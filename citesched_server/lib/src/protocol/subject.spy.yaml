@@ -1,0 +1,11 @@
+class: Subject
+table: subject
+fields:
+  code: String
+  name: String
+  units: int
+  yearLevel: int?
+  term: int?
+  type: SubjectType
+  createdAt: DateTime
+  updatedAt: DateTime

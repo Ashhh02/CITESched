@@ -1,0 +1,19 @@
+class: Student
+table: student
+fields:
+  name: String
+  email: String
+  studentNumber: String
+  course: String
+  yearLevel: int
+  userInfoId: int
+  createdAt: DateTime
+  updatedAt: DateTime
+
+indexes:
+  student_email_unique_idx:
+    fields: email
+    unique: true
+  student_number_unique_idx:
+    fields: studentNumber
+    unique: true

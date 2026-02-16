@@ -1,0 +1,8 @@
+class: DashboardStats
+fields:
+  totalSchedules: int
+  totalFaculty: int
+  totalStudents: int
+  totalConflicts: int
+  facultyLoad: List<FacultyLoadData>
+  recentConflicts: List<ScheduleConflict>

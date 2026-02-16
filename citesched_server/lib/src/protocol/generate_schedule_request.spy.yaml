@@ -1,0 +1,7 @@
+class: GenerateScheduleRequest
+fields:
+  subjectIds: List<int>
+  facultyIds: List<int>
+  roomIds: List<int>
+  timeslotIds: List<int>
+  sections: List<String>

@@ -1,0 +1,12 @@
+class: Schedule
+table: schedule
+fields:
+  subjectId: int, relation(parent=subject)
+  facultyId: int, relation(parent=faculty)
+  roomId: int, relation(parent=room)
+  timeslotId: int, relation(parent=timeslot)
+  section: String
+  loadType: SubjectType?
+  units: double?
+  createdAt: DateTime
+  updatedAt: DateTime

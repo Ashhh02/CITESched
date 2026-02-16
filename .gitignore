@@ -1,0 +1,40 @@
+# -----------------------
+# Standard Flutter/Dart
+# -----------------------
+.dart_tool/
+.packages
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# -----------------------
+# Serverpod Specifics
+# -----------------------
+# CRITICAL: Never commit your passwords/secrets
+**/config/passwords.yaml
+**/config/google_client_secret.json
+
+# Serverpod Migration working directories
+**/migrate_working_dir/
+
+# Serverpod Terraform/Deployment (if you use AWS/GCP later)
+**/deploy/aws/terraform/.terraform/
+**/deploy/gcp/terraform/.terraform/
+*.tfstate
+*.tfstate.backup
+
+# -----------------------
+# IDE & System Files
+# -----------------------
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# -----------------------
+# Node/Web (if you use them)
+# -----------------------
+node_modules/
+npm-debug.log

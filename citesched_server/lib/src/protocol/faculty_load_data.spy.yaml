@@ -1,0 +1,5 @@
+class: FacultyLoadData
+fields:
+  facultyName: String
+  currentLoad: double
+  maxLoad: double

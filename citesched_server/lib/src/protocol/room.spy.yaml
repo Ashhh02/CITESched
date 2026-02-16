@@ -1,0 +1,9 @@
+class: Room
+table: room
+fields:
+  name: String
+  capacity: int
+  type: RoomType
+  building: String
+  createdAt: DateTime
+  updatedAt: DateTime

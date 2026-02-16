@@ -1,0 +1,4 @@
+enum: EmploymentStatus
+values:
+  - fullTime
+  - partTime

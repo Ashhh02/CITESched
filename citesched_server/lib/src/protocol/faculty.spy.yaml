@@ -1,0 +1,22 @@
+class: Faculty
+table: faculty
+fields:
+  name: String
+  email: String
+  department: String
+  maxLoad: int
+  employmentStatus: EmploymentStatus
+  shiftPreference: FacultyShiftPreference?
+  preferredHours: String?
+  facultyId: String
+  userInfoId: int
+  createdAt: DateTime
+  updatedAt: DateTime
+
+indexes:
+  faculty_email_unique_idx:
+    fields: email
+    unique: true
+  faculty_id_unique_idx:
+    fields: facultyId
+    unique: true

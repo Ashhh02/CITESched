@@ -1,0 +1,7 @@
+enum: FacultyShiftPreference
+values:
+  - any
+  - morning
+  - afternoon
+  - evening
+  - custom

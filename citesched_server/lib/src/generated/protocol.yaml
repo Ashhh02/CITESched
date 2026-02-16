@@ -1,0 +1,56 @@
+emailIdp:
+  - login:
+  - startRegistration:
+  - verifyRegistrationCode:
+  - finishRegistration:
+  - startPasswordReset:
+  - verifyPasswordResetCode:
+  - finishPasswordReset:
+jwtRefresh:
+  - refreshAccessToken:
+admin:
+  - assignRole:
+  - getAllUserRoles:
+  - createFaculty:
+  - getAllFaculty:
+  - updateFaculty:
+  - deleteFaculty:
+  - createStudent:
+  - getAllStudents:
+  - updateStudent:
+  - deleteStudent:
+  - createRoom:
+  - getAllRooms:
+  - updateRoom:
+  - deleteRoom:
+  - createSubject:
+  - getAllSubjects:
+  - updateSubject:
+  - deleteSubject:
+  - createTimeslot:
+  - getAllTimeslots:
+  - updateTimeslot:
+  - deleteTimeslot:
+  - createSchedule:
+  - getAllSchedules:
+  - updateSchedule:
+  - deleteSchedule:
+  - generateSchedule:
+  - getDashboardStats:
+customAuth:
+  - loginWithId:
+debug:
+  - getSessionInfo:
+setup:
+  - createAccount:
+student:
+  - getSchedules:
+  - getScheduleById:
+  - getMyProfile:
+  - updateMyProfile:
+  - getFaculty:
+  - getRooms:
+  - getSubjects:
+  - getTimeslots:
+greeting:
+  - hello:

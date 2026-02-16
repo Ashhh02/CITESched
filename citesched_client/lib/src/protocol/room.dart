@@ -1,0 +1,146 @@
+/* AUTOMATICALLY GENERATED CODE DO NOT MODIFY */
+/*   To generate run: "serverpod generate"    */
+
+// ignore_for_file: implementation_imports
+// ignore_for_file: library_private_types_in_public_api
+// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: public_member_api_docs
+// ignore_for_file: type_literal_in_constant_pattern
+// ignore_for_file: use_super_parameters
+// ignore_for_file: invalid_use_of_internal_member
+
+// ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'package:serverpod_client/serverpod_client.dart' as _i1;
+import 'room_type.dart' as _i2;
+
+abstract class Room implements _i1.SerializableModel {
+  Room._({
+    this.id,
+    required this.name,
+    required this.capacity,
+    required this.type,
+    required this.building,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory Room({
+    int? id,
+    required String name,
+    required int capacity,
+    required _i2.RoomType type,
+    required String building,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) = _RoomImpl;
+
+  factory Room.fromJson(Map<String, dynamic> jsonSerialization) {
+    return Room(
+      id: jsonSerialization['id'] as int?,
+      name: jsonSerialization['name'] as String,
+      capacity: jsonSerialization['capacity'] as int,
+      type: _i2.RoomType.fromJson((jsonSerialization['type'] as String)),
+      building: jsonSerialization['building'] as String,
+      createdAt: _i1.DateTimeJsonExtension.fromJson(
+        jsonSerialization['createdAt'],
+      ),
+      updatedAt: _i1.DateTimeJsonExtension.fromJson(
+        jsonSerialization['updatedAt'],
+      ),
+    );
+  }
+
+  /// The database id, set if the object has been inserted into the
+  /// database or if it has been fetched from the database. Otherwise,
+  /// the id will be null.
+  int? id;
+
+  String name;
+
+  int capacity;
+
+  _i2.RoomType type;
+
+  String building;
+
+  DateTime createdAt;
+
+  DateTime updatedAt;
+
+  /// Returns a shallow copy of this [Room]
+  /// with some or all fields replaced by the given arguments.
+  @_i1.useResult
+  Room copyWith({
+    int? id,
+    String? name,
+    int? capacity,
+    _i2.RoomType? type,
+    String? building,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  });
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      '__className__': 'Room',
+      if (id != null) 'id': id,
+      'name': name,
+      'capacity': capacity,
+      'type': type.toJson(),
+      'building': building,
+      'createdAt': createdAt.toJson(),
+      'updatedAt': updatedAt.toJson(),
+    };
+  }
+
+  @override
+  String toString() {
+    return _i1.SerializationManager.encode(this);
+  }
+}
+
+class _Undefined {}
+
+class _RoomImpl extends Room {
+  _RoomImpl({
+    int? id,
+    required String name,
+    required int capacity,
+    required _i2.RoomType type,
+    required String building,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : super._(
+         id: id,
+         name: name,
+         capacity: capacity,
+         type: type,
+         building: building,
+         createdAt: createdAt,
+         updatedAt: updatedAt,
+       );
+
+  /// Returns a shallow copy of this [Room]
+  /// with some or all fields replaced by the given arguments.
+  @_i1.useResult
+  @override
+  Room copyWith({
+    Object? id = _Undefined,
+    String? name,
+    int? capacity,
+    _i2.RoomType? type,
+    String? building,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Room(
+      id: id is int? ? id : this.id,
+      name: name ?? this.name,
+      capacity: capacity ?? this.capacity,
+      type: type ?? this.type,
+      building: building ?? this.building,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+}

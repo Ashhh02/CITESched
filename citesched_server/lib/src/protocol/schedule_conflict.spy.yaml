@@ -1,0 +1,6 @@
+class: ScheduleConflict
+fields:
+  type: String
+  message: String
+  conflictingScheduleId: int?
+  details: String?

@@ -1,0 +1,6 @@
+class: GenerateScheduleResponse
+fields:
+  success: bool
+  schedules: List<Schedule>?
+  conflicts: List<ScheduleConflict>?
+  message: String?

@@ -1,0 +1,9 @@
+class: Timeslot
+table: timeslot
+fields:
+  day: DayOfWeek
+  startTime: String
+  endTime: String
+  label: String
+  createdAt: DateTime
+  updatedAt: DateTime

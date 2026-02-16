@@ -1,0 +1,10 @@
+class: UserRole
+table: user_role
+fields:
+  userId: String
+  role: String
+
+indexes:
+  user_role_user_id_unique_idx:
+    fields: userId
+    unique: true

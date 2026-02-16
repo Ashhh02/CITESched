@@ -1,0 +1,4 @@
+enum: RoomType
+values:
+  - lecture
+  - laboratory
