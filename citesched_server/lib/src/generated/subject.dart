@@ -12,6 +12,7 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/serverpod.dart' as _i1;
 import 'subject_type.dart' as _i2;
+import 'program.dart' as _i3;
 
 abstract class Subject
     implements _i1.TableRow<int?>, _i1.ProtocolSerialization {
@@ -23,6 +24,8 @@ abstract class Subject
     this.yearLevel,
     this.term,
     required this.type,
+    required this.program,
+    required this.studentsCount,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -35,6 +38,8 @@ abstract class Subject
     int? yearLevel,
     int? term,
     required _i2.SubjectType type,
+    required _i3.Program program,
+    required int studentsCount,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _SubjectImpl;
@@ -48,6 +53,8 @@ abstract class Subject
       yearLevel: jsonSerialization['yearLevel'] as int?,
       term: jsonSerialization['term'] as int?,
       type: _i2.SubjectType.fromJson((jsonSerialization['type'] as String)),
+      program: _i3.Program.fromJson((jsonSerialization['program'] as String)),
+      studentsCount: jsonSerialization['studentsCount'] as int,
       createdAt: _i1.DateTimeJsonExtension.fromJson(
         jsonSerialization['createdAt'],
       ),
@@ -76,6 +83,10 @@ abstract class Subject
 
   _i2.SubjectType type;
 
+  _i3.Program program;
+
+  int studentsCount;
+
   DateTime createdAt;
 
   DateTime updatedAt;
@@ -94,6 +105,8 @@ abstract class Subject
     int? yearLevel,
     int? term,
     _i2.SubjectType? type,
+    _i3.Program? program,
+    int? studentsCount,
     DateTime? createdAt,
     DateTime? updatedAt,
   });
@@ -108,6 +121,8 @@ abstract class Subject
       if (yearLevel != null) 'yearLevel': yearLevel,
       if (term != null) 'term': term,
       'type': type.toJson(),
+      'program': program.toJson(),
+      'studentsCount': studentsCount,
       'createdAt': createdAt.toJson(),
       'updatedAt': updatedAt.toJson(),
     };
@@ -124,6 +139,8 @@ abstract class Subject
       if (yearLevel != null) 'yearLevel': yearLevel,
       if (term != null) 'term': term,
       'type': type.toJson(),
+      'program': program.toJson(),
+      'studentsCount': studentsCount,
       'createdAt': createdAt.toJson(),
       'updatedAt': updatedAt.toJson(),
     };
@@ -170,6 +187,8 @@ class _SubjectImpl extends Subject {
     int? yearLevel,
     int? term,
     required _i2.SubjectType type,
+    required _i3.Program program,
+    required int studentsCount,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : super._(
@@ -180,6 +199,8 @@ class _SubjectImpl extends Subject {
          yearLevel: yearLevel,
          term: term,
          type: type,
+         program: program,
+         studentsCount: studentsCount,
          createdAt: createdAt,
          updatedAt: updatedAt,
        );
@@ -196,6 +217,8 @@ class _SubjectImpl extends Subject {
     Object? yearLevel = _Undefined,
     Object? term = _Undefined,
     _i2.SubjectType? type,
+    _i3.Program? program,
+    int? studentsCount,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -207,6 +230,8 @@ class _SubjectImpl extends Subject {
       yearLevel: yearLevel is int? ? yearLevel : this.yearLevel,
       term: term is int? ? term : this.term,
       type: type ?? this.type,
+      program: program ?? this.program,
+      studentsCount: studentsCount ?? this.studentsCount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -245,6 +270,17 @@ class SubjectUpdateTable extends _i1.UpdateTable<SubjectTable> {
     _i2.SubjectType value,
   ) => _i1.ColumnValue(
     table.type,
+    value,
+  );
+
+  _i1.ColumnValue<_i3.Program, _i3.Program> program(_i3.Program value) =>
+      _i1.ColumnValue(
+        table.program,
+        value,
+      );
+
+  _i1.ColumnValue<int, int> studentsCount(int value) => _i1.ColumnValue(
+    table.studentsCount,
     value,
   );
 
@@ -289,6 +325,15 @@ class SubjectTable extends _i1.Table<int?> {
       this,
       _i1.EnumSerialization.byName,
     );
+    program = _i1.ColumnEnum(
+      'program',
+      this,
+      _i1.EnumSerialization.byName,
+    );
+    studentsCount = _i1.ColumnInt(
+      'studentsCount',
+      this,
+    );
     createdAt = _i1.ColumnDateTime(
       'createdAt',
       this,
@@ -313,6 +358,10 @@ class SubjectTable extends _i1.Table<int?> {
 
   late final _i1.ColumnEnum<_i2.SubjectType> type;
 
+  late final _i1.ColumnEnum<_i3.Program> program;
+
+  late final _i1.ColumnInt studentsCount;
+
   late final _i1.ColumnDateTime createdAt;
 
   late final _i1.ColumnDateTime updatedAt;
@@ -326,6 +375,8 @@ class SubjectTable extends _i1.Table<int?> {
     yearLevel,
     term,
     type,
+    program,
+    studentsCount,
     createdAt,
     updatedAt,
   ];

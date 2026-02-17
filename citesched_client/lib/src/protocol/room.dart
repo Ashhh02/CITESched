@@ -12,6 +12,7 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod_client/serverpod_client.dart' as _i1;
 import 'room_type.dart' as _i2;
+import 'program.dart' as _i3;
 
 abstract class Room implements _i1.SerializableModel {
   Room._({
@@ -19,7 +20,9 @@ abstract class Room implements _i1.SerializableModel {
     required this.name,
     required this.capacity,
     required this.type,
+    required this.program,
     required this.building,
+    required this.isActive,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -29,7 +32,9 @@ abstract class Room implements _i1.SerializableModel {
     required String name,
     required int capacity,
     required _i2.RoomType type,
+    required _i3.Program program,
     required String building,
+    required bool isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _RoomImpl;
@@ -40,7 +45,9 @@ abstract class Room implements _i1.SerializableModel {
       name: jsonSerialization['name'] as String,
       capacity: jsonSerialization['capacity'] as int,
       type: _i2.RoomType.fromJson((jsonSerialization['type'] as String)),
+      program: _i3.Program.fromJson((jsonSerialization['program'] as String)),
       building: jsonSerialization['building'] as String,
+      isActive: jsonSerialization['isActive'] as bool,
       createdAt: _i1.DateTimeJsonExtension.fromJson(
         jsonSerialization['createdAt'],
       ),
@@ -61,7 +68,11 @@ abstract class Room implements _i1.SerializableModel {
 
   _i2.RoomType type;
 
+  _i3.Program program;
+
   String building;
+
+  bool isActive;
 
   DateTime createdAt;
 
@@ -75,7 +86,9 @@ abstract class Room implements _i1.SerializableModel {
     String? name,
     int? capacity,
     _i2.RoomType? type,
+    _i3.Program? program,
     String? building,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   });
@@ -87,7 +100,9 @@ abstract class Room implements _i1.SerializableModel {
       'name': name,
       'capacity': capacity,
       'type': type.toJson(),
+      'program': program.toJson(),
       'building': building,
+      'isActive': isActive,
       'createdAt': createdAt.toJson(),
       'updatedAt': updatedAt.toJson(),
     };
@@ -107,7 +122,9 @@ class _RoomImpl extends Room {
     required String name,
     required int capacity,
     required _i2.RoomType type,
+    required _i3.Program program,
     required String building,
+    required bool isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : super._(
@@ -115,7 +132,9 @@ class _RoomImpl extends Room {
          name: name,
          capacity: capacity,
          type: type,
+         program: program,
          building: building,
+         isActive: isActive,
          createdAt: createdAt,
          updatedAt: updatedAt,
        );
@@ -129,7 +148,9 @@ class _RoomImpl extends Room {
     String? name,
     int? capacity,
     _i2.RoomType? type,
+    _i3.Program? program,
     String? building,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -138,7 +159,9 @@ class _RoomImpl extends Room {
       name: name ?? this.name,
       capacity: capacity ?? this.capacity,
       type: type ?? this.type,
+      program: program ?? this.program,
       building: building ?? this.building,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

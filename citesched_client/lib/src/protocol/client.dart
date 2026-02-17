@@ -255,6 +255,7 @@ class EndpointAdmin extends _i2.EndpointRef {
   @override
   String get name => 'admin';
 
+  /// Get aggregated dashboard statistics. ─────────────────────────────────────────────────
   /// Assign or change a user's role (admin, faculty, student).
   _i3.Future<_i5.UserRole> assignRole({
     required String userId,

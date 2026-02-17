@@ -42,7 +42,12 @@ class SetupEndpoint extends Endpoint {
       if (userInfo.scopeNames == null) {
         userInfo.scopeNames = [];
       }
-      userInfo.scopeNames!.add(role);
+      
+      // Fix: Only add the role if it doesn't already exist (and clear duplicates)
+      var currentScopes = userInfo.scopeNames!.toSet();
+      currentScopes.add(role);
+      userInfo.scopeNames = currentScopes.toList();
+      
       await UserInfo.db.updateRow(session, userInfo);
 
       // Create linked profile based on role

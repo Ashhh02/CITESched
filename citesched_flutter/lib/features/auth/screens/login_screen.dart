@@ -146,25 +146,88 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final screenSize = MediaQuery.of(context).size;
     final isDesktop = screenSize.width > 900;
 
-    // Active Theme Colors
+    // --- 1. DYNAMIC THEME COLORS ---
+
+    // Main Backgrounds
+    final bgBody = _isDarkMode ? _bgBodyDark : _bgBodyLight;
+    final bgRight = _isDarkMode ? _bgRightDark : _bgRightLight;
+    final cardBg = _isDarkMode ? _cardBgDark : _cardBgLight;
+
+    // Text Colors
+    final textPrimary = _isDarkMode ? Colors.white : const Color(0xFF1E293B);
+    final textMuted = _isDarkMode ? Colors.white60 : Colors.grey.shade600;
+
+    // Input Fields
+    final inputFillColor = _isDarkMode
+        ? const Color(0xFF334155)
+        : Colors.grey.shade200;
+    final inputBorderColor = _isDarkMode
+        ? Colors.transparent
+        : Colors.transparent;
+    final inputTextColor = _isDarkMode ? Colors.white : Colors.black87;
+
+    // Active Brand Color (Purple/Pink)
     final activeThemeColor = _isDarkMode
         ? (_isFaculty ? _facultyColorDark : _studentColorDark)
         : (_isFaculty ? _facultyColorLight : _studentColorLight);
-    final bgBody = _isDarkMode ? _bgBodyDark : _bgBodyLight;
-    final cardBg = _isDarkMode ? _cardBgDark : _cardBgLight;
-    final textPrimary = _isDarkMode ? _textPrimaryDark : _textPrimaryLight;
-    final textMuted = _isDarkMode ? _textMutedDark : _textMutedLight;
-    final inputBorder = _isDarkMode ? _inputBorderDark : _inputBorderLight;
 
-    // For right side background, the design uses a slightly different color
-    // but the split container CSS defines bg-right separately.
-    final bgRight = _isDarkMode ? _bgRightDark : _bgRightLight;
+    // Google Button Specifics
+    final googleBtnBg = _isDarkMode ? Colors.transparent : Colors.white;
+    final googleBtnBorder = _isDarkMode ? Colors.white54 : Colors.grey.shade300;
+    final googleBtnText = _isDarkMode ? Colors.white : Colors.black87;
+
+    // --- 2. INPUT FIELD BUILDER (Fixed: No active green outline) ---
+    Widget buildCustomField({
+      required TextEditingController controller,
+      required String hintText,
+      bool isPassword = false,
+    }) {
+      return Container(
+        height: 52,
+        decoration: BoxDecoration(
+          color: inputFillColor,
+          borderRadius: BorderRadius.circular(12),
+          // We use a static border color (or transparent if you prefer no border)
+          border: Border.all(color: inputBorderColor),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Center(
+          child: TextField(
+            controller: controller,
+            obscureText: isPassword && _obscurePassword,
+            cursorColor: textPrimary, // Cursor matches text color
+            style: GoogleFonts.poppins(
+              color: inputTextColor, // Typing text color (White/Black)
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              filled: false,
+              fillColor: Colors.transparent,
+              hintText: hintText,
+              hintStyle: GoogleFonts.poppins(
+                color: textMuted,
+                fontSize: 14,
+              ),
+              // Disable all default borders to prevent the green line
+              border: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              errorBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: bgBody,
       body: Row(
         children: [
-          // Left Side - Image (Desktop only)
+          // Left Side (Desktop Image)
           if (isDesktop)
             Expanded(
               flex: 1,
@@ -174,21 +237,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Image.asset(
                     'assets/jmcbackground.jpg',
                     fit: BoxFit.cover,
-                    // Simulate image-rendering: -webkit-optimize-contrast
-                    filterQuality: FilterQuality.high,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(color: _facultyColorLight);
-                    },
+                    errorBuilder: (context, error, stackTrace) =>
+                        Container(color: activeThemeColor),
                   ),
-                  // Overlay to ensure text readability (matches the text-shadow logic mostly,
-                  // but a slight gradient helps like in the previous version)
-                  Container(
-                    color: Colors.black.withValues(
-                      alpha: 0.3,
-                    ), // Slight darkening for text contrast
-                  ),
+                  Container(color: Colors.black.withOpacity(0.3)),
                   Padding(
-                    padding: const EdgeInsets.all(80.0), // match padding: 80px
+                    padding: const EdgeInsets.all(80.0),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,38 +252,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           style: GoogleFonts.poppins(
                             fontSize: 56,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: -1,
                             color: Colors.white,
-                            height: 1.1,
-                            shadows: [
-                              Shadow(
-                                offset: const Offset(2, 2),
-                                blurRadius: 15,
-                                color: Colors.black.withValues(alpha: 0.7),
-                              ),
-                            ],
                           ),
                         ),
-                        const SizedBox(height: 10), // margin-bottom: 10px
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxWidth: 550,
-                          ), // max-width: 550px
-                          child: Text(
-                            'Secure access to faculty loading, conflict detection, and student class schedules for the JMCFI CITE Department.',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w400,
-                              height: 1.6,
-                              color: Colors.white,
-                              shadows: [
-                                Shadow(
-                                  offset: const Offset(1, 1),
-                                  blurRadius: 10,
-                                  color: Colors.black.withValues(alpha: 0.7),
-                                ),
-                              ],
-                            ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Secure access to faculty loading and schedules.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            color: Colors.white,
                           ),
                         ),
                       ],
@@ -239,62 +270,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
 
-          // Right Side - Login Form
+          // Right Side (Form)
           Expanded(
             flex: 1,
             child: Container(
-              color: bgRight, // var(--bg-right)
+              color: bgRight,
               child: Stack(
                 children: [
                   // Theme Toggle
                   Positioned(
                     top: 25,
                     right: 25,
-                    child: Material(
-                      color: cardBg, // var(--card-bg)
-                      borderRadius: BorderRadius.circular(12),
-                      elevation: 0,
-                      child: InkWell(
-                        onTap: () {
-                          setState(() {
-                            _isDarkMode = !_isDarkMode;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          width: 45,
-                          height: 45,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: inputBorder),
-                            borderRadius: BorderRadius.circular(12),
-                            // box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                    child: InkWell(
+                      onTap: () => setState(() => _isDarkMode = !_isDarkMode),
+                      child: Container(
+                        width: 45,
+                        height: 45,
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.grey.withOpacity(0.3),
                           ),
-                          child: Icon(
-                            _isDarkMode
-                                ? Icons.wb_sunny_rounded
-                                : Icons.nightlight_round,
-                            color: textPrimary,
-                            size: 20,
-                          ),
+                        ),
+                        child: Icon(
+                          _isDarkMode
+                              ? Icons.wb_sunny_rounded
+                              : Icons.nightlight_round,
+                          color: textPrimary,
+                          size: 20,
                         ),
                       ),
                     ),
                   ),
 
+                  // Login Form Center
                   Center(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(40), // padding: 40px
+                      padding: const EdgeInsets.all(40),
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: 420,
-                        ), // max-width: 420px
+                        constraints: const BoxConstraints(maxWidth: 420),
                         child: Container(
                           padding: const EdgeInsets.all(40),
                           decoration: BoxDecoration(
@@ -302,7 +317,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             borderRadius: BorderRadius.circular(24),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
+                                color: Colors.black.withOpacity(0.1),
                                 blurRadius: 50,
                                 offset: const Offset(0, 20),
                               ),
@@ -311,55 +326,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // Logo
                               Center(
                                 child: Image.asset(
                                   'assets/jmclogo.png',
-                                  width: 90, // max-width: 90px
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.school, size: 60),
+                                  width: 90,
+                                  errorBuilder: (ctx, err, stack) => Icon(
+                                    Icons.school,
+                                    size: 60,
+                                    color: activeThemeColor,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 20),
 
-                              // Error Message (Alert)
                               if (_errorMessage != null)
                                 Container(
                                   margin: const EdgeInsets.only(bottom: 24),
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.red.withValues(alpha: 0.1),
+                                    color: Colors.red.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.warning_amber_rounded,
-                                        color: Colors.red,
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          _errorMessage!,
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 13,
-                                            color: Colors.red,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.red,
+                                    ),
                                   ),
                                 ),
 
-                              // Title
+                              // HEADER TEXT (Fixed Color)
                               Text(
                                 _isFaculty ? 'Faculty Login' : 'Student Login',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 24, // Assumed size for h2
+                                  fontSize: 24,
                                   fontWeight: FontWeight.w700,
-                                  color: textPrimary,
+                                  color:
+                                      textPrimary, // Uses White (Dark) or Black (Light)
                                 ),
                               ),
                               const SizedBox(height: 5),
@@ -367,7 +371,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 'Welcome back! Please enter your details.',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 14, // 0.9rem ~= 14.4px
+                                  fontSize: 14,
                                   color: textMuted,
                                 ),
                               ),
@@ -377,9 +381,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               Container(
                                 padding: const EdgeInsets.all(5),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(
-                                    alpha: 0.05,
-                                  ), // rgba(0,0,0,0.05)
+                                  color: _isDarkMode
+                                      ? Colors.black26
+                                      : Colors.grey.shade100,
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Row(
@@ -401,40 +405,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(
-                                height: 30,
-                              ), // margin-bottom: 30px on .role-switcher
-                              // Form
+                              const SizedBox(height: 30),
+
+                              // Inputs
                               _buildLabel(
                                 _isFaculty ? 'Username' : 'Student ID',
                                 textPrimary,
                               ),
                               const SizedBox(height: 8),
-                              _buildInput(
+                              buildCustomField(
                                 controller: _idController,
                                 hintText: 'Enter ID number',
-                                bgBody: bgBody,
-                                cardBg: cardBg,
-                                inputBorder: inputBorder,
-                                activeTheme: activeThemeColor,
-                                textPrimary: textPrimary,
-                              ),
-                              const SizedBox(height: 16), // mb-3 ~= 16px
-
-                              _buildLabel('Password', textPrimary),
-                              const SizedBox(height: 8),
-                              _buildInput(
-                                controller: _passwordController,
-                                hintText: '••••••••',
-                                isPassword: true,
-                                bgBody: bgBody,
-                                cardBg: cardBg,
-                                inputBorder: inputBorder,
-                                activeTheme: activeThemeColor,
-                                textPrimary: textPrimary,
                               ),
 
                               const SizedBox(height: 16),
+
+                              _buildLabel('Password', textPrimary),
+                              const SizedBox(height: 8),
+                              buildCustomField(
+                                controller: _passwordController,
+                                hintText: '••••••••',
+                                isPassword: true,
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // Checkbox Row
                               Row(
                                 children: [
                                   SizedBox(
@@ -442,13 +438,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     width: 24,
                                     child: Checkbox(
                                       value: !_obscurePassword,
-                                      onChanged: (val) {
-                                        setState(() {
-                                          _obscurePassword = !val!;
-                                        });
-                                      },
+                                      onChanged: (val) => setState(
+                                        () => _obscurePassword = !val!,
+                                      ),
                                       activeColor: activeThemeColor,
-                                      side: BorderSide(color: textMuted),
+                                      checkColor: Colors.white,
+                                      // Border color matches textMuted so it's visible in both modes
+                                      side: BorderSide(
+                                        color: textMuted,
+                                        width: 1.5,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(4),
                                       ),
@@ -458,14 +457,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   Text(
                                     'Show Password',
                                     style: GoogleFonts.poppins(
-                                      fontSize: 14, // small
                                       color: textMuted,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 24), // mb-4
+                              const SizedBox(height: 24),
 
+                              // Login Button
                               ElevatedButton(
                                 onPressed: _isLoading ? null : _login,
                                 style: ElevatedButton.styleFrom(
@@ -475,12 +474,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  elevation: 0,
                                 ),
                                 child: _isLoading
                                     ? const SizedBox(
-                                        width: 20,
                                         height: 20,
+                                        width: 20,
                                         child: CircularProgressIndicator(
                                           color: Colors.white,
                                           strokeWidth: 2,
@@ -490,54 +488,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         'SIGN IN',
                                         style: GoogleFonts.poppins(
                                           fontWeight: FontWeight.w600,
-                                          fontSize: 16,
                                         ),
                                       ),
                               ),
 
-                              const SizedBox(height: 24), // mb-4
+                              const SizedBox(height: 24),
                               Text(
                                 'OR SIGN IN WITH',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 12.8, // 0.8rem
+                                  fontSize: 12,
                                   color: textMuted,
-                                  letterSpacing: 1.0,
                                 ),
                               ),
                               const SizedBox(height: 24),
 
-                              // Google Button Placeholder (Visual only as per request)
-                              Center(
+                              // Google Button (Fixed Colors)
+                              InkWell(
+                                onTap: () {
+                                  // Add Google Login Logic Here
+                                },
                                 child: Container(
-                                  width: 340, // data-width="340"
-                                  height: 44,
+                                  width: double.infinity,
+                                  height: 50,
                                   decoration: BoxDecoration(
-                                    border: Border.all(color: inputBorder),
-                                    borderRadius: BorderRadius.circular(4),
-                                    color: Colors.white,
+                                    color:
+                                        googleBtnBg, // White (Light) vs Transparent (Dark)
+                                    border: Border.all(color: googleBtnBorder),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      // Google Icon simulation
-                                      Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: Image.network(
-                                          'https://developers.google.com/identity/images/g-logo.png',
-                                          height: 20,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  const Icon(
-                                                    Icons.g_mobiledata,
-                                                    color: Colors.blue,
-                                                  ),
-                                        ),
+                                      Image.network(
+                                        'https://developers.google.com/identity/images/g-logo.png',
+                                        height: 20,
+                                        errorBuilder: (ctx, err, stack) =>
+                                            const Icon(
+                                              Icons.g_mobiledata,
+                                              color: Colors.blue,
+                                            ),
                                       ),
+                                      const SizedBox(width: 12),
                                       Text(
-                                        'Sign in with Google',
-                                        style: GoogleFonts.roboto(
-                                          color: Colors.black54,
+                                        "Sign in with Google",
+                                        style: GoogleFonts.poppins(
+                                          color:
+                                              googleBtnText, // Black (Light) vs White (Dark)
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -585,7 +582,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
+                      color: const Color.fromARGB(
+                        255,
+                        51,
+                        51,
+                        51,
+                      ).withValues(alpha: 0.08),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),

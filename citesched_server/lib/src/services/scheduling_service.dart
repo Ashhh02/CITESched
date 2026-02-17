@@ -131,6 +131,49 @@ class SchedulingService {
           ),
         );
       }
+
+      // ─── New Constraints ───────────────────────────────────────────
+
+      // Fetch Subject and Room for further validation
+      var subject = await Subject.db.findById(session, schedule.subjectId);
+      var room = await Room.db.findById(session, schedule.roomId);
+
+      if (subject != null && room != null) {
+        // 1. Program Match Check
+        if (subject.program != room.program) {
+          conflicts.add(
+            ScheduleConflict(
+              type: 'program_mismatch',
+              message: 'Subject program does not match Room program',
+              details:
+                  'Subject program is ${subject.program.name}, but Room program is ${room.program.name}',
+            ),
+          );
+        }
+
+        // 2. Capacity Check
+        if (room.capacity < subject.studentsCount) {
+          conflicts.add(
+            ScheduleConflict(
+              type: 'capacity_exceeded',
+              message: 'Room capacity is smaller than subject student count',
+              details:
+                  'Room capacity is ${room.capacity}, but Subject has ${subject.studentsCount} students',
+            ),
+          );
+        }
+
+        // 3. Room Active Check
+        if (!room.isActive) {
+          conflicts.add(
+            ScheduleConflict(
+              type: 'room_inactive',
+              message: 'The selected room is currently inactive',
+              details: 'Room ${room.name} must be active for assignment',
+            ),
+          );
+        }
+      }
     }
 
     // Check faculty availability (only if time is set)

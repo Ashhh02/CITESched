@@ -7,5 +7,7 @@ fields:
   yearLevel: int?
   term: int?
   type: SubjectType
+  program: Program
+  studentsCount: int
   createdAt: DateTime
   updatedAt: DateTime

@@ -8,7 +8,12 @@ import '../services/scheduling_service.dart';
 /// Only users with the 'admin' scope can access these methods.
 class AdminEndpoint extends Endpoint {
   @override
+  bool get requireLogin => true;
+
+  @override
   Set<Scope> get requiredScopes => {AppScopes.admin};
+
+  /// Get aggregated dashboard statistics. ─────────────────────────────────────────────────
 
   // ─── Role Management ─────────────────────────────────────────────────
 
@@ -329,6 +334,11 @@ class AdminEndpoint extends Endpoint {
       throw Exception('Subject units must be greater than 0');
     }
 
+    // Validate student count
+    if (subject.studentsCount < 0) {
+      throw Exception('Student count cannot be negative');
+    }
+
     // Set timestamps
     subject.createdAt = DateTime.now();
     subject.updatedAt = DateTime.now();
@@ -357,6 +367,11 @@ class AdminEndpoint extends Endpoint {
     // Validate units
     if (subject.units <= 0) {
       throw Exception('Subject units must be greater than 0');
+    }
+
+    // Validate student count
+    if (subject.studentsCount < 0) {
+      throw Exception('Student count cannot be negative');
     }
 
     // Update timestamp
@@ -571,126 +586,108 @@ class AdminEndpoint extends Endpoint {
 
   /// Get aggregated dashboard statistics.
   Future<DashboardStats> getDashboardStats(Session session) async {
-    // 1. Get Counts
-    var totalSchedules = await Schedule.db.count(session);
-    var totalFaculty = await Faculty.db.count(session);
-    var totalStudents = await Student.db.count(session);
+    try {
+      print('[DEBUG] getDashboardStats: Step 1 - Fetching counts');
+      session.log('Step 1: Fetching counts...');
+      var totalSchedules = await Schedule.db.count(session);
+      var totalFaculty = await Faculty.db.count(session);
+      var totalStudents = await Student.db.count(session);
+      print('[DEBUG] getDashboardStats: Counts - schedules=$totalSchedules, faculty=$totalFaculty, students=$totalStudents');
 
-    // 2. Calculate Faculty Load
-    // Fetch all schedules and faculty to calculate load in memory
-    // (Optimization: In a real large-scale app, this should be a custom SQL query)
-    var allSchedules = await Schedule.db.find(session);
-    var allFaculty = await Faculty.db.find(session);
-    var allSubjects = await Subject.db.find(session);
+      // 2. Calculate Faculty Load
+      print('[DEBUG] getDashboardStats: Step 2 - Fetching all data');
+      var allSchedules = await Schedule.db.find(session);
+      var allFaculty = await Faculty.db.find(session);
+      var allSubjects = await Subject.db.find(session);
+      print('[DEBUG] getDashboardStats: Fetched ${allSchedules.length} schedules, ${allFaculty.length} faculty');
 
-    // Map subject ID to units for quick lookup
-    var subjectUnits = {for (var s in allSubjects) s.id!: s.units};
+      // Map subject ID to units for quick lookup
+      var subjectUnits = <int, double>{
+        for (var s in allSubjects)
+          if (s.id != null) s.id!: s.units.toDouble(),
+      };
 
-    List<FacultyLoadData> facultyLoad = [];
-    for (var faculty in allFaculty) {
-      double currentLoad = 0;
-      var facultySchedules = allSchedules.where(
-        (s) => s.facultyId == faculty.id,
-      );
+      List<FacultyLoadData> facultyLoad = [];
+      for (var faculty in allFaculty) {
+        double currentLoad = 0;
+        var facultySchedules = allSchedules.where(
+          (s) => s.facultyId == faculty.id,
+        );
 
-      for (var schedule in facultySchedules) {
-        // Assume 1 unit = 1 hour for now, or use subject units if available
-        // You might want to adjust this logic based on how 'units' map to 'hours'
-        currentLoad += (subjectUnits[schedule.subjectId] ?? 3).toDouble();
-      }
-
-      facultyLoad.add(
-        FacultyLoadData(
-          facultyName: faculty.name,
-          currentLoad: currentLoad,
-          maxLoad: faculty.maxLoad.toDouble(),
-        ),
-      );
-    }
-
-    // 3. Integrity Check (Conflicts)
-    // Re-run validation on all schedules to find current conflicts
-    // This is an expensive operation, so use with caution on large datasets
-    List<ScheduleConflict> conflicts = [];
-
-    // We can't easily "find all conflicts" without checking each schedule against others.
-    // A simpler approach for the dashboard might be to just return a count if we had a
-    // persistent 'Conflict' table. Since we don't, we'll do a quick scan or just return 0
-    // if we trust the 'createSchedule' validation.
-
-    // However, to satisfy the requirement of "Unresolved Conflicts" which implies
-    // some might exist, let's scan.
-    // Optimization: Only scan if requested or cache this.
-    // For now, let's just return an empty list or a placeholder if we want to be fast,
-    // OR implementation the scan.
-
-    // Let's implement a "soft" scan: Check if any room is double booked or faculty double booked.
-    // This is O(N^2) naive, but O(N) if we sort/group.
-
-    // We will Group by Room+Time and Faculty+Time
-    // ... (logic for conflict detection) ...
-
-    // For this implementation, we will trust the `createSchedule` validation and return 0
-    // unless we specifically add a mechanism to flag "force-added" schedules.
-    // But since the user asked for "unresolved conflicts", let's simulate a check
-    // by looking for overlaps.
-
-    // Group schedules by Timeslot
-    var schedulesByTime = <int, List<Schedule>>{};
-    for (var s in allSchedules) {
-      schedulesByTime.putIfAbsent(s.timeslotId, () => []).add(s);
-    }
-
-    // Check constraints within each timeslot
-    for (var timeslotId in schedulesByTime.keys) {
-      var concurrent = schedulesByTime[timeslotId]!;
-
-      // Check Room Conflicts
-      var schedulesByRoom = <int, List<Schedule>>{};
-      for (var s in concurrent) {
-        schedulesByRoom.putIfAbsent(s.roomId, () => []).add(s);
-      }
-
-      schedulesByRoom.forEach((roomId, roomSchedules) {
-        if (roomSchedules.length > 1) {
-          conflicts.add(
-            ScheduleConflict(
-              type: 'Room Conflict',
-              message:
-                  'Multiple classes in Room $roomId at Timeslot $timeslotId',
-              details:
-                  'Schedules: ${roomSchedules.map((s) => s.id).join(', ')}',
-            ),
-          );
+        for (var schedule in facultySchedules) {
+          currentLoad += subjectUnits[schedule.subjectId] ?? 3.0;
         }
-      });
 
-      // Check Faculty Conflicts
-      var schedulesByFaculty = <int, List<Schedule>>{};
-      for (var s in concurrent) {
-        schedulesByFaculty.putIfAbsent(s.facultyId, () => []).add(s);
+        facultyLoad.add(
+          FacultyLoadData(
+            facultyName: faculty.name,
+            currentLoad: currentLoad,
+            maxLoad: (faculty.maxLoad).toDouble(),
+          ),
+        );
       }
-      schedulesByFaculty.forEach((facultyId, facSchedules) {
-        if (facSchedules.length > 1) {
-          conflicts.add(
-            ScheduleConflict(
-              type: 'Faculty Conflict',
-              message:
-                  'Faculty $facultyId has multiple classes at Timeslot $timeslotId',
-              details: 'Schedules: ${facSchedules.map((s) => s.id).join(', ')}',
-            ),
-          );
-        }
-      });
-    }
+      print('[DEBUG] getDashboardStats: Step 2 complete');
 
-    return DashboardStats(
-      totalSchedules: totalSchedules,
-      totalFaculty: totalFaculty,
-      totalStudents: totalStudents,
-      totalConflicts: conflicts.length,
-      facultyLoad: facultyLoad,
-      recentConflicts: conflicts,
-    );
+      // 3. Integrity Check (Conflicts)
+      print('[DEBUG] getDashboardStats: Step 3 - Calculating conflicts');
+      List<ScheduleConflict> conflicts = [];
+
+      var schedulesByTime = <int, List<Schedule>>{};
+      for (var s in allSchedules) {
+        schedulesByTime.putIfAbsent(s.timeslotId, () => []).add(s);
+      }
+
+      for (var timeslotId in schedulesByTime.keys) {
+        var concurrent = schedulesByTime[timeslotId]!;
+
+        var schedulesByRoom = <int, List<Schedule>>{};
+        for (var s in concurrent) {
+          schedulesByRoom.putIfAbsent(s.roomId, () => []).add(s);
+        }
+
+        schedulesByRoom.forEach((roomId, roomSchedules) {
+          if (roomSchedules.length > 1) {
+            conflicts.add(
+              ScheduleConflict(
+                type: 'Room Conflict',
+                message: 'Multiple classes in Room $roomId at Timeslot $timeslotId',
+                details: 'Schedules: ${roomSchedules.map((s) => s.id).join(', ')}',
+              ),
+            );
+          }
+        });
+
+        var schedulesByFaculty = <int, List<Schedule>>{};
+        for (var s in concurrent) {
+          schedulesByFaculty.putIfAbsent(s.facultyId, () => []).add(s);
+        }
+        schedulesByFaculty.forEach((facultyId, facSchedules) {
+          if (facSchedules.length > 1) {
+            conflicts.add(
+              ScheduleConflict(
+                type: 'Faculty Conflict',
+                message: 'Faculty $facultyId has multiple classes at Timeslot $timeslotId',
+                details: 'Schedules: ${facSchedules.map((s) => s.id).join(', ')}',
+              ),
+            );
+          }
+        });
+      }
+      print('[DEBUG] getDashboardStats: Step 3 complete. Found ${conflicts.length} conflicts.');
+
+      return DashboardStats(
+        totalSchedules: totalSchedules,
+        totalFaculty: totalFaculty,
+        totalStudents: totalStudents,
+        totalConflicts: conflicts.length,
+        facultyLoad: facultyLoad,
+        recentConflicts: conflicts,
+      );
+    } catch (e, stack) {
+      print('[ERROR] getDashboardStats failed: $e');
+      print('[ERROR] Stack trace: \n$stack');
+      rethrow;
+    }
   }
 }
+

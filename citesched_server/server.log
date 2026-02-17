@@ -1,0 +1,9 @@
+SERVERPOD version: 3.2.3, dart: 3.10.7 (stable) (Tue Dec 23 00:01:57 2025 -0800) on "windows_x64", time: 2026-02-17 13:45:59.755343Z
+runMode: development
+serverId: default
+role: monolith
+loggingMode: normal
+applyMigrations: false
+applyRepairMigration: false
+SERVERPOD initialized, time: 2026-02-17 13:45:59.859154Z
+2026-02-17 13:46:01.175195Z WebServer  INFO: Webserver listening on http://localhost:8085

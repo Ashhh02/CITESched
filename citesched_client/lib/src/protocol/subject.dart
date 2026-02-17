@@ -12,6 +12,7 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod_client/serverpod_client.dart' as _i1;
 import 'subject_type.dart' as _i2;
+import 'program.dart' as _i3;
 
 abstract class Subject implements _i1.SerializableModel {
   Subject._({
@@ -22,6 +23,8 @@ abstract class Subject implements _i1.SerializableModel {
     this.yearLevel,
     this.term,
     required this.type,
+    required this.program,
+    required this.studentsCount,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -34,6 +37,8 @@ abstract class Subject implements _i1.SerializableModel {
     int? yearLevel,
     int? term,
     required _i2.SubjectType type,
+    required _i3.Program program,
+    required int studentsCount,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _SubjectImpl;
@@ -47,6 +52,8 @@ abstract class Subject implements _i1.SerializableModel {
       yearLevel: jsonSerialization['yearLevel'] as int?,
       term: jsonSerialization['term'] as int?,
       type: _i2.SubjectType.fromJson((jsonSerialization['type'] as String)),
+      program: _i3.Program.fromJson((jsonSerialization['program'] as String)),
+      studentsCount: jsonSerialization['studentsCount'] as int,
       createdAt: _i1.DateTimeJsonExtension.fromJson(
         jsonSerialization['createdAt'],
       ),
@@ -73,6 +80,10 @@ abstract class Subject implements _i1.SerializableModel {
 
   _i2.SubjectType type;
 
+  _i3.Program program;
+
+  int studentsCount;
+
   DateTime createdAt;
 
   DateTime updatedAt;
@@ -88,6 +99,8 @@ abstract class Subject implements _i1.SerializableModel {
     int? yearLevel,
     int? term,
     _i2.SubjectType? type,
+    _i3.Program? program,
+    int? studentsCount,
     DateTime? createdAt,
     DateTime? updatedAt,
   });
@@ -102,6 +115,8 @@ abstract class Subject implements _i1.SerializableModel {
       if (yearLevel != null) 'yearLevel': yearLevel,
       if (term != null) 'term': term,
       'type': type.toJson(),
+      'program': program.toJson(),
+      'studentsCount': studentsCount,
       'createdAt': createdAt.toJson(),
       'updatedAt': updatedAt.toJson(),
     };
@@ -124,6 +139,8 @@ class _SubjectImpl extends Subject {
     int? yearLevel,
     int? term,
     required _i2.SubjectType type,
+    required _i3.Program program,
+    required int studentsCount,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : super._(
@@ -134,6 +151,8 @@ class _SubjectImpl extends Subject {
          yearLevel: yearLevel,
          term: term,
          type: type,
+         program: program,
+         studentsCount: studentsCount,
          createdAt: createdAt,
          updatedAt: updatedAt,
        );
@@ -150,6 +169,8 @@ class _SubjectImpl extends Subject {
     Object? yearLevel = _Undefined,
     Object? term = _Undefined,
     _i2.SubjectType? type,
+    _i3.Program? program,
+    int? studentsCount,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -161,6 +182,8 @@ class _SubjectImpl extends Subject {
       yearLevel: yearLevel is int? ? yearLevel : this.yearLevel,
       term: term is int? ? term : this.term,
       type: type ?? this.type,
+      program: program ?? this.program,
+      studentsCount: studentsCount ?? this.studentsCount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

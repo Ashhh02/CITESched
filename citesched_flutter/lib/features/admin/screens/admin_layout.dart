@@ -1,5 +1,10 @@
 import 'package:citesched_flutter/core/theme/app_theme.dart';
 import 'package:citesched_flutter/features/admin/screens/admin_dashboard_screen.dart';
+import 'package:citesched_flutter/features/admin/screens/faculty_management_screen.dart';
+import 'package:citesched_flutter/features/admin/screens/faculty_loading_screen.dart';
+import 'package:citesched_flutter/features/admin/screens/subject_management_screen.dart';
+import 'package:citesched_flutter/features/admin/screens/room_management_screen.dart';
+import 'package:citesched_flutter/features/admin/screens/timetable_screen.dart';
 import 'package:citesched_flutter/features/admin/widgets/admin_sidebar.dart';
 
 import 'package:flutter/material.dart';
@@ -16,30 +21,11 @@ class _AdminLayoutState extends State<AdminLayout> {
 
   final List<Widget> _screens = [
     const AdminDashboardScreen(),
-    const Center(
-      child: Text(
-        'Adding Faculty - Coming Soon',
-        style: TextStyle(color: Colors.black),
-      ),
-    ),
-    const Center(
-      child: Text(
-        'Faculty Loading - Coming Soon',
-        style: TextStyle(color: Colors.black),
-      ),
-    ),
-    const Center(
-      child: Text('Subjects Management', style: TextStyle(color: Colors.black)),
-    ),
-    const Center(
-      child: Text('Rooms Management', style: TextStyle(color: Colors.black)),
-    ),
-    const Center(
-      child: Text(
-        'Timetable - Coming Soon',
-        style: TextStyle(color: Colors.black),
-      ),
-    ),
+    const FacultyManagementScreen(),
+    const FacultyLoadingScreen(),
+    const SubjectManagementScreen(),
+    const RoomManagementScreen(),
+    const TimetableScreen(),
     const Center(
       child: Text(
         'Conflicts - Coming Soon',
