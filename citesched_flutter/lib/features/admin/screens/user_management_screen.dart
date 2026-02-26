@@ -35,6 +35,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         ? ref.watch(archivedStudentsProvider)
         : ref.watch(studentsProvider);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       backgroundColor: DesignSystem.backgroundColor,
       body: SingleChildScrollView(
@@ -43,79 +45,94 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Hero Section ──────────────────────────────────────────────
+            // Header (Standardized Maroon Gradient Banner)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [maroonColor, const Color(0xFFb5179e)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
+                  colors: [maroonColor, const Color(0xFF8e005b)],
                 ),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
                     color: maroonColor.withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+                    blurRadius: 25,
+                    offset: const Offset(0, 12),
                   ),
                 ],
               ),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(
-                      Icons.manage_accounts_rounded,
-                      color: Colors.white,
-                      size: 36,
-                    ),
-                  ),
-                  const SizedBox(width: 24),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'User Management',
-                          style: GoogleFonts.poppins(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Manage student accounts and section assignments',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
+                        child: const Icon(
+                          Icons.manage_accounts_rounded,
+                          color: Colors.white,
+                          size: 32,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 24),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'User Management',
+                            style: GoogleFonts.poppins(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: -1,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Manage student accounts and section assignments',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              color: Colors.white.withValues(alpha: 0.8),
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
+                  const SizedBox(width: 16),
                   ElevatedButton.icon(
-                    onPressed: () => _showAddStudentModal(),
-                    icon: const Icon(Icons.person_add_rounded, size: 18),
+                    onPressed: _showAddStudentModal,
+                    icon: const Icon(Icons.person_add_rounded, size: 24),
                     label: Text(
                       'Add Student',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: maroonColor,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
+                        horizontal: 28,
+                        vertical: 18,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                      elevation: 0,
                     ),
                   ),
                 ],
@@ -222,9 +239,15 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                 }
 
                 return Container(
+                  width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white10
+                          : Colors.black.withOpacity(0.05),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.04),
