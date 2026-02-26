@@ -1,5 +1,6 @@
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/features/auth/widgets/logout_confirmation_dialog.dart';
+import 'package:citesched_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,9 +17,11 @@ class AdminSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Maroon theme color from design
-    final maroonColor = const Color(0xFF720045);
-    final innerMenuBg = const Color(0xFF7b004f);
+    // Formal maroon theme color from design system
+    final maroonColor = DesignSystem.headerColor;
+    final innerMenuBg =
+        Color.lerp(DesignSystem.headerColor, Colors.black, 0.15) ??
+        DesignSystem.headerColor;
 
     return Container(
       width: 260, // var(--sidebar-width)
@@ -83,7 +86,7 @@ class AdminSidebar extends ConsumerWidget {
                   _buildNavItem(7, Icons.assessment_outlined, 'Reports'),
                   const SizedBox(height: 12),
                   _buildNavItem(
-                    8,
+                    9,
                     Icons.logout_rounded,
                     'Logout',
                     isLogout: true,

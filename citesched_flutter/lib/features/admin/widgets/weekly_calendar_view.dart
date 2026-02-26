@@ -155,7 +155,11 @@ class WeeklyCalendarView extends StatelessWidget {
                       padding: const EdgeInsets.all(4),
                       decoration: isPreferredTime
                           ? BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
+                              color: Colors.black,
+                              borderRadius: const BorderRadius.only(
+                                topRight: Radius.circular(8),
+                                bottomRight: Radius.circular(8),
+                              ),
                             )
                           : null,
                       child: Column(
@@ -164,7 +168,9 @@ class WeeklyCalendarView extends StatelessWidget {
                             _formatHour(hour),
                             style: GoogleFonts.poppins(
                               fontSize: 12,
-                              color: Colors.grey,
+                              color: isPreferredTime
+                                  ? Colors.white
+                                  : Colors.grey,
                             ),
                           ),
                           if (isPreferredTime)
@@ -173,7 +179,7 @@ class WeeklyCalendarView extends StatelessWidget {
                               style: GoogleFonts.poppins(
                                 fontSize: 8,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.green[700],
+                                color: Colors.white70,
                               ),
                             ),
                         ],
@@ -184,7 +190,7 @@ class WeeklyCalendarView extends StatelessWidget {
                         width: dayWidth,
                         decoration: BoxDecoration(
                           color: isPreferredTime
-                              ? Colors.green.withOpacity(0.02)
+                              ? Colors.black.withOpacity(0.04)
                               : (_isDayHighlighted(day) &&
                                         _isTimeHighlighted(hour)
                                     ? maroonColor.withOpacity(0.03)
@@ -276,47 +282,100 @@ class WeeklyCalendarView extends StatelessWidget {
     final double height = (prefRange.end - prefRange.start) * hourHeight;
     final double left = 80 + (dayIndex * dayWidth);
 
-    String label = '';
-    switch (selectedFaculty!.shiftPreference) {
+    // Build label
+    String shiftLabel = '';
+    String timeRange = '';
+    switch (selectedFaculty?.shiftPreference) {
       case FacultyShiftPreference.morning:
-        label = 'MORNING SHIFT';
+        shiftLabel = 'Morning';
+        timeRange = '7AM – 12PM';
         break;
       case FacultyShiftPreference.afternoon:
-        label = 'AFTERNOON SHIFT';
+        shiftLabel = 'Afternoon';
+        timeRange = '1PM – 6PM';
         break;
       case FacultyShiftPreference.evening:
-        label = 'EVENING SHIFT';
+        shiftLabel = 'Evening';
+        timeRange = '6PM – 9PM';
         break;
       case FacultyShiftPreference.any:
-        label = 'FLEXIBLE SHIFT';
+        shiftLabel = 'Any Shift';
+        timeRange = 'Flexible';
         break;
       case FacultyShiftPreference.custom:
-        label = 'PREFERRED HOURS';
+        shiftLabel = 'Custom';
+        timeRange = selectedFaculty?.preferredHours ?? '';
         break;
-      case null:
+      default:
         break;
     }
 
     return Positioned(
-      top: top,
-      left: left,
-      width: dayWidth,
-      height: height,
+      top: top + 4,
+      left: left + 4,
+      width: dayWidth - 8,
+      height: height - 8,
       child: IgnorePointer(
         child: Container(
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: RotatedBox(
-            quarterTurns: 3,
-            child: Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: Colors.green.withOpacity(0.04),
-                letterSpacing: 4,
-              ),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          decoration: BoxDecoration(
+            color: maroonColor.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: maroonColor.withOpacity(0.25),
+              width: 1.5,
             ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.star_rounded,
+                size: 16,
+                color: maroonColor.withOpacity(0.5),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Preferred',
+                style: GoogleFonts.poppins(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: maroonColor.withOpacity(0.7),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              Text(
+                shiftLabel,
+                style: GoogleFonts.poppins(
+                  fontSize: 8,
+                  color: maroonColor.withOpacity(0.55),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (timeRange.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: maroonColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    timeRange,
+                    style: GoogleFonts.poppins(
+                      fontSize: 7,
+                      fontWeight: FontWeight.w600,
+                      color: maroonColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),
@@ -352,20 +411,15 @@ class WeeklyCalendarView extends StatelessWidget {
     final double left = 80 + (dayIndex * dayWidth);
 
     final bool hasConflict = info.conflicts.isNotEmpty;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Use a more professional color scheme for the "Instructor Label" view
-    final Color blockColor = selectedFaculty != null
-        ? (isDark ? Colors.blueGrey[900]! : Colors.white).withOpacity(0.9)
-        : (hasConflict
-              ? Colors.red.withOpacity(0.08)
-              : maroonColor.withOpacity(0.05));
+    // Black card design per specification
+    final Color blockColor = hasConflict
+        ? const Color(0xFF2D0000) // Dark red-black for conflicts
+        : Colors.black;
 
     final Color borderColor = hasConflict
         ? Colors.red.shade400
-        : (selectedFaculty != null
-              ? maroonColor
-              : maroonColor.withOpacity(0.3));
+        : Colors.grey[800]!;
 
     return Positioned(
       top: top + 2,
@@ -376,82 +430,93 @@ class WeeklyCalendarView extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _showScheduleDetails(context, info),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
               color: blockColor,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: borderColor,
-                width: selectedFaculty != null || hasConflict ? 2 : 1,
+                width: hasConflict ? 2 : 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withOpacity(0.25),
                   blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  offset: const Offset(0, 3),
                 ),
                 if (hasConflict)
                   BoxShadow(
-                    color: Colors.red.withOpacity(0.15),
+                    color: Colors.red.withOpacity(0.2),
                     blurRadius: 12,
                     spreadRadius: 2,
                   ),
               ],
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Top Label: "Preferred Time"
                 Text(
-                  selectedFaculty != null
-                      ? selectedFaculty!.name.toUpperCase()
-                      : (schedule.faculty?.name ?? 'UNASSIGNED'),
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
-                    color: maroonColor,
-                    letterSpacing: 0.5,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: maroonColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    schedule.subject?.code ?? 'N/A',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
-                      color: maroonColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${timeslot.startTime} – ${timeslot.endTime}',
+                  'Preferred Time',
                   style: GoogleFonts.poppins(
                     fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withOpacity(0.7),
+                    letterSpacing: 0.3,
                   ),
                 ),
-                if (hasConflict) ...[
-                  const Spacer(),
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    size: 16,
-                    color: Colors.red[700],
+                const SizedBox(height: 4),
+                // Main Text: Faculty Name (Bold)
+                Text(
+                  selectedFaculty != null
+                      ? selectedFaculty!.name
+                      : (schedule.faculty?.name ?? 'Unassigned'),
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.white,
+                    height: 1.2,
                   ),
-                ],
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                // Sub Text: Subject Name
+                Text(
+                  schedule.subject?.name ?? schedule.subject?.code ?? 'N/A',
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white.withOpacity(0.85),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const Spacer(),
+                // Bottom: Time range + conflict icon
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${timeslot.startTime} – ${timeslot.endTime}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withOpacity(0.6),
+                        ),
+                      ),
+                    ),
+                    if (hasConflict)
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 16,
+                        color: Colors.red[300],
+                      ),
+                  ],
+                ),
               ],
             ),
           ),

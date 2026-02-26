@@ -3,6 +3,7 @@ fields:
   facultyId: int
   facultyName: String
   totalUnits: double
+  totalHours: double
   totalSubjects: int
   loadStatus: String # Underloaded, Balanced, Overloaded
   program: String?

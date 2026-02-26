@@ -1,4 +1,4 @@
-import 'package:citesched_client/citesched_client.dart';
+﻿import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +23,7 @@ class _FacultyManagementScreenState
     extends ConsumerState<FacultyManagementScreen> {
   String _searchQuery = '';
   Program? _selectedProgram;
+  bool _isShowingArchived = false;
   final TextEditingController _searchController = TextEditingController();
 
   // Color scheme matching admin sidebar
@@ -64,17 +65,140 @@ class _FacultyManagementScreenState
     );
   }
 
-  void _deleteFaculty(Faculty faculty) async {
+  void _archiveFaculty(Faculty faculty) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          'Delete Faculty',
+          'Archive Faculty',
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'Are you sure you want to delete ${faculty.name}? This action cannot be undone.',
+          'Are you sure you want to archive ${faculty.name}? They will be hidden from active lists.',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Archive', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        final archivedFaculty = faculty.copyWith(isActive: false);
+        await client.admin.updateFaculty(archivedFaculty);
+        ref.refresh(facultyListProvider);
+        ref.refresh(archivedFacultyListProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Faculty archived successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error archiving faculty: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _restoreFaculty(Faculty faculty) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Restore Faculty',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to restore ${faculty.name}? They will reappear in active lists.',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Restore', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        final restoredFaculty = faculty.copyWith(isActive: true);
+        await client.admin.updateFaculty(restoredFaculty);
+        ref.refresh(facultyListProvider);
+        ref.refresh(archivedFacultyListProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Faculty restored successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error restoring faculty: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _permanentDeleteFaculty(Faculty faculty) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Text(
+              'Permanent Delete',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to PERMANENTLY delete ${faculty.name}? This action cannot be undone.',
           style: GoogleFonts.poppins(),
         ),
         actions: [
@@ -88,7 +212,7 @@ class _FacultyManagementScreenState
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text('Delete', style: GoogleFonts.poppins()),
+            child: Text('Delete Permanently', style: GoogleFonts.poppins()),
           ),
         ],
       ),
@@ -98,10 +222,11 @@ class _FacultyManagementScreenState
       try {
         await client.admin.deleteFaculty(faculty.id!);
         ref.refresh(facultyListProvider);
+        ref.refresh(archivedFacultyListProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Faculty deleted successfully'),
+            const SnackBar(
+              content: Text('Faculty permanently deleted'),
               backgroundColor: Colors.green,
             ),
           );
@@ -119,9 +244,64 @@ class _FacultyManagementScreenState
     }
   }
 
+  Widget _buildViewToggle(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.grey[200],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildToggleOption('Active', false, isDark),
+          _buildToggleOption('Archived', true, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleOption(String label, bool isArchived, bool isDark) {
+    final isSelected = _isShowingArchived == isArchived;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isShowingArchived = isArchived;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? maroonColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: maroonColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected
+                ? Colors.white
+                : (isDark ? Colors.grey[400] : Colors.grey[600]),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final facultyAsync = ref.watch(facultyListProvider);
+    final facultyAsync = _isShowingArchived
+        ? ref.watch(archivedFacultyListProvider)
+        : ref.watch(facultyListProvider);
     final conflictsAsync = ref.watch(allConflictsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const bgColor = Colors.white;
@@ -136,201 +316,111 @@ class _FacultyManagementScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            isMobile
-                ? Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          maroonColor,
-                          const Color(0xFF8e005b),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: maroonColor.withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.people_rounded,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Faculty Management',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Manage instructors and workload',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      color: Colors.white.withValues(
-                                        alpha: 0.8,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _showAddFacultyModal,
-                            icon: const Icon(Icons.add_rounded, size: 20),
-                            label: Text(
-                              'Add Faculty Member',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: maroonColor,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              elevation: 0,
-                            ),
+            // Header (Standardized Maroon Gradient Banner)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    maroonColor,
+                    const Color(0xFF8e005b),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: maroonColor.withValues(alpha: 0.3),
+                    blurRadius: 25,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
                           ),
                         ),
-                      ],
-                    ),
-                  )
-                : Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          maroonColor,
-                          const Color(0xFF8e005b),
-                        ],
+                        child: const Icon(
+                          Icons.people_outline_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color: maroonColor.withValues(alpha: 0.3),
-                          blurRadius: 25,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.people_outline_rounded,
-                                color: Colors.white,
-                                size: 32,
-                              ),
-                            ),
-                            const SizedBox(width: 24),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Faculty Management',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -1,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Manage faculty members, workload assignments, and preferences',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: _showAddFacultyModal,
-                          icon: const Icon(Icons.add_rounded, size: 20),
-                          label: Text(
-                            'Add Faculty Member',
+                      const SizedBox(width: 24),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Faculty Management',
                             style: GoogleFonts.poppins(
+                              fontSize: isMobile ? 24 : 32,
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: 0.5,
+                              color: Colors.white,
+                              letterSpacing: -1,
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: maroonColor,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 28,
-                              vertical: 20,
+                          const SizedBox(height: 4),
+                          Text(
+                            'Manage instructors, workloads, and schedules',
+                            style: GoogleFonts.poppins(
+                              fontSize: isMobile ? 12 : 16,
+                              color: Colors.white.withValues(alpha: 0.8),
+                              letterSpacing: 0.2,
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            elevation: 8,
-                            shadowColor: Colors.black.withValues(alpha: 0.2),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
+                    onPressed: _showAddFacultyModal,
+                    icon: const Icon(Icons.person_add_rounded, size: 24),
+                    label: Text(
+                      isMobile ? 'Add' : 'Add Faculty Member',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: maroonColor,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 16 : 28,
+                        vertical: isMobile ? 12 : 18,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
                     ),
                   ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 32),
 
             // Search and Filter Row
             isMobile
                 ? Column(
                     children: [
+                      _buildViewToggle(isDark),
+                      const SizedBox(height: 16),
                       _buildSearchBar(isDark),
                       const SizedBox(height: 16),
                       _buildProgramFilter(facultyAsync, isDark),
@@ -347,10 +437,11 @@ class _FacultyManagementScreenState
                         flex: 2,
                         child: _buildProgramFilter(facultyAsync, isDark),
                       ),
+                      const SizedBox(width: 16),
+                      _buildViewToggle(isDark),
                     ],
                   ),
             const SizedBox(height: 32),
-            const SizedBox(height: 24),
 
             // Faculty Table
             Expanded(
@@ -618,46 +709,121 @@ class _FacultyManagementScreenState
                                               ),
                                             ),
                                             DataCell(
-                                              Row(
-                                                children: [
-                                                  Container(
-                                                    width: 40,
-                                                    height: 40,
-                                                    decoration: BoxDecoration(
-                                                      color: maroonColor,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            10,
-                                                          ),
-                                                    ),
-                                                    child: Center(
-                                                      child: Text(
-                                                        faculty.name.isNotEmpty
-                                                            ? faculty.name[0]
-                                                                  .toUpperCase()
-                                                            : '?',
-                                                        style:
-                                                            GoogleFonts.poppins(
-                                                              color:
-                                                                  Colors.white,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                              fontSize: 16,
+                                              conflictsAsync.when(
+                                                loading: () => Row(
+                                                  children: [
+                                                    Container(
+                                                      width: 40,
+                                                      height: 40,
+                                                      decoration: BoxDecoration(
+                                                        color: maroonColor,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              10,
                                                             ),
                                                       ),
+                                                      child: Center(
+                                                        child: Text(
+                                                          faculty
+                                                                  .name
+                                                                  .isNotEmpty
+                                                              ? faculty.name[0]
+                                                                    .toUpperCase()
+                                                              : '?',
+                                                          style:
+                                                              GoogleFonts.poppins(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontSize: 16,
+                                                              ),
+                                                        ),
+                                                      ),
                                                     ),
-                                                  ),
-                                                  const SizedBox(width: 12),
-                                                  Text(
-                                                    faculty.name,
-                                                    style: GoogleFonts.poppins(
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      fontSize: 14,
+                                                    const SizedBox(width: 12),
+                                                    Text(
+                                                      faculty.name,
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            fontSize: 14,
+                                                          ),
                                                     ),
+                                                  ],
+                                                ),
+                                                error: (_, __) => Text(
+                                                  faculty.name,
+                                                  style: GoogleFonts.poppins(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 14,
                                                   ),
-                                                ],
+                                                ),
+                                                data: (conflicts) {
+                                                  final hasNameConflict =
+                                                      conflicts
+                                                          .hasConflictForFaculty(
+                                                            faculty.id!,
+                                                          );
+                                                  return Row(
+                                                    children: [
+                                                      Container(
+                                                        width: 40,
+                                                        height: 40,
+                                                        decoration: BoxDecoration(
+                                                          color: maroonColor,
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                10,
+                                                              ),
+                                                        ),
+                                                        child: Center(
+                                                          child: Text(
+                                                            faculty
+                                                                    .name
+                                                                    .isNotEmpty
+                                                                ? faculty
+                                                                      .name[0]
+                                                                      .toUpperCase()
+                                                                : '?',
+                                                            style:
+                                                                GoogleFonts.poppins(
+                                                                  color: Colors
+                                                                      .white,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  fontSize: 16,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 12),
+                                                      Text(
+                                                        faculty.name,
+                                                        style:
+                                                            GoogleFonts.poppins(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              fontSize: 14,
+                                                            ),
+                                                      ),
+                                                      if (hasNameConflict) ...[
+                                                        const SizedBox(
+                                                          width: 6,
+                                                        ),
+                                                        Icon(
+                                                          Icons.warning_rounded,
+                                                          color: Colors.red,
+                                                          size: 16,
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  );
+                                                },
                                               ),
                                             ),
                                             DataCell(
@@ -681,7 +847,7 @@ class _FacultyManagementScreenState
                                             ),
                                             DataCell(
                                               Text(
-                                                faculty.program.name
+                                                (faculty.program?.name ?? '—')
                                                     .toUpperCase(),
                                                 style: GoogleFonts.poppins(
                                                   fontSize: 13,
@@ -767,6 +933,15 @@ class _FacultyManagementScreenState
                                                       .hasConflictForFaculty(
                                                         faculty.id!,
                                                       );
+                                                  final conflictCount = conflicts
+                                                      .where(
+                                                        (c) =>
+                                                            c.facultyId ==
+                                                                faculty.id ||
+                                                            c.conflictingScheduleId ==
+                                                                faculty.id,
+                                                      )
+                                                      .length;
                                                   return Container(
                                                     padding:
                                                         const EdgeInsets.symmetric(
@@ -799,19 +974,39 @@ class _FacultyManagementScreenState
                                                                   ),
                                                       ),
                                                     ),
-                                                    child: Text(
-                                                      hasConflict
-                                                          ? 'CONFLICT'
-                                                          : 'CLEAR',
-                                                      style:
-                                                          GoogleFonts.poppins(
-                                                            fontSize: 10,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            color: hasConflict
-                                                                ? Colors.red
-                                                                : Colors.green,
+                                                    child: Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        if (hasConflict) ...[
+                                                          const Icon(
+                                                            Icons
+                                                                .warning_rounded,
+                                                            color: Colors.red,
+                                                            size: 14,
                                                           ),
+                                                          const SizedBox(
+                                                            width: 4,
+                                                          ),
+                                                        ],
+                                                        Text(
+                                                          hasConflict
+                                                              ? '$conflictCount âš '
+                                                              : '—',
+                                                          style:
+                                                              GoogleFonts.poppins(
+                                                                fontSize: 10,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color:
+                                                                    hasConflict
+                                                                    ? Colors.red
+                                                                    : Colors
+                                                                          .grey,
+                                                              ),
+                                                        ),
+                                                      ],
                                                     ),
                                                   );
                                                 },
@@ -880,7 +1075,9 @@ class _FacultyManagementScreenState
                                                   ),
                                                   const SizedBox(width: 6),
                                                   Text(
-                                                    '${faculty.maxLoad} hrs',
+                                                    faculty.maxLoad != null
+                                                        ? '${faculty.maxLoad} Units'
+                                                        : '—',
                                                     style: GoogleFonts.poppins(
                                                       fontSize: 13,
                                                       fontWeight:
@@ -894,73 +1091,151 @@ class _FacultyManagementScreenState
                                               Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  Material(
-                                                    color: Colors.transparent,
-                                                    child: InkWell(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
-                                                      onTap: () =>
-                                                          _showEditFacultyModal(
-                                                            faculty,
-                                                          ),
-                                                      child: Container(
-                                                        padding:
-                                                            const EdgeInsets.all(
+                                                  if (!_isShowingArchived) ...[
+                                                    Material(
+                                                      color: Colors.transparent,
+                                                      child: InkWell(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
                                                               8,
                                                             ),
-                                                        decoration: BoxDecoration(
-                                                          color: maroonColor
-                                                              .withOpacity(0.1),
-                                                          borderRadius:
-                                                              BorderRadius.circular(
+                                                        onTap: () =>
+                                                            _showEditFacultyModal(
+                                                              faculty,
+                                                            ),
+                                                        child: Container(
+                                                          padding:
+                                                              const EdgeInsets.all(
                                                                 8,
                                                               ),
-                                                        ),
-                                                        child: Icon(
-                                                          Icons.edit_outlined,
-                                                          color: maroonColor,
-                                                          size: 18,
+                                                          decoration: BoxDecoration(
+                                                            color: maroonColor
+                                                                .withOpacity(
+                                                                  0.1,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          child: Icon(
+                                                            Icons.edit_outlined,
+                                                            color: maroonColor,
+                                                            size: 18,
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Material(
-                                                    color: Colors.transparent,
-                                                    child: InkWell(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
-                                                      onTap: () =>
-                                                          _deleteFaculty(
-                                                            faculty,
-                                                          ),
-                                                      child: Container(
-                                                        padding:
-                                                            const EdgeInsets.all(
+                                                    const SizedBox(width: 8),
+                                                    Material(
+                                                      color: Colors.transparent,
+                                                      child: InkWell(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
                                                               8,
                                                             ),
-                                                        decoration: BoxDecoration(
-                                                          color: Colors.red
-                                                              .withOpacity(
-                                                                0.1,
-                                                              ),
-                                                          borderRadius:
-                                                              BorderRadius.circular(
+                                                        onTap: () =>
+                                                            _archiveFaculty(
+                                                              faculty,
+                                                            ),
+                                                        child: Container(
+                                                          padding:
+                                                              const EdgeInsets.all(
                                                                 8,
                                                               ),
-                                                        ),
-                                                        child: const Icon(
-                                                          Icons.delete_outline,
-                                                          color: Colors.red,
-                                                          size: 18,
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.orange
+                                                                .withOpacity(
+                                                                  0.1,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          child: const Icon(
+                                                            Icons
+                                                                .archive_outlined,
+                                                            color:
+                                                                Colors.orange,
+                                                            size: 18,
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
-                                                  ),
+                                                  ] else ...[
+                                                    Material(
+                                                      color: Colors.transparent,
+                                                      child: InkWell(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                        onTap: () =>
+                                                            _restoreFaculty(
+                                                              faculty,
+                                                            ),
+                                                        child: Container(
+                                                          padding:
+                                                              const EdgeInsets.all(
+                                                                8,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.green
+                                                                .withOpacity(
+                                                                  0.1,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          child: const Icon(
+                                                            Icons
+                                                                .restore_rounded,
+                                                            color: Colors.green,
+                                                            size: 18,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Material(
+                                                      color: Colors.transparent,
+                                                      child: InkWell(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                        onTap: () =>
+                                                            _permanentDeleteFaculty(
+                                                              faculty,
+                                                            ),
+                                                        child: Container(
+                                                          padding:
+                                                              const EdgeInsets.all(
+                                                                8,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.red
+                                                                .withOpacity(
+                                                                  0.1,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          child: const Icon(
+                                                            Icons
+                                                                .delete_forever_rounded,
+                                                            color: Colors.red,
+                                                            size: 18,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ],
                                               ),
                                             ),
@@ -986,7 +1261,8 @@ class _FacultyManagementScreenState
     );
   }
 
-  Color _getStatusColor(EmploymentStatus status) {
+  Color _getStatusColor(EmploymentStatus? status) {
+    if (status == null) return Colors.grey;
     switch (status) {
       case EmploymentStatus.fullTime:
         return Colors.green;
@@ -995,7 +1271,8 @@ class _FacultyManagementScreenState
     }
   }
 
-  String _getStatusText(EmploymentStatus status) {
+  String _getStatusText(EmploymentStatus? status) {
+    if (status == null) return '—';
     switch (status) {
       case EmploymentStatus.fullTime:
         return 'Full-Time';
@@ -1004,7 +1281,8 @@ class _FacultyManagementScreenState
     }
   }
 
-  IconData _getStatusIcon(EmploymentStatus status) {
+  IconData _getStatusIcon(EmploymentStatus? status) {
+    if (status == null) return Icons.help_outline;
     switch (status) {
       case EmploymentStatus.fullTime:
         return Icons.verified;
@@ -1243,7 +1521,7 @@ class _FacultyManagementScreenState
               style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
             ),
             subtitle: Text(
-              faculty.program.name.toUpperCase(),
+              (faculty.program?.name ?? '—').toUpperCase(),
               style: GoogleFonts.poppins(fontSize: 12),
             ),
             children: [
@@ -1273,22 +1551,47 @@ class _FacultyManagementScreenState
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        TextButton.icon(
-                          onPressed: () => _showEditFacultyModal(faculty),
-                          icon: const Icon(Icons.edit_outlined),
-                          label: const Text('Edit'),
-                        ),
-                        TextButton.icon(
-                          onPressed: () => _deleteFaculty(faculty),
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
+                        if (!_isShowingArchived) ...[
+                          TextButton.icon(
+                            onPressed: () => _showEditFacultyModal(faculty),
+                            icon: const Icon(Icons.edit_outlined),
+                            label: const Text('Edit'),
                           ),
-                          label: const Text(
-                            'Delete',
-                            style: TextStyle(color: Colors.red),
+                          TextButton.icon(
+                            onPressed: () => _archiveFaculty(faculty),
+                            icon: const Icon(
+                              Icons.archive_outlined,
+                              color: Colors.orange,
+                            ),
+                            label: const Text(
+                              'Archive',
+                              style: TextStyle(color: Colors.orange),
+                            ),
                           ),
-                        ),
+                        ] else ...[
+                          TextButton.icon(
+                            onPressed: () => _restoreFaculty(faculty),
+                            icon: const Icon(
+                              Icons.restore_rounded,
+                              color: Colors.green,
+                            ),
+                            label: const Text(
+                              'Restore',
+                              style: TextStyle(color: Colors.green),
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => _permanentDeleteFaculty(faculty),
+                            icon: const Icon(
+                              Icons.delete_forever_rounded,
+                              color: Colors.red,
+                            ),
+                            label: const Text(
+                              'Delete',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -1351,15 +1654,21 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _facultyIdController = TextEditingController();
-  final _maxLoadController = TextEditingController(text: '21');
+  final _maxLoadController = TextEditingController();
   final _preferredHoursController = TextEditingController();
 
-  EmploymentStatus _employmentStatus = EmploymentStatus.fullTime;
-  FacultyShiftPreference _shiftPreference = FacultyShiftPreference.morning;
-  Program _program = Program.it;
+  EmploymentStatus? _employmentStatus;
+  FacultyShiftPreference? _shiftPreference;
+  Program? _program;
   bool _isActive = true;
   bool _isLoading = false;
   String? _customPreferredHours;
+
+  // â”€â”€â”€ Faculty Availability (Day Picker) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  final List<_AvailabilityEntry> _availabilities = [];
+  DayOfWeek _selectedDay = DayOfWeek.mon;
+  TimeOfDay _startTime = const TimeOfDay(hour: 8, minute: 0);
+  TimeOfDay _endTime = const TimeOfDay(hour: 12, minute: 0);
 
   @override
   void dispose() {
@@ -1377,6 +1686,16 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
       debugPrint('Add Faculty validation failed');
       return;
     }
+    // Validate nullable dropdowns
+    if (_employmentStatus == null || _program == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select Employment Status and Program'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -1385,18 +1704,38 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         facultyId: _facultyIdController.text.trim(),
-        maxLoad: int.parse(_maxLoadController.text),
-        employmentStatus: _employmentStatus,
+        maxLoad: int.tryParse(_maxLoadController.text) ?? 0,
+        employmentStatus: _employmentStatus!,
         shiftPreference: _shiftPreference,
         preferredHours: _customPreferredHours,
         userInfoId: 0, // Placeholder, will be set by backend
-        program: _program,
+        program: _program!,
         isActive: _isActive,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
-      await client.admin.createFaculty(faculty);
+      final created = await client.admin.createFaculty(faculty);
+
+      // Save faculty availability if any were added
+      if (_availabilities.isNotEmpty && created.id != null) {
+        final avails = _availabilities
+            .map(
+              (e) => FacultyAvailability(
+                facultyId: created.id!,
+                dayOfWeek: e.day,
+                startTime:
+                    '${e.start.hour.toString().padLeft(2, '0')}:${e.start.minute.toString().padLeft(2, '0')}',
+                endTime:
+                    '${e.end.hour.toString().padLeft(2, '0')}:${e.end.minute.toString().padLeft(2, '0')}',
+                isPreferred: true,
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ),
+            )
+            .toList();
+        await client.admin.setFacultyAvailability(created.id!, avails);
+      }
 
       if (mounted) {
         Navigator.pop(context);
@@ -1736,7 +2075,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
           ),
           const SizedBox(height: 20),
           _buildLabel(
-            'Max Load (hours)',
+            'Max Loads (hours)',
             Icons.access_time_rounded,
             textPrimary,
           ),
@@ -1762,129 +2101,59 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
             Icons.work_outline_rounded,
             textPrimary,
           ),
-          _buildDropdown<EmploymentStatus>(
+          _buildNullableDropdown<EmploymentStatus>(
             value: _employmentStatus,
             bgBody: bgBody,
             textPrimary: textPrimary,
             textMuted: textMuted,
             primaryPurple: primaryPurple,
             items: EmploymentStatus.values,
-            onChanged: (value) => setState(() => _employmentStatus = value!),
+            onChanged: (value) => setState(() => _employmentStatus = value),
             itemLabel: (status) =>
                 status == EmploymentStatus.fullTime ? 'Full-Time' : 'Part-Time',
+            hint: 'Select Status',
           ),
           const SizedBox(height: 20),
           _buildLabel('Shift Preference', Icons.schedule_rounded, textPrimary),
-          _buildDropdown<FacultyShiftPreference>(
+          _buildNullableDropdown<FacultyShiftPreference>(
             value: _shiftPreference,
             bgBody: bgBody,
             textPrimary: textPrimary,
             textMuted: textMuted,
             primaryPurple: primaryPurple,
             items: FacultyShiftPreference.values,
-            onChanged: (value) => setState(() => _shiftPreference = value!),
+            onChanged: (value) => setState(() => _shiftPreference = value),
             itemLabel: (pref) {
               switch (pref) {
                 case FacultyShiftPreference.any:
                   return 'Any Time (Flexible)';
                 case FacultyShiftPreference.morning:
-                  return 'Morning (7:00 AM – 12:00 PM)';
+                  return 'Morning (7:00 AM to 12:00 PM)';
                 case FacultyShiftPreference.afternoon:
-                  return 'Afternoon (1:00 PM – 6:00 PM)';
+                  return 'Afternoon (1:00 PM to 6:00 PM)';
                 case FacultyShiftPreference.evening:
-                  return 'Evening (6:00 PM – 9:00 PM)';
+                  return 'Evening (6:00 PM to 9:00 PM)';
                 case FacultyShiftPreference.custom:
                   return 'Custom';
               }
             },
+            hint: 'Select Shift',
           ),
+
           const SizedBox(height: 24),
-          _buildLabel('Time Preferences', Icons.more_time_rounded, textPrimary),
-          OutlinedButton.icon(
-            onPressed: _showCustomHoursPicker,
-            icon: const Icon(Icons.add_circle_outline, size: 20),
-            label: Text(
-              _customPreferredHours == null
-                  ? 'Add Custom Hours'
-                  : 'Change Custom Hours',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            ),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 54),
-              side: BorderSide(color: primaryPurple, width: 1.5),
-              foregroundColor: primaryPurple,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          if (_customPreferredHours != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green.withOpacity(0.1)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      size: 16,
-                      color: Colors.green,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Custom Hours Applied',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green[700],
-                          ),
-                        ),
-                        Text(
-                          _customPreferredHours!,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: () =>
-                        setState(() => _customPreferredHours = null),
-                    color: textMuted,
-                  ),
-                ],
-              ),
-            ),
-          ],
+          _buildDayPickerSection(primaryPurple, textPrimary, textMuted, bgBody),
           const SizedBox(height: 24),
           _buildLabel('Program Assignment', Icons.school_outlined, textPrimary),
-          _buildDropdown<Program>(
+          _buildNullableDropdown<Program>(
             value: _program,
             bgBody: bgBody,
             textPrimary: textPrimary,
             textMuted: textMuted,
             primaryPurple: primaryPurple,
             items: Program.values,
-            onChanged: (value) => setState(() => _program = value!),
+            onChanged: (value) => setState(() => _program = value),
             itemLabel: (prog) => prog.name.toUpperCase(),
+            hint: 'Select Program',
           ),
           const SizedBox(height: 24),
           InkWell(
@@ -1980,7 +2249,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
   }
 
   Widget _buildDropdown<T>({
-    required T value,
+    required T? value,
     required List<T> items,
     required ValueChanged<T?> onChanged,
     required String Function(T) itemLabel,
@@ -2017,6 +2286,392 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
       ),
     );
   }
+
+  Widget _buildNullableDropdown<T>({
+    required T? value,
+    required List<T> items,
+    required ValueChanged<T?> onChanged,
+    required String Function(T) itemLabel,
+    required Color bgBody,
+    required Color textPrimary,
+    required Color textMuted,
+    required Color primaryPurple,
+    String hint = 'Select...',
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgBody,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          isExpanded: true,
+          hint: Text(
+            hint,
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              color: textMuted,
+            ),
+          ),
+          icon: Icon(Icons.keyboard_arrow_down_rounded, color: textMuted),
+          style: GoogleFonts.poppins(
+            fontSize: 15,
+            color: textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
+          items: items.map((T item) {
+            return DropdownMenuItem<T>(
+              value: item,
+              child: Text(itemLabel(item)),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDayPickerSection(
+    Color primaryPurple,
+    Color textPrimary,
+    Color textMuted,
+    Color bgBody,
+  ) {
+    const days = [
+      DayOfWeek.mon,
+      DayOfWeek.tue,
+      DayOfWeek.wed,
+      DayOfWeek.thu,
+      DayOfWeek.fri,
+      DayOfWeek.sat,
+    ];
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.calendar_month_rounded, size: 16, color: primaryPurple),
+            const SizedBox(width: 6),
+            Text(
+              'Preferred Teaching Days & Time',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: textPrimary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: List.generate(days.length, (i) {
+            final isSelected = _selectedDay == days[i];
+            return GestureDetector(
+              onTap: () => setState(() {
+                _selectedDay = days[i];
+                _shiftPreference = FacultyShiftPreference.custom;
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected ? primaryPurple : Colors.white,
+                  border: Border.all(
+                    color: isSelected ? primaryPurple : Colors.black,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: primaryPurple.withOpacity(0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Text(
+                  dayLabels[i],
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : Colors.black,
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () async {
+                  final p = await showTimePicker(
+                    context: context,
+                    initialTime: _startTime,
+                    helpText: 'Start Time',
+                  );
+                  if (p != null) {
+                    setState(() {
+                      _startTime = p;
+                      _shiftPreference = FacultyShiftPreference.custom;
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: bgBody,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.black.withOpacity(0.08)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.schedule_rounded,
+                        size: 16,
+                        color: primaryPurple,
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Start',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: textMuted,
+                            ),
+                          ),
+                          Text(
+                            _startTime.format(context),
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10),
+              child: Text(
+                '->',
+                style: TextStyle(fontSize: 18, color: Colors.black45),
+              ),
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: () async {
+                  final p = await showTimePicker(
+                    context: context,
+                    initialTime: _endTime,
+                    helpText: 'End Time',
+                  );
+                  if (p != null) {
+                    setState(() {
+                      _endTime = p;
+                      _shiftPreference = FacultyShiftPreference.custom;
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: bgBody,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.black.withOpacity(0.08)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.schedule_rounded,
+                        size: 16,
+                        color: primaryPurple,
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'End',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: textMuted,
+                            ),
+                          ),
+                          Text(
+                            _endTime.format(context),
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              final sM = _startTime.hour * 60 + _startTime.minute;
+              final eM = _endTime.hour * 60 + _endTime.minute;
+              if (eM <= sM) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('End time must be after start time'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              for (final ex in _availabilities) {
+                if (ex.day == _selectedDay) {
+                  final es = ex.start.hour * 60 + ex.start.minute;
+                  final ee = ex.end.hour * 60 + ex.end.minute;
+                  if (sM < ee && es < eM) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Overlapping availability'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                    return;
+                  }
+                }
+              }
+              setState(() {
+                _availabilities.add(
+                  _AvailabilityEntry(
+                    day: _selectedDay,
+                    start: _startTime,
+                    end: _endTime,
+                  ),
+                );
+                // Auto-set shift preference to Custom when availability is added
+                _shiftPreference = FacultyShiftPreference.custom;
+              });
+            },
+            icon: const Icon(Icons.add_circle_outline, size: 18),
+            label: Text(
+              'Add Availability',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              side: BorderSide(color: primaryPurple, width: 1.5),
+              foregroundColor: primaryPurple,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ),
+        if (_availabilities.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: primaryPurple.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: primaryPurple.withOpacity(0.15)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Added (${_availabilities.length})',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: primaryPurple,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ..._availabilities.asMap().entries.map((e) {
+                  final idx = DayOfWeek.values.indexOf(e.value.day);
+                  const dl = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: primaryPurple,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            idx >= 0 ? dl[idx] : '?',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${e.value.start.format(context)} - ${e.value.end.format(context)}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 16),
+                          color: Colors.red,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () =>
+                              setState(() => _availabilities.removeAt(e.key)),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 // Edit Faculty Modal (similar to Add but with pre-filled data)
@@ -2043,12 +2698,18 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
   late TextEditingController _maxLoadController;
   late TextEditingController _preferredHoursController;
 
-  late EmploymentStatus _employmentStatus;
-  late FacultyShiftPreference _shiftPreference;
-  late Program _program;
+  EmploymentStatus? _employmentStatus;
+  FacultyShiftPreference? _shiftPreference;
+  Program? _program;
   late bool _isActive;
   bool _isLoading = false;
   String? _customPreferredHours;
+
+  // Faculty Availability (Day Picker)
+  final List<_AvailabilityEntry> _availabilities = [];
+  DayOfWeek _selectedDay = DayOfWeek.mon;
+  TimeOfDay _startTime = const TimeOfDay(hour: 8, minute: 0);
+  TimeOfDay _endTime = const TimeOfDay(hour: 12, minute: 0);
 
   @override
   void initState() {
@@ -2442,7 +3103,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
           ),
           const SizedBox(height: 20),
           _buildLabel(
-            'Max Load (hours)',
+            'Max Loads (hours)',
             Icons.access_time_rounded,
             textPrimary,
           ),
@@ -2479,107 +3140,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
             itemLabel: (status) =>
                 status == EmploymentStatus.fullTime ? 'Full-Time' : 'Part-Time',
           ),
-          const SizedBox(height: 20),
-          _buildLabel('Shift Preference', Icons.schedule_rounded, textPrimary),
-          _buildDropdown<FacultyShiftPreference>(
-            value: _shiftPreference,
-            bgBody: bgBody,
-            textPrimary: textPrimary,
-            textMuted: textMuted,
-            primaryPurple: primaryPurple,
-            items: FacultyShiftPreference.values,
-            onChanged: (value) => setState(() => _shiftPreference = value!),
-            itemLabel: (pref) {
-              switch (pref) {
-                case FacultyShiftPreference.any:
-                  return 'Any Time (Flexible)';
-                case FacultyShiftPreference.morning:
-                  return 'Morning (7:00 AM – 12:00 PM)';
-                case FacultyShiftPreference.afternoon:
-                  return 'Afternoon (1:00 PM – 6:00 PM)';
-                case FacultyShiftPreference.evening:
-                  return 'Evening (6:00 PM – 9:00 PM)';
-                case FacultyShiftPreference.custom:
-                  return 'Custom';
-              }
-            },
-          ),
-          const SizedBox(height: 24),
-          _buildLabel('Time Preferences', Icons.more_time_rounded, textPrimary),
-          OutlinedButton.icon(
-            onPressed: _showCustomHoursPicker,
-            icon: const Icon(Icons.add_circle_outline, size: 20),
-            label: Text(
-              _customPreferredHours == null
-                  ? 'Add Custom Hours'
-                  : 'Change Custom Hours',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            ),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 54),
-              side: BorderSide(color: primaryPurple, width: 1.5),
-              foregroundColor: primaryPurple,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          if (_customPreferredHours != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green.withOpacity(0.1)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      size: 16,
-                      color: Colors.green,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Custom Hours Applied',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green[700],
-                          ),
-                        ),
-                        Text(
-                          _customPreferredHours!,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: () =>
-                        setState(() => _customPreferredHours = null),
-                    color: textMuted,
-                  ),
-                ],
-              ),
-            ),
-          ],
+
           const SizedBox(height: 24),
           _buildLabel('Program Assignment', Icons.school_outlined, textPrimary),
           _buildDropdown<Program>(
@@ -2686,7 +3247,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
   }
 
   Widget _buildDropdown<T>({
-    required T value,
+    required T? value,
     required List<T> items,
     required ValueChanged<T?> onChanged,
     required String Function(T) itemLabel,
@@ -2723,4 +3284,375 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
       ),
     );
   }
+
+  // â”€â”€â”€ Day Picker Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  Widget _buildDayPickerSection(
+    Color primaryPurple,
+    Color textPrimary,
+    Color textMuted,
+    Color bgBody,
+  ) {
+    const days = [
+      DayOfWeek.mon,
+      DayOfWeek.tue,
+      DayOfWeek.wed,
+      DayOfWeek.thu,
+      DayOfWeek.fri,
+      DayOfWeek.sat,
+    ];
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.calendar_month_rounded, size: 16, color: primaryPurple),
+            const SizedBox(width: 6),
+            Text(
+              'Preferred Teaching Days & Time',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: textPrimary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Day toggle chips
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: List.generate(days.length, (i) {
+            final day = days[i];
+            final isSelected = _selectedDay == day;
+            return GestureDetector(
+              onTap: () => setState(() {
+                _selectedDay = day;
+                _shiftPreference = FacultyShiftPreference.custom;
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected ? primaryPurple : Colors.white,
+                  border: Border.all(
+                    color: isSelected ? primaryPurple : Colors.black,
+                    width: 1,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: primaryPurple.withOpacity(0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Text(
+                  dayLabels[i],
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : Colors.black,
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 14),
+        // Start / End time row
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () async {
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: _startTime,
+                    helpText: 'Select Start Time',
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      _startTime = picked;
+                      _shiftPreference = FacultyShiftPreference.custom;
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: bgBody,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.black.withOpacity(0.08)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.schedule_rounded,
+                        size: 16,
+                        color: primaryPurple,
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Start',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: textMuted,
+                            ),
+                          ),
+                          Text(
+                            _startTime.format(context),
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10),
+              child: Text(
+                'â†’',
+                style: TextStyle(fontSize: 18, color: Colors.black45),
+              ),
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: () async {
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: _endTime,
+                    helpText: 'Select End Time',
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      _endTime = picked;
+                      _shiftPreference = FacultyShiftPreference.custom;
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: bgBody,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.black.withOpacity(0.08)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.schedule_rounded,
+                        size: 16,
+                        color: primaryPurple,
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'End',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: textMuted,
+                            ),
+                          ),
+                          Text(
+                            _endTime.format(context),
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Add button
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              final startMins = _startTime.hour * 60 + _startTime.minute;
+              final endMins = _endTime.hour * 60 + _endTime.minute;
+              if (endMins <= startMins) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('End time must be after start time'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              // Check duplicate day/time overlap
+              for (final existing in _availabilities) {
+                if (existing.day == _selectedDay) {
+                  final eStart =
+                      existing.start.hour * 60 + existing.start.minute;
+                  final eEnd = existing.end.hour * 60 + existing.end.minute;
+                  if (startMins < eEnd && eStart < endMins) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Overlapping availability for same day'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                    return;
+                  }
+                }
+              }
+              setState(() {
+                _availabilities.add(
+                  _AvailabilityEntry(
+                    day: _selectedDay,
+                    start: _startTime,
+                    end: _endTime,
+                  ),
+                );
+                // Auto-set shift preference to Custom when availability is added
+                _shiftPreference = FacultyShiftPreference.custom;
+              });
+            },
+            icon: const Icon(Icons.add_circle_outline, size: 18),
+            label: Text(
+              'Add Availability',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              side: BorderSide(color: primaryPurple, width: 1.5),
+              foregroundColor: primaryPurple,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ),
+        if (_availabilities.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: primaryPurple.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: primaryPurple.withOpacity(0.15)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Added Availability (${_availabilities.length})',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: primaryPurple,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ..._availabilities.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final e = entry.value;
+                  const dayLabels2 = [
+                    'Mon',
+                    'Tue',
+                    'Wed',
+                    'Thu',
+                    'Fri',
+                    'Sat',
+                    'Sun',
+                  ];
+                  final dayIdx = DayOfWeek.values.indexOf(e.day);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: primaryPurple,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            dayIdx >= 0 ? dayLabels2[dayIdx] : '?',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${e.start.format(context)} â€“ ${e.end.format(context)}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 16),
+                          color: Colors.red,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () =>
+                              setState(() => _availabilities.removeAt(i)),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Simple data class to hold a faculty availability entry in the UI before saving.
+class _AvailabilityEntry {
+  final DayOfWeek day;
+  final TimeOfDay start;
+  final TimeOfDay end;
+
+  const _AvailabilityEntry({
+    required this.day,
+    required this.start,
+    required this.end,
+  });
 }

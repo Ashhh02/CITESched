@@ -27,7 +27,7 @@ class StudentScheduleEndpoint extends Endpoint {
     // 3. Fetch Schedules for the Student's Section
     final schedules = await Schedule.db.find(
       session,
-      where: (s) => s.section.equals(student.section),
+      where: (s) => s.section.equals(student.section) & s.isActive.equals(true),
       include: Schedule.include(
         subject: Subject.include(),
         faculty: Faculty.include(),

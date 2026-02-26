@@ -1,0 +1,11 @@
+class: FacultyAvailability
+table: faculty_availability
+fields:
+  facultyId: int
+  faculty: Faculty?, relation(field=facultyId)
+  dayOfWeek: DayOfWeek
+  startTime: String
+  endTime: String
+  isPreferred: bool
+  createdAt: DateTime
+  updatedAt: DateTime

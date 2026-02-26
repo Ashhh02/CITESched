@@ -3,23 +3,44 @@ import 'package:citesched_flutter/main.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final facultyListProvider = FutureProvider<List<Faculty>>((ref) async {
-  return await client.admin.getAllFaculty();
+  return await client.admin.getAllFaculty(isActive: true);
+});
+
+final archivedFacultyListProvider = FutureProvider<List<Faculty>>((ref) async {
+  return await client.admin.getAllFaculty(isActive: false);
 });
 
 final subjectsProvider = FutureProvider<List<Subject>>((ref) async {
-  return await client.admin.getAllSubjects();
+  return await client.admin.getAllSubjects(isActive: true);
+});
+
+final archivedSubjectsProvider = FutureProvider<List<Subject>>((ref) async {
+  return await client.admin.getAllSubjects(isActive: false);
 });
 
 final roomListProvider = FutureProvider<List<Room>>((ref) async {
-  return await client.admin.getAllRooms();
+  return await client.admin.getAllRooms(isActive: true);
 });
 
-final roomsProvider = FutureProvider<List<Room>>((ref) async {
-  return await client.admin.getAllRooms();
+final archivedRoomListProvider = FutureProvider<List<Room>>((ref) async {
+  return await client.admin.getAllRooms(isActive: false);
+});
+
+final studentsProvider = FutureProvider<List<Student>>((ref) async {
+  return await client.admin.getAllStudents(isActive: true);
+});
+
+final archivedStudentsProvider = FutureProvider<List<Student>>((ref) async {
+  return await client.admin.getAllStudents(isActive: false);
 });
 
 final timeslotsProvider = FutureProvider<List<Timeslot>>((ref) async {
   return await client.admin.getAllTimeslots();
+});
+
+// Sections
+final sectionListProvider = FutureProvider<List<Section>>((ref) async {
+  return await client.admin.getAllSections();
 });
 
 final schedulesProvider = FutureProvider<List<Schedule>>((ref) async {

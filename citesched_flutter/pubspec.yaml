@@ -37,6 +37,10 @@ dependencies:
   serverpod_auth_email_flutter: ^3.2.3
   serverpod_auth_shared_flutter: ^3.2.3
   fl_chart: ^0.68.0
+  pdf: ^3.11.3
+  printing: ^5.14.2
+  docx_creator: ^1.0.9
+  path_provider: ^2.1.0
 
 dev_dependencies:
   flutter_lints: ">=3.0.0 <7.0.0"

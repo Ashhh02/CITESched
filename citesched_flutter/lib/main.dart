@@ -33,6 +33,9 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.darkTheme,
       home: const RootScreen(),
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return child ?? const SizedBox.shrink();
+      },
     );
   }
 }

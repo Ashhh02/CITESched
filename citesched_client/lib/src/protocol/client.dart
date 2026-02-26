@@ -37,14 +37,17 @@ import 'package:citesched_client/src/protocol/reports/conflict_summary_report.da
     as _i18;
 import 'package:citesched_client/src/protocol/reports/schedule_overview_report.dart'
     as _i19;
-import 'package:serverpod_auth_client/serverpod_auth_client.dart' as _i20;
-import 'package:citesched_client/src/protocol/nlp_response.dart' as _i21;
-import 'package:citesched_client/src/protocol/schedule_info.dart' as _i22;
+import 'package:citesched_client/src/protocol/section.dart' as _i20;
+import 'package:citesched_client/src/protocol/faculty_availability.dart'
+    as _i21;
+import 'package:serverpod_auth_client/serverpod_auth_client.dart' as _i22;
+import 'package:citesched_client/src/protocol/nlp_response.dart' as _i23;
+import 'package:citesched_client/src/protocol/schedule_info.dart' as _i24;
 import 'package:citesched_client/src/protocol/timetable_filter_request.dart'
-    as _i23;
-import 'package:citesched_client/src/protocol/timetable_summary.dart' as _i24;
-import 'package:citesched_client/src/protocol/greetings/greeting.dart' as _i25;
-import 'protocol.dart' as _i26;
+    as _i25;
+import 'package:citesched_client/src/protocol/timetable_summary.dart' as _i26;
+import 'package:citesched_client/src/protocol/greetings/greeting.dart' as _i27;
+import 'protocol.dart' as _i28;
 
 /// By extending [EmailIdpBaseEndpoint], the email identity provider endpoints
 /// are made available on the server and enable the corresponding sign-in widget
@@ -300,11 +303,11 @@ class EndpointAdmin extends _i2.EndpointRef {
       );
 
   /// Get all faculty members.
-  _i3.Future<List<_i6.Faculty>> getAllFaculty() =>
+  _i3.Future<List<_i6.Faculty>> getAllFaculty({required bool isActive}) =>
       caller.callServerEndpoint<List<_i6.Faculty>>(
         'admin',
         'getAllFaculty',
-        {},
+        {'isActive': isActive},
       );
 
   /// Update a faculty member with validation.
@@ -332,11 +335,11 @@ class EndpointAdmin extends _i2.EndpointRef {
       );
 
   /// Get all students.
-  _i3.Future<List<_i7.Student>> getAllStudents() =>
+  _i3.Future<List<_i7.Student>> getAllStudents({required bool isActive}) =>
       caller.callServerEndpoint<List<_i7.Student>>(
         'admin',
         'getAllStudents',
-        {},
+        {'isActive': isActive},
       );
 
   /// Update a student with validation.
@@ -363,11 +366,11 @@ class EndpointAdmin extends _i2.EndpointRef {
       );
 
   /// Get all rooms.
-  _i3.Future<List<_i8.Room>> getAllRooms() =>
+  _i3.Future<List<_i8.Room>> getAllRooms({required bool isActive}) =>
       caller.callServerEndpoint<List<_i8.Room>>(
         'admin',
         'getAllRooms',
-        {},
+        {'isActive': isActive},
       );
 
   /// Update a room with validation.
@@ -395,11 +398,11 @@ class EndpointAdmin extends _i2.EndpointRef {
       );
 
   /// Get all subjects.
-  _i3.Future<List<_i9.Subject>> getAllSubjects() =>
+  _i3.Future<List<_i9.Subject>> getAllSubjects({required bool isActive}) =>
       caller.callServerEndpoint<List<_i9.Subject>>(
         'admin',
         'getAllSubjects',
-        {},
+        {'isActive': isActive},
       );
 
   /// Update a subject with validation.
@@ -471,36 +474,51 @@ class EndpointAdmin extends _i2.EndpointRef {
   );
 
   /// Get all schedule entries.
-  _i3.Future<List<_i11.Schedule>> getAllSchedules() =>
+  _i3.Future<List<_i11.Schedule>> getAllSchedules({bool? isActive}) =>
       caller.callServerEndpoint<List<_i11.Schedule>>(
         'admin',
         'getAllSchedules',
-        {},
+        {'isActive': isActive},
       );
 
   /// Get schedule for a specific faculty with includes.
-  _i3.Future<List<_i11.Schedule>> getFacultySchedule(int facultyId) =>
-      caller.callServerEndpoint<List<_i11.Schedule>>(
-        'admin',
-        'getFacultySchedule',
-        {'facultyId': facultyId},
-      );
+  _i3.Future<List<_i11.Schedule>> getFacultySchedule(
+    int facultyId, {
+    bool? isActive,
+  }) => caller.callServerEndpoint<List<_i11.Schedule>>(
+    'admin',
+    'getFacultySchedule',
+    {
+      'facultyId': facultyId,
+      'isActive': isActive,
+    },
+  );
 
   /// Get schedule for a specific subject with includes.
-  _i3.Future<List<_i11.Schedule>> getSubjectSchedule(int subjectId) =>
-      caller.callServerEndpoint<List<_i11.Schedule>>(
-        'admin',
-        'getSubjectSchedule',
-        {'subjectId': subjectId},
-      );
+  _i3.Future<List<_i11.Schedule>> getSubjectSchedule(
+    int subjectId, {
+    bool? isActive,
+  }) => caller.callServerEndpoint<List<_i11.Schedule>>(
+    'admin',
+    'getSubjectSchedule',
+    {
+      'subjectId': subjectId,
+      'isActive': isActive,
+    },
+  );
 
   /// Get schedule for a specific room with includes.
-  _i3.Future<List<_i11.Schedule>> getRoomSchedule(int roomId) =>
-      caller.callServerEndpoint<List<_i11.Schedule>>(
-        'admin',
-        'getRoomSchedule',
-        {'roomId': roomId},
-      );
+  _i3.Future<List<_i11.Schedule>> getRoomSchedule(
+    int roomId, {
+    bool? isActive,
+  }) => caller.callServerEndpoint<List<_i11.Schedule>>(
+    'admin',
+    'getRoomSchedule',
+    {
+      'roomId': roomId,
+      'isActive': isActive,
+    },
+  );
 
   /// Update a schedule entry with conflict detection.
   _i3.Future<_i11.Schedule> updateSchedule(_i11.Schedule schedule) =>
@@ -510,7 +528,7 @@ class EndpointAdmin extends _i2.EndpointRef {
         {'schedule': schedule},
       );
 
-  /// Delete a schedule entry by ID.
+  /// Delete (Archive) a schedule entry by ID.
   _i3.Future<bool> deleteSchedule(int id) => caller.callServerEndpoint<bool>(
     'admin',
     'deleteSchedule',
@@ -581,6 +599,93 @@ class EndpointAdmin extends _i2.EndpointRef {
         'getScheduleOverviewReport',
         {},
       );
+
+  /// Create a new section with validation.
+  _i3.Future<_i20.Section> createSection(_i20.Section section) =>
+      caller.callServerEndpoint<_i20.Section>(
+        'admin',
+        'createSection',
+        {'section': section},
+      );
+
+  /// Get all sections.
+  _i3.Future<List<_i20.Section>> getAllSections() =>
+      caller.callServerEndpoint<List<_i20.Section>>(
+        'admin',
+        'getAllSections',
+        {},
+      );
+
+  /// Update a section.
+  _i3.Future<_i20.Section> updateSection(_i20.Section section) =>
+      caller.callServerEndpoint<_i20.Section>(
+        'admin',
+        'updateSection',
+        {'section': section},
+      );
+
+  /// Delete a section by ID.
+  _i3.Future<bool> deleteSection(int id) => caller.callServerEndpoint<bool>(
+    'admin',
+    'deleteSection',
+    {'id': id},
+  );
+
+  /// Set faculty availability (creates or replaces entries for a faculty).
+  _i3.Future<List<_i21.FacultyAvailability>> setFacultyAvailability(
+    int facultyId,
+    List<_i21.FacultyAvailability> availabilities,
+  ) => caller.callServerEndpoint<List<_i21.FacultyAvailability>>(
+    'admin',
+    'setFacultyAvailability',
+    {
+      'facultyId': facultyId,
+      'availabilities': availabilities,
+    },
+  );
+
+  /// Get all availability entries for a specific faculty.
+  _i3.Future<List<_i21.FacultyAvailability>> getFacultyAvailability(
+    int facultyId,
+  ) => caller.callServerEndpoint<List<_i21.FacultyAvailability>>(
+    'admin',
+    'getFacultyAvailability',
+    {'facultyId': facultyId},
+  );
+
+  /// Get all faculty availabilities.
+  _i3.Future<List<_i21.FacultyAvailability>> getAllFacultyAvailabilities() =>
+      caller.callServerEndpoint<List<_i21.FacultyAvailability>>(
+        'admin',
+        'getAllFacultyAvailabilities',
+        {},
+      );
+
+  /// Delete a single faculty availability entry.
+  _i3.Future<bool> deleteFacultyAvailability(int id) =>
+      caller.callServerEndpoint<bool>(
+        'admin',
+        'deleteFacultyAvailability',
+        {'id': id},
+      );
+
+  /// Pre-check readiness for schedule generation.
+  /// Returns a map with readiness status and any missing items.
+  _i3.Future<_i12.GenerateScheduleResponse> precheckSchedule() =>
+      caller.callServerEndpoint<_i12.GenerateScheduleResponse>(
+        'admin',
+        'precheckSchedule',
+        {},
+      );
+
+  /// Regenerate all schedules using the AI scheduling engine.
+  /// Clears existing schedules, then generates new ones respecting all constraints.
+  _i3.Future<_i12.GenerateScheduleResponse> regenerateSchedule() =>
+      caller.callServerEndpoint<_i12.GenerateScheduleResponse>(
+        'admin',
+        'regenerateSchedule',
+        {},
+      );
 }
 
 /// {@category Endpoint}
@@ -591,11 +696,11 @@ class EndpointCustomAuth extends _i2.EndpointRef {
   String get name => 'customAuth';
 
   /// Logs in a user using their ID (Student ID or Faculty ID) and password.
-  _i3.Future<_i20.AuthenticationResponse> loginWithId({
+  _i3.Future<_i22.AuthenticationResponse> loginWithId({
     required String id,
     required String password,
     required String role,
-  }) => caller.callServerEndpoint<_i20.AuthenticationResponse>(
+  }) => caller.callServerEndpoint<_i22.AuthenticationResponse>(
     'customAuth',
     'loginWithId',
     {
@@ -651,8 +756,19 @@ class EndpointNLP extends _i2.EndpointRef {
   @override
   String get name => 'nLP';
 
-  _i3.Future<_i21.NLPResponse> query(String text) =>
-      caller.callServerEndpoint<_i21.NLPResponse>(
+  /// Processes natural language queries from authenticated users
+  ///
+  /// Requires:
+  /// - Valid JWT authentication (enforced by Serverpod)
+  /// - Query must be 1-500 characters
+  ///
+  /// Security:
+  /// - Input validation (length checks)
+  /// - Forbidden keyword filtering
+  /// - Role-based access control (RBAC)
+  /// - No dynamic SQL execution
+  _i3.Future<_i23.NLPResponse> query(String text) =>
+      caller.callServerEndpoint<_i23.NLPResponse>(
         'nLP',
         'query',
         {'text': text},
@@ -673,6 +789,7 @@ class EndpointSetup extends _i2.EndpointRef {
     required String role,
     String? studentId,
     String? facultyId,
+    String? section,
   }) => caller.callServerEndpoint<bool>(
     'setup',
     'createAccount',
@@ -683,6 +800,7 @@ class EndpointSetup extends _i2.EndpointRef {
       'role': role,
       'studentId': studentId,
       'facultyId': facultyId,
+      'section': section,
     },
   );
 }
@@ -784,24 +902,24 @@ class EndpointTimetable extends _i2.EndpointRef {
   @override
   String get name => 'timetable';
 
-  _i3.Future<List<_i22.ScheduleInfo>> getSchedules(
-    _i23.TimetableFilterRequest filter,
-  ) => caller.callServerEndpoint<List<_i22.ScheduleInfo>>(
+  _i3.Future<List<_i24.ScheduleInfo>> getSchedules(
+    _i25.TimetableFilterRequest filter,
+  ) => caller.callServerEndpoint<List<_i24.ScheduleInfo>>(
     'timetable',
     'getSchedules',
     {'filter': filter},
   );
 
-  _i3.Future<_i24.TimetableSummary> getSummary(
-    _i23.TimetableFilterRequest filter,
-  ) => caller.callServerEndpoint<_i24.TimetableSummary>(
+  _i3.Future<_i26.TimetableSummary> getSummary(
+    _i25.TimetableFilterRequest filter,
+  ) => caller.callServerEndpoint<_i26.TimetableSummary>(
     'timetable',
     'getSummary',
     {'filter': filter},
   );
 
-  _i3.Future<List<_i22.ScheduleInfo>> getPersonalSchedule() =>
-      caller.callServerEndpoint<List<_i22.ScheduleInfo>>(
+  _i3.Future<List<_i24.ScheduleInfo>> getPersonalSchedule() =>
+      caller.callServerEndpoint<List<_i24.ScheduleInfo>>(
         'timetable',
         'getPersonalSchedule',
         {},
@@ -818,8 +936,8 @@ class EndpointGreeting extends _i2.EndpointRef {
   String get name => 'greeting';
 
   /// Returns a personalized greeting message: "Hello {name}".
-  _i3.Future<_i25.Greeting> hello(String name) =>
-      caller.callServerEndpoint<_i25.Greeting>(
+  _i3.Future<_i27.Greeting> hello(String name) =>
+      caller.callServerEndpoint<_i27.Greeting>(
         'greeting',
         'hello',
         {'name': name},
@@ -829,13 +947,13 @@ class EndpointGreeting extends _i2.EndpointRef {
 class Modules {
   Modules(Client client) {
     serverpod_auth_idp = _i1.Caller(client);
-    auth = _i20.Caller(client);
+    auth = _i22.Caller(client);
     serverpod_auth_core = _i4.Caller(client);
   }
 
   late final _i1.Caller serverpod_auth_idp;
 
-  late final _i20.Caller auth;
+  late final _i22.Caller auth;
 
   late final _i4.Caller serverpod_auth_core;
 }
@@ -860,7 +978,7 @@ class Client extends _i2.ServerpodClientShared {
     bool? disconnectStreamsOnLostInternetConnection,
   }) : super(
          host,
-         _i26.Protocol(),
+         _i28.Protocol(),
          securityContext: securityContext,
          streamingConnectionTimeout: streamingConnectionTimeout,
          connectionTimeout: connectionTimeout,

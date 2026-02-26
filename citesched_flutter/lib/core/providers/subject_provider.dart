@@ -3,5 +3,5 @@ import 'package:citesched_flutter/main.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final subjectsProvider = FutureProvider<List<Subject>>((ref) async {
-  return await client.admin.getAllSubjects();
+  return await client.admin.getAllSubjects(isActive: true);
 });

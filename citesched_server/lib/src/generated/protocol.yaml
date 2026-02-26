@@ -47,6 +47,16 @@ admin:
   - getRoomUtilizationReport:
   - getConflictSummaryReport:
   - getScheduleOverviewReport:
+  - createSection:
+  - getAllSections:
+  - updateSection:
+  - deleteSection:
+  - setFacultyAvailability:
+  - getFacultyAvailability:
+  - getAllFacultyAvailabilities:
+  - deleteFacultyAvailability:
+  - precheckSchedule:
+  - regenerateSchedule:
 customAuth:
   - loginWithId:
 debug:

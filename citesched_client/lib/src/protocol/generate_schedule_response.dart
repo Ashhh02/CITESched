@@ -21,6 +21,9 @@ abstract class GenerateScheduleResponse implements _i1.SerializableModel {
     this.schedules,
     this.conflicts,
     this.message,
+    this.totalAssigned,
+    this.conflictsDetected,
+    this.unassignedSubjects,
   });
 
   factory GenerateScheduleResponse({
@@ -28,6 +31,9 @@ abstract class GenerateScheduleResponse implements _i1.SerializableModel {
     List<_i2.Schedule>? schedules,
     List<_i3.ScheduleConflict>? conflicts,
     String? message,
+    int? totalAssigned,
+    int? conflictsDetected,
+    int? unassignedSubjects,
   }) = _GenerateScheduleResponseImpl;
 
   factory GenerateScheduleResponse.fromJson(
@@ -46,6 +52,9 @@ abstract class GenerateScheduleResponse implements _i1.SerializableModel {
               jsonSerialization['conflicts'],
             ),
       message: jsonSerialization['message'] as String?,
+      totalAssigned: jsonSerialization['totalAssigned'] as int?,
+      conflictsDetected: jsonSerialization['conflictsDetected'] as int?,
+      unassignedSubjects: jsonSerialization['unassignedSubjects'] as int?,
     );
   }
 
@@ -57,6 +66,12 @@ abstract class GenerateScheduleResponse implements _i1.SerializableModel {
 
   String? message;
 
+  int? totalAssigned;
+
+  int? conflictsDetected;
+
+  int? unassignedSubjects;
+
   /// Returns a shallow copy of this [GenerateScheduleResponse]
   /// with some or all fields replaced by the given arguments.
   @_i1.useResult
@@ -65,6 +80,9 @@ abstract class GenerateScheduleResponse implements _i1.SerializableModel {
     List<_i2.Schedule>? schedules,
     List<_i3.ScheduleConflict>? conflicts,
     String? message,
+    int? totalAssigned,
+    int? conflictsDetected,
+    int? unassignedSubjects,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -76,6 +94,9 @@ abstract class GenerateScheduleResponse implements _i1.SerializableModel {
       if (conflicts != null)
         'conflicts': conflicts?.toJson(valueToJson: (v) => v.toJson()),
       if (message != null) 'message': message,
+      if (totalAssigned != null) 'totalAssigned': totalAssigned,
+      if (conflictsDetected != null) 'conflictsDetected': conflictsDetected,
+      if (unassignedSubjects != null) 'unassignedSubjects': unassignedSubjects,
     };
   }
 
@@ -93,11 +114,17 @@ class _GenerateScheduleResponseImpl extends GenerateScheduleResponse {
     List<_i2.Schedule>? schedules,
     List<_i3.ScheduleConflict>? conflicts,
     String? message,
+    int? totalAssigned,
+    int? conflictsDetected,
+    int? unassignedSubjects,
   }) : super._(
          success: success,
          schedules: schedules,
          conflicts: conflicts,
          message: message,
+         totalAssigned: totalAssigned,
+         conflictsDetected: conflictsDetected,
+         unassignedSubjects: unassignedSubjects,
        );
 
   /// Returns a shallow copy of this [GenerateScheduleResponse]
@@ -109,6 +136,9 @@ class _GenerateScheduleResponseImpl extends GenerateScheduleResponse {
     Object? schedules = _Undefined,
     Object? conflicts = _Undefined,
     Object? message = _Undefined,
+    Object? totalAssigned = _Undefined,
+    Object? conflictsDetected = _Undefined,
+    Object? unassignedSubjects = _Undefined,
   }) {
     return GenerateScheduleResponse(
       success: success ?? this.success,
@@ -119,6 +149,13 @@ class _GenerateScheduleResponseImpl extends GenerateScheduleResponse {
           ? conflicts
           : this.conflicts?.map((e0) => e0.copyWith()).toList(),
       message: message is String? ? message : this.message,
+      totalAssigned: totalAssigned is int? ? totalAssigned : this.totalAssigned,
+      conflictsDetected: conflictsDetected is int?
+          ? conflictsDetected
+          : this.conflictsDetected,
+      unassignedSubjects: unassignedSubjects is int?
+          ? unassignedSubjects
+          : this.unassignedSubjects,
     );
   }
 }

@@ -1,10 +1,11 @@
-import 'package:citesched_client/citesched_client.dart';
+﻿import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
 import 'package:citesched_flutter/features/admin/widgets/timetable_filter_panel.dart';
 import 'package:citesched_flutter/features/admin/widgets/timetable_summary_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:citesched_flutter/core/providers/admin_providers.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class TimetableFilterNotifier extends Notifier<TimetableFilterRequest> {
@@ -22,11 +23,17 @@ final timetableFilterProvider =
 final filteredSchedulesProvider = FutureProvider<List<ScheduleInfo>>((
   ref,
 ) async {
+  ref.watch(
+    schedulesProvider,
+  ); // Ensure real-time reflection of schedule changes
   final filter = ref.watch(timetableFilterProvider);
   return await client.timetable.getSchedules(filter);
 });
 
 final timetableSummaryProvider = FutureProvider<TimetableSummary>((ref) async {
+  ref.watch(
+    schedulesProvider,
+  ); // Ensure real-time reflection of schedule changes
   final filter = ref.watch(timetableFilterProvider);
   return await client.timetable.getSummary(filter);
 });
@@ -51,8 +58,8 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
 
   Future<void> _loadMetadata() async {
     try {
-      final faculty = await client.admin.getAllFaculty();
-      final rooms = await client.admin.getAllRooms();
+      final faculty = await client.admin.getAllFaculty(isActive: true);
+      final rooms = await client.admin.getAllRooms(isActive: true);
       setState(() {
         _facultyList = faculty;
         _roomList = rooms;
@@ -63,42 +70,194 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
   }
 
   Future<void> _generateSchedule() async {
+    // Step 1: Pre-check
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    GenerateScheduleResponse? precheck;
+    try {
+      precheck = await client.admin.precheckSchedule();
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Pre-check failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+    if (mounted) Navigator.pop(context);
+
+    final precheckResult = precheck;
+    if (!precheckResult.success) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.orange,
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Not Ready',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: Text(
+              precheckResult?.message ?? 'Missing required data.',
+              style: GoogleFonts.poppins(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'OK',
+                  style: GoogleFonts.poppins(
+                    color: maroonColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    // Step 2: Confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.auto_awesome_rounded, color: maroonColor, size: 24),
+            const SizedBox(width: 8),
+            Text(
+              'Re-Generate AI Schedule',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.orange,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'All existing schedules will be cleared before regeneration.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.orange[800],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              precheckResult?.message ?? '',
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: Colors.grey),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+            label: Text(
+              'Generate',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: maroonColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    // Step 3: Run regeneration
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: maroonColor),
+              const SizedBox(height: 16),
+              Text(
+                'Generating schedule...',
+                style: GoogleFonts.poppins(fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
 
     try {
-      final subjects = await client.admin.getAllSubjects();
-      final faculty = await client.admin.getAllFaculty();
-      final rooms = await client.admin.getAllRooms();
-      final timeslots = await client.admin.getAllTimeslots();
-
-      final request = GenerateScheduleRequest(
-        subjectIds: subjects.map((s) => s.id!).toList(),
-        facultyIds: faculty.map((f) => f.id!).toList(),
-        roomIds: rooms.map((r) => r.id!).toList(),
-        timeslotIds: timeslots.map((t) => t.id!).toList(),
-        sections: ['A', 'B', 'C'],
-      );
-
-      final response = await client.admin.generateSchedule(request);
+      final response = await client.admin.regenerateSchedule();
       if (mounted) Navigator.pop(context);
 
-      if (response.success) {
+      if (mounted) {
         ref.invalidate(filteredSchedulesProvider);
         ref.invalidate(timetableSummaryProvider);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Schedule generated and persisted successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        // Show conflicts... (logic kept from original but omitted for brevity in this initial rewrite)
+        _showSummaryDialog(response);
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
@@ -108,6 +267,122 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
         );
       }
     }
+  }
+
+  void _showSummaryDialog(GenerateScheduleResponse response) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              response.success
+                  ? Icons.check_circle_rounded
+                  : Icons.warning_amber_rounded,
+              color: response.success ? Colors.green : Colors.orange,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Generation Complete',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildSummaryStatRow(
+              icon: Icons.check_rounded,
+              color: Colors.green,
+              label: 'Assigned',
+              value: '${response.totalAssigned ?? 0}',
+            ),
+            const SizedBox(height: 8),
+            _buildSummaryStatRow(
+              icon: Icons.warning_amber_rounded,
+              color: Colors.orange,
+              label: 'Conflicts Detected',
+              value: '${response.conflictsDetected ?? 0}',
+            ),
+            const SizedBox(height: 8),
+            _buildSummaryStatRow(
+              icon: Icons.block_rounded,
+              color: Colors.red,
+              label: 'Unassigned Subjects',
+              value: '${response.unassignedSubjects ?? 0}',
+            ),
+            if (response.message != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  response.message!,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: maroonColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              'Done',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryStatRow({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Text(label, style: GoogleFonts.poppins(fontSize: 13))),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -262,7 +537,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
           (end.hour - start.hour) + (end.minute - start.minute) / 60.0;
     }
 
-    final efficiency = (totalHours / faculty.maxLoad) * 100;
+    final efficiency = (totalHours / (faculty.maxLoad ?? 1)) * 100;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -294,7 +569,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                   ),
                 ),
                 Text(
-                  '${faculty.employmentStatus.name.toUpperCase()} • ${faculty.program.name.toUpperCase()}',
+                  '${faculty.employmentStatus?.name.toUpperCase() ?? ""} ${faculty.program?.name.toUpperCase() ?? ""}',
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: Colors.grey,

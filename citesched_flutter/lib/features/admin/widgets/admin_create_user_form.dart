@@ -6,7 +6,14 @@ import 'package:google_fonts/google_fonts.dart';
 class AdminCreateUserForm extends StatefulWidget {
   final VoidCallback onSuccess;
 
-  const AdminCreateUserForm({super.key, required this.onSuccess});
+  /// Optional: pre-select a role when opening the dialog.
+  final String? initialRole;
+
+  const AdminCreateUserForm({
+    super.key,
+    required this.onSuccess,
+    this.initialRole,
+  });
 
   @override
   State<AdminCreateUserForm> createState() => _AdminCreateUserFormState();
@@ -20,10 +27,17 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _selectedRole = 'student';
+  final _sectionController = TextEditingController();
+  late String _selectedRole;
 
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedRole = widget.initialRole ?? 'student';
+  }
 
   @override
   void dispose() {
@@ -31,6 +45,7 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _sectionController.dispose();
     super.dispose();
   }
 
@@ -53,6 +68,11 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
             : null,
         facultyId: _selectedRole == 'faculty' || _selectedRole == 'admin'
             ? _idController.text.trim()
+            : null,
+        section:
+            _selectedRole == 'student' &&
+                _sectionController.text.trim().isNotEmpty
+            ? _sectionController.text.trim()
             : null,
       );
 
@@ -112,11 +132,13 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
         ? const Color(0xFF94A3B8)
         : const Color(0xFF666666);
 
+    final isStudent = _selectedRole == 'student';
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
         width: 650,
-        constraints: const BoxConstraints(maxHeight: 750),
+        constraints: const BoxConstraints(maxHeight: 820),
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(19),
@@ -240,7 +262,7 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                           ),
                         ),
 
-                      // System Role (moved to top for better UX)
+                      // System Role
                       _buildLabel(
                         'System Role',
                         Icons.admin_panel_settings_rounded,
@@ -316,8 +338,9 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                               ),
                             ],
                             onChanged: (value) {
-                              if (value != null)
+                              if (value != null) {
                                 setState(() => _selectedRole = value);
+                              }
                             },
                           ),
                         ),
@@ -326,16 +349,14 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
 
                       // Student / Faculty ID
                       _buildLabel(
-                        _selectedRole == 'student'
-                            ? 'Student ID'
-                            : 'Faculty ID',
+                        isStudent ? 'Student ID' : 'Faculty ID',
                         Icons.badge_rounded,
                         textPrimary,
                       ),
                       TextFormField(
                         controller: _idController,
                         decoration: _buildInputDecoration(
-                          _selectedRole == 'student' ? '107690' : 'FAC-001',
+                          isStudent ? '107690' : 'FAC-001',
                           bgBody,
                           primaryPurple,
                           textMuted,
@@ -398,6 +419,30 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                         },
                       ),
                       const SizedBox(height: 20),
+
+                      // Section — only for Student
+                      if (isStudent) ...[
+                        _buildLabel(
+                          'Section',
+                          Icons.group_rounded,
+                          textPrimary,
+                        ),
+                        TextFormField(
+                          controller: _sectionController,
+                          decoration: _buildInputDecoration(
+                            'e.g. BSIT-3A',
+                            bgBody,
+                            primaryPurple,
+                            textMuted,
+                          ),
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            color: textPrimary,
+                          ),
+                          // Optional — no validator
+                        ),
+                        const SizedBox(height: 20),
+                      ],
 
                       // Initial Password
                       _buildLabel(

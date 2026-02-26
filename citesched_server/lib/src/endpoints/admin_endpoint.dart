@@ -76,7 +76,7 @@ class AdminEndpoint extends Endpoint {
     }
 
     // Validate maxLoad
-    if (faculty.maxLoad <= 0) {
+    if ((faculty.maxLoad ?? 0) <= 0) {
       throw Exception('Max load must be greater than 0');
     }
 
@@ -88,8 +88,14 @@ class AdminEndpoint extends Endpoint {
   }
 
   /// Get all faculty members.
-  Future<List<Faculty>> getAllFaculty(Session session) async {
-    return await Faculty.db.find(session);
+  Future<List<Faculty>> getAllFaculty(
+    Session session, {
+    bool isActive = true,
+  }) async {
+    return await Faculty.db.find(
+      session,
+      where: (t) => t.isActive.equals(isActive),
+    );
   }
 
   /// Update a faculty member with validation.
@@ -115,7 +121,7 @@ class AdminEndpoint extends Endpoint {
     }
 
     // Validate maxLoad
-    if (faculty.maxLoad <= 0) {
+    if ((faculty.maxLoad ?? 0) <= 0) {
       throw Exception('Max load must be greater than 0');
     }
 
@@ -184,8 +190,14 @@ class AdminEndpoint extends Endpoint {
   }
 
   /// Get all students.
-  Future<List<Student>> getAllStudents(Session session) async {
-    return await Student.db.find(session);
+  Future<List<Student>> getAllStudents(
+    Session session, {
+    bool isActive = true,
+  }) async {
+    return await Student.db.find(
+      session,
+      where: (t) => t.isActive.equals(isActive),
+    );
   }
 
   /// Update a student with validation.
@@ -232,10 +244,8 @@ class AdminEndpoint extends Endpoint {
     var student = await Student.db.findById(session, id);
     if (student == null) return false;
 
-    // Optional: Check for related data like grades/enrollments if they existed
-    // For now, just delete
-
-    await Student.db.deleteRow(session, student);
+    student.isActive = false;
+    await Student.db.updateRow(session, student);
     return true;
   }
 
@@ -286,8 +296,14 @@ class AdminEndpoint extends Endpoint {
   }
 
   /// Get all rooms.
-  Future<List<Room>> getAllRooms(Session session) async {
-    return await Room.db.find(session);
+  Future<List<Room>> getAllRooms(
+    Session session, {
+    bool isActive = true,
+  }) async {
+    return await Room.db.find(
+      session,
+      where: (t) => t.isActive.equals(isActive),
+    );
   }
 
   /// Update a room with validation.
@@ -352,7 +368,8 @@ class AdminEndpoint extends Endpoint {
       );
     }
 
-    await Room.db.deleteRow(session, room);
+    room.isActive = false;
+    await Room.db.updateRow(session, room);
     return true;
   }
 
@@ -383,8 +400,14 @@ class AdminEndpoint extends Endpoint {
   }
 
   /// Get all subjects.
-  Future<List<Subject>> getAllSubjects(Session session) async {
-    return await Subject.db.find(session);
+  Future<List<Subject>> getAllSubjects(
+    Session session, {
+    bool isActive = true,
+  }) async {
+    return await Subject.db.find(
+      session,
+      where: (t) => t.isActive.equals(isActive),
+    );
   }
 
   /// Update a subject with validation.
@@ -434,7 +457,8 @@ class AdminEndpoint extends Endpoint {
       );
     }
 
-    await Subject.db.deleteRow(session, subject);
+    subject.isActive = false;
+    await Subject.db.updateRow(session, subject);
     return true;
   }
 
@@ -576,18 +600,30 @@ class AdminEndpoint extends Endpoint {
   }
 
   /// Get all schedule entries.
-  Future<List<Schedule>> getAllSchedules(Session session) async {
-    return await Schedule.db.find(session);
+  Future<List<Schedule>> getAllSchedules(
+    Session session, {
+    bool? isActive = true,
+  }) async {
+    return await Schedule.db.find(
+      session,
+      where: (t) =>
+          isActive == null ? Constant.bool(true) : t.isActive.equals(isActive),
+    );
   }
 
   /// Get schedule for a specific faculty with includes.
   Future<List<Schedule>> getFacultySchedule(
     Session session,
-    int facultyId,
-  ) async {
+    int facultyId, {
+    bool? isActive = true,
+  }) async {
     return await Schedule.db.find(
       session,
-      where: (t) => t.facultyId.equals(facultyId),
+      where: (t) =>
+          t.facultyId.equals(facultyId) &
+          (isActive == null
+              ? Constant.bool(true)
+              : t.isActive.equals(isActive)),
       include: Schedule.include(
         subject: Subject.include(),
         faculty: Faculty.include(),
@@ -601,11 +637,16 @@ class AdminEndpoint extends Endpoint {
   /// Get schedule for a specific subject with includes.
   Future<List<Schedule>> getSubjectSchedule(
     Session session,
-    int subjectId,
-  ) async {
+    int subjectId, {
+    bool? isActive = true,
+  }) async {
     return await Schedule.db.find(
       session,
-      where: (t) => t.subjectId.equals(subjectId),
+      where: (t) =>
+          t.subjectId.equals(subjectId) &
+          (isActive == null
+              ? Constant.bool(true)
+              : t.isActive.equals(isActive)),
       include: Schedule.include(
         subject: Subject.include(),
         faculty: Faculty.include(),
@@ -619,11 +660,16 @@ class AdminEndpoint extends Endpoint {
   /// Get schedule for a specific room with includes.
   Future<List<Schedule>> getRoomSchedule(
     Session session,
-    int roomId,
-  ) async {
+    int roomId, {
+    bool? isActive = true,
+  }) async {
     return await Schedule.db.find(
       session,
-      where: (t) => t.roomId.equals(roomId),
+      where: (t) =>
+          t.roomId.equals(roomId) &
+          (isActive == null
+              ? Constant.bool(true)
+              : t.isActive.equals(isActive)),
       include: Schedule.include(
         subject: Subject.include(),
         faculty: Faculty.include(),
@@ -664,11 +710,13 @@ class AdminEndpoint extends Endpoint {
     return await Schedule.db.updateRow(session, schedule);
   }
 
-  /// Delete a schedule entry by ID.
+  /// Delete (Archive) a schedule entry by ID.
   Future<bool> deleteSchedule(Session session, int id) async {
     var schedule = await Schedule.db.findById(session, id);
     if (schedule == null) return false;
-    await Schedule.db.deleteRow(session, schedule);
+
+    schedule.isActive = false;
+    await Schedule.db.updateRow(session, schedule);
     return true;
   }
 
@@ -758,7 +806,7 @@ class AdminEndpoint extends Endpoint {
           FacultyLoadData(
             facultyName: faculty.name,
             currentLoad: currentLoad,
-            maxLoad: (faculty.maxLoad).toDouble(),
+            maxLoad: (faculty.maxLoad ?? 0).toDouble(),
           ),
         );
       }
@@ -863,5 +911,314 @@ class AdminEndpoint extends Endpoint {
     Session session,
   ) async {
     return await ReportService().generateScheduleOverview(session);
+  }
+
+  // ─── Section CRUD ───────────────────────────────────────────────────
+
+  /// Create a new section with validation.
+  Future<Section> createSection(Session session, Section section) async {
+    // Validate fields
+    if (section.sectionCode.trim().isEmpty) {
+      throw Exception('Section code cannot be empty');
+    }
+    if (section.yearLevel < 1 || section.yearLevel > 6) {
+      throw Exception('Year level must be between 1 and 6');
+    }
+    if (section.semester < 1 || section.semester > 3) {
+      throw Exception('Semester must be 1, 2, or 3');
+    }
+
+    // Check uniqueness
+    var existing = await Section.db.findFirstRow(
+      session,
+      where: (t) =>
+          t.program.equals(section.program) &
+          t.yearLevel.equals(section.yearLevel) &
+          t.sectionCode.equals(section.sectionCode) &
+          t.academicYear.equals(section.academicYear) &
+          t.semester.equals(section.semester),
+    );
+    if (existing != null) {
+      throw Exception(
+        'Section ${section.sectionCode} already exists for this program/year/semester',
+      );
+    }
+
+    section.createdAt = DateTime.now();
+    section.updatedAt = DateTime.now();
+    return await Section.db.insertRow(session, section);
+  }
+
+  /// Get all sections.
+  Future<List<Section>> getAllSections(Session session) async {
+    return await Section.db.find(session);
+  }
+
+  /// Update a section.
+  Future<Section> updateSection(Session session, Section section) async {
+    var existing = await Section.db.findById(session, section.id!);
+    if (existing == null) {
+      throw Exception('Section not found with ID: ${section.id}');
+    }
+
+    if (section.sectionCode.trim().isEmpty) {
+      throw Exception('Section code cannot be empty');
+    }
+
+    section.updatedAt = DateTime.now();
+    return await Section.db.updateRow(session, section);
+  }
+
+  /// Delete a section by ID.
+  Future<bool> deleteSection(Session session, int id) async {
+    var section = await Section.db.findById(session, id);
+    if (section == null) return false;
+
+    // Check for students assigned to this section
+    var students = await Student.db.find(
+      session,
+      where: (t) => t.sectionId.equals(id),
+    );
+    if (students.isNotEmpty) {
+      throw Exception(
+        'Cannot delete section: ${students.length} student(s) assigned. '
+        'Please reassign students first.',
+      );
+    }
+
+    section.isActive = false;
+    await Section.db.updateRow(session, section);
+    return true;
+  }
+
+  // ─── Faculty Availability CRUD ──────────────────────────────────────
+
+  /// Set faculty availability (creates or replaces entries for a faculty).
+  Future<List<FacultyAvailability>> setFacultyAvailability(
+    Session session,
+    int facultyId,
+    List<FacultyAvailability> availabilities,
+  ) async {
+    // Validate faculty exists
+    var faculty = await Faculty.db.findById(session, facultyId);
+    if (faculty == null) {
+      throw Exception('Faculty not found with ID: $facultyId');
+    }
+
+    // Validate each availability entry
+    for (var avail in availabilities) {
+      if (!_isValidTimeFormat(avail.startTime)) {
+        throw Exception('Invalid start time: ${avail.startTime}');
+      }
+      if (!_isValidTimeFormat(avail.endTime)) {
+        throw Exception('Invalid end time: ${avail.endTime}');
+      }
+      if (!_isStartBeforeEnd(avail.startTime, avail.endTime)) {
+        throw Exception(
+          'Start time must be before end time: ${avail.startTime} - ${avail.endTime}',
+        );
+      }
+    }
+
+    // Check for overlapping availability for same faculty on same day
+    for (var i = 0; i < availabilities.length; i++) {
+      for (var j = i + 1; j < availabilities.length; j++) {
+        if (availabilities[i].dayOfWeek == availabilities[j].dayOfWeek) {
+          if (_timesOverlap(
+            availabilities[i].startTime,
+            availabilities[i].endTime,
+            availabilities[j].startTime,
+            availabilities[j].endTime,
+          )) {
+            throw Exception(
+              'Overlapping availability on ${availabilities[i].dayOfWeek.name}: '
+              '${availabilities[i].startTime}-${availabilities[i].endTime} and '
+              '${availabilities[j].startTime}-${availabilities[j].endTime}',
+            );
+          }
+        }
+      }
+    }
+
+    // Delete existing availability for this faculty
+    var existing = await FacultyAvailability.db.find(
+      session,
+      where: (t) => t.facultyId.equals(facultyId),
+    );
+    for (var e in existing) {
+      await FacultyAvailability.db.deleteRow(session, e);
+    }
+
+    // Insert new entries
+    var now = DateTime.now();
+    var results = <FacultyAvailability>[];
+    for (var avail in availabilities) {
+      avail.facultyId = facultyId;
+      avail.createdAt = now;
+      avail.updatedAt = now;
+      results.add(await FacultyAvailability.db.insertRow(session, avail));
+    }
+
+    return results;
+  }
+
+  /// Get all availability entries for a specific faculty.
+  Future<List<FacultyAvailability>> getFacultyAvailability(
+    Session session,
+    int facultyId,
+  ) async {
+    return await FacultyAvailability.db.find(
+      session,
+      where: (t) => t.facultyId.equals(facultyId),
+    );
+  }
+
+  /// Get all faculty availabilities.
+  Future<List<FacultyAvailability>> getAllFacultyAvailabilities(
+    Session session,
+  ) async {
+    return await FacultyAvailability.db.find(session);
+  }
+
+  /// Delete a single faculty availability entry.
+  Future<bool> deleteFacultyAvailability(Session session, int id) async {
+    var avail = await FacultyAvailability.db.findById(session, id);
+    if (avail == null) return false;
+    await FacultyAvailability.db.deleteRow(session, avail);
+    return true;
+  }
+
+  // ─── Schedule Pre-Check & Regeneration ──────────────────────────────
+
+  /// Pre-check readiness for schedule generation.
+  /// Returns a map with readiness status and any missing items.
+  Future<GenerateScheduleResponse> precheckSchedule(
+    Session session,
+  ) async {
+    var missing = <String>[];
+
+    var facultyCount = await Faculty.db.count(session);
+    if (facultyCount == 0) missing.add('No faculty members defined');
+
+    var subjectCount = await Subject.db.count(session);
+    if (subjectCount == 0) missing.add('No subjects defined');
+
+    var roomCount = await Room.db.count(session);
+    if (roomCount == 0) missing.add('No rooms defined');
+
+    var sectionCount = await Section.db.count(session);
+    if (sectionCount == 0) missing.add('No sections defined');
+
+    var timeslotCount = await Timeslot.db.count(session);
+    if (timeslotCount == 0) missing.add('No timeslots defined');
+
+    var availabilityCount = await FacultyAvailability.db.count(session);
+    if (availabilityCount == 0) {
+      missing.add('No faculty availability defined');
+    }
+
+    if (missing.isNotEmpty) {
+      return GenerateScheduleResponse(
+        success: false,
+        message: 'Not ready: ${missing.join(", ")}',
+        totalAssigned: 0,
+        conflictsDetected: 0,
+        unassignedSubjects: 0,
+      );
+    }
+
+    return GenerateScheduleResponse(
+      success: true,
+      message:
+          'Ready to generate. Faculty: $facultyCount, '
+          'Subjects: $subjectCount, Rooms: $roomCount, '
+          'Sections: $sectionCount, Timeslots: $timeslotCount, '
+          'Availabilities: $availabilityCount',
+      totalAssigned: 0,
+      conflictsDetected: 0,
+      unassignedSubjects: 0,
+    );
+  }
+
+  /// Regenerate all schedules using the AI scheduling engine.
+  /// Clears existing schedules, then generates new ones respecting all constraints.
+  Future<GenerateScheduleResponse> regenerateSchedule(
+    Session session,
+  ) async {
+    // 1. Pre-check
+    var precheck = await precheckSchedule(session);
+    if (!precheck.success) {
+      return precheck;
+    }
+
+    // 2. Clear existing schedules
+    var existingSchedules = await Schedule.db.find(session);
+    for (var s in existingSchedules) {
+      await Schedule.db.deleteRow(session, s);
+    }
+
+    // 3. Fetch all entities
+    var allFaculty = await Faculty.db.find(session);
+    var allSubjects = await Subject.db.find(session);
+    var allRooms = await Room.db.find(session);
+    var allTimeslots = await Timeslot.db.find(session);
+    var allSections = await Section.db.find(session);
+    var allAvailabilities = await FacultyAvailability.db.find(session);
+
+    // Build availability lookup: facultyId -> list of availability windows
+    var availabilityMap = <int, List<FacultyAvailability>>{};
+    for (var a in allAvailabilities) {
+      availabilityMap.putIfAbsent(a.facultyId, () => []);
+      availabilityMap[a.facultyId]!.add(a);
+    }
+
+    // 4. Run AI scheduling algorithm
+    var request = GenerateScheduleRequest(
+      subjectIds: allSubjects.map((s) => s.id!).toList(),
+      facultyIds: allFaculty.map((f) => f.id!).toList(),
+      roomIds: allRooms.map((r) => r.id!).toList(),
+      timeslotIds: allTimeslots.map((t) => t.id!).toList(),
+      sections: allSections.map((s) => s.sectionCode).toList(),
+    );
+
+    var result = await SchedulingService().generateSchedule(session, request);
+
+    // 5. Recalculate conflicts
+    var conflicts = await ConflictService().getAllConflicts(session);
+
+    // 6. Return summary
+    return GenerateScheduleResponse(
+      success: result.success,
+      schedules: result.schedules,
+      conflicts: conflicts,
+      message: result.message,
+      totalAssigned: result.schedules?.length ?? 0,
+      conflictsDetected: conflicts.length,
+      unassignedSubjects: result.conflicts?.length ?? 0,
+    );
+  }
+
+  /// Check if two time ranges overlap.
+  bool _timesOverlap(
+    String start1,
+    String end1,
+    String start2,
+    String end2,
+  ) {
+    try {
+      var s1 = _timeToMinutes(start1);
+      var e1 = _timeToMinutes(end1);
+      var s2 = _timeToMinutes(start2);
+      var e2 = _timeToMinutes(end2);
+      return s1 < e2 && s2 < e1;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Convert time string to minutes since midnight.
+  int _timeToMinutes(String time) {
+    var parts = time.split(':');
+    return int.parse(parts[0]) * 60 + int.parse(parts[1]);
   }
 }

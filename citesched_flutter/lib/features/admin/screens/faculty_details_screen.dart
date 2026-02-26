@@ -33,7 +33,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
         backgroundColor: maroonColor,
-        foregroundColor: Colors.white,
+        foregroundColor: const Color.fromARGB(255, 0, 0, 0),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -106,7 +106,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              faculty.program.name.toUpperCase(),
+                              (faculty.program?.name ?? '—').toUpperCase(),
                               style: GoogleFonts.poppins(),
                             ),
                           ],
@@ -238,7 +238,8 @@ class FacultyDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatusChip(EmploymentStatus status) {
+  Widget _buildStatusChip(EmploymentStatus? status) {
+    if (status == null) return const Text('—');
     Color color = status == EmploymentStatus.fullTime
         ? Colors.green
         : Colors.blue;

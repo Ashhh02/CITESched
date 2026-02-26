@@ -14,6 +14,7 @@ class SetupEndpoint extends Endpoint {
     required String role,
     String? studentId,
     String? facultyId,
+    String? section,
   }) async {
     try {
       var userInfo = await Emails.createUser(
@@ -65,6 +66,7 @@ class SetupEndpoint extends Endpoint {
               studentNumber: studentId,
               course: 'BSIT', // Default
               yearLevel: 1, // Default
+              section: section,
               userInfoId: userInfo!.id!,
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),

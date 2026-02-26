@@ -8,9 +8,12 @@
 // ignore_for_file: type_literal_in_constant_pattern
 // ignore_for_file: use_super_parameters
 // ignore_for_file: invalid_use_of_internal_member
+// ignore_for_file: unnecessary_null_comparison
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/serverpod.dart' as _i1;
+import 'section.dart' as _i2;
+import 'package:citesched_server/src/generated/protocol.dart' as _i3;
 
 abstract class Student
     implements _i1.TableRow<int?>, _i1.ProtocolSerialization {
@@ -22,10 +25,13 @@ abstract class Student
     required this.course,
     required this.yearLevel,
     this.section,
+    this.sectionId,
+    this.sectionRef,
     required this.userInfoId,
+    bool? isActive,
     required this.createdAt,
     required this.updatedAt,
-  });
+  }) : isActive = isActive ?? true;
 
   factory Student({
     int? id,
@@ -35,7 +41,10 @@ abstract class Student
     required String course,
     required int yearLevel,
     String? section,
+    int? sectionId,
+    _i2.Section? sectionRef,
     required int userInfoId,
+    bool? isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _StudentImpl;
@@ -49,7 +58,14 @@ abstract class Student
       course: jsonSerialization['course'] as String,
       yearLevel: jsonSerialization['yearLevel'] as int,
       section: jsonSerialization['section'] as String?,
+      sectionId: jsonSerialization['sectionId'] as int?,
+      sectionRef: jsonSerialization['sectionRef'] == null
+          ? null
+          : _i3.Protocol().deserialize<_i2.Section>(
+              jsonSerialization['sectionRef'],
+            ),
       userInfoId: jsonSerialization['userInfoId'] as int,
+      isActive: jsonSerialization['isActive'] as bool?,
       createdAt: _i1.DateTimeJsonExtension.fromJson(
         jsonSerialization['createdAt'],
       ),
@@ -78,7 +94,13 @@ abstract class Student
 
   String? section;
 
+  int? sectionId;
+
+  _i2.Section? sectionRef;
+
   int userInfoId;
+
+  bool isActive;
 
   DateTime createdAt;
 
@@ -98,7 +120,10 @@ abstract class Student
     String? course,
     int? yearLevel,
     String? section,
+    int? sectionId,
+    _i2.Section? sectionRef,
     int? userInfoId,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   });
@@ -113,7 +138,10 @@ abstract class Student
       'course': course,
       'yearLevel': yearLevel,
       if (section != null) 'section': section,
+      if (sectionId != null) 'sectionId': sectionId,
+      if (sectionRef != null) 'sectionRef': sectionRef?.toJson(),
       'userInfoId': userInfoId,
+      'isActive': isActive,
       'createdAt': createdAt.toJson(),
       'updatedAt': updatedAt.toJson(),
     };
@@ -130,14 +158,17 @@ abstract class Student
       'course': course,
       'yearLevel': yearLevel,
       if (section != null) 'section': section,
+      if (sectionId != null) 'sectionId': sectionId,
+      if (sectionRef != null) 'sectionRef': sectionRef?.toJsonForProtocol(),
       'userInfoId': userInfoId,
+      'isActive': isActive,
       'createdAt': createdAt.toJson(),
       'updatedAt': updatedAt.toJson(),
     };
   }
 
-  static StudentInclude include() {
-    return StudentInclude._();
+  static StudentInclude include({_i2.SectionInclude? sectionRef}) {
+    return StudentInclude._(sectionRef: sectionRef);
   }
 
   static StudentIncludeList includeList({
@@ -177,7 +208,10 @@ class _StudentImpl extends Student {
     required String course,
     required int yearLevel,
     String? section,
+    int? sectionId,
+    _i2.Section? sectionRef,
     required int userInfoId,
+    bool? isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : super._(
@@ -188,7 +222,10 @@ class _StudentImpl extends Student {
          course: course,
          yearLevel: yearLevel,
          section: section,
+         sectionId: sectionId,
+         sectionRef: sectionRef,
          userInfoId: userInfoId,
+         isActive: isActive,
          createdAt: createdAt,
          updatedAt: updatedAt,
        );
@@ -205,7 +242,10 @@ class _StudentImpl extends Student {
     String? course,
     int? yearLevel,
     Object? section = _Undefined,
+    Object? sectionId = _Undefined,
+    Object? sectionRef = _Undefined,
     int? userInfoId,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -217,7 +257,12 @@ class _StudentImpl extends Student {
       course: course ?? this.course,
       yearLevel: yearLevel ?? this.yearLevel,
       section: section is String? ? section : this.section,
+      sectionId: sectionId is int? ? sectionId : this.sectionId,
+      sectionRef: sectionRef is _i2.Section?
+          ? sectionRef
+          : this.sectionRef?.copyWith(),
       userInfoId: userInfoId ?? this.userInfoId,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -258,8 +303,18 @@ class StudentUpdateTable extends _i1.UpdateTable<StudentTable> {
     value,
   );
 
+  _i1.ColumnValue<int, int> sectionId(int? value) => _i1.ColumnValue(
+    table.sectionId,
+    value,
+  );
+
   _i1.ColumnValue<int, int> userInfoId(int value) => _i1.ColumnValue(
     table.userInfoId,
+    value,
+  );
+
+  _i1.ColumnValue<bool, bool> isActive(bool value) => _i1.ColumnValue(
+    table.isActive,
     value,
   );
 
@@ -303,9 +358,18 @@ class StudentTable extends _i1.Table<int?> {
       'section',
       this,
     );
+    sectionId = _i1.ColumnInt(
+      'sectionId',
+      this,
+    );
     userInfoId = _i1.ColumnInt(
       'userInfoId',
       this,
+    );
+    isActive = _i1.ColumnBool(
+      'isActive',
+      this,
+      hasDefault: true,
     );
     createdAt = _i1.ColumnDateTime(
       'createdAt',
@@ -331,11 +395,30 @@ class StudentTable extends _i1.Table<int?> {
 
   late final _i1.ColumnString section;
 
+  late final _i1.ColumnInt sectionId;
+
+  _i2.SectionTable? _sectionRef;
+
   late final _i1.ColumnInt userInfoId;
+
+  late final _i1.ColumnBool isActive;
 
   late final _i1.ColumnDateTime createdAt;
 
   late final _i1.ColumnDateTime updatedAt;
+
+  _i2.SectionTable get sectionRef {
+    if (_sectionRef != null) return _sectionRef!;
+    _sectionRef = _i1.createRelationTable(
+      relationFieldName: 'sectionRef',
+      field: Student.t.sectionId,
+      foreignField: _i2.Section.t.id,
+      tableRelation: tableRelation,
+      createTable: (foreignTableRelation) =>
+          _i2.SectionTable(tableRelation: foreignTableRelation),
+    );
+    return _sectionRef!;
+  }
 
   @override
   List<_i1.Column> get columns => [
@@ -346,17 +429,31 @@ class StudentTable extends _i1.Table<int?> {
     course,
     yearLevel,
     section,
+    sectionId,
     userInfoId,
+    isActive,
     createdAt,
     updatedAt,
   ];
+
+  @override
+  _i1.Table? getRelationTable(String relationField) {
+    if (relationField == 'sectionRef') {
+      return sectionRef;
+    }
+    return null;
+  }
 }
 
 class StudentInclude extends _i1.IncludeObject {
-  StudentInclude._();
+  StudentInclude._({_i2.SectionInclude? sectionRef}) {
+    _sectionRef = sectionRef;
+  }
+
+  _i2.SectionInclude? _sectionRef;
 
   @override
-  Map<String, _i1.Include?> get includes => {};
+  Map<String, _i1.Include?> get includes => {'sectionRef': _sectionRef};
 
   @override
   _i1.Table<int?> get table => Student.t;
@@ -384,6 +481,10 @@ class StudentIncludeList extends _i1.IncludeList {
 
 class StudentRepository {
   const StudentRepository._();
+
+  final attachRow = const StudentAttachRowRepository._();
+
+  final detachRow = const StudentDetachRowRepository._();
 
   /// Returns a list of [Student]s matching the given query parameters.
   ///
@@ -416,6 +517,7 @@ class StudentRepository {
     bool orderDescending = false,
     _i1.OrderByListBuilder<StudentTable>? orderByList,
     _i1.Transaction? transaction,
+    StudentInclude? include,
   }) async {
     return session.db.find<Student>(
       where: where?.call(Student.t),
@@ -425,6 +527,7 @@ class StudentRepository {
       limit: limit,
       offset: offset,
       transaction: transaction,
+      include: include,
     );
   }
 
@@ -453,6 +556,7 @@ class StudentRepository {
     bool orderDescending = false,
     _i1.OrderByListBuilder<StudentTable>? orderByList,
     _i1.Transaction? transaction,
+    StudentInclude? include,
   }) async {
     return session.db.findFirstRow<Student>(
       where: where?.call(Student.t),
@@ -461,6 +565,7 @@ class StudentRepository {
       orderDescending: orderDescending,
       offset: offset,
       transaction: transaction,
+      include: include,
     );
   }
 
@@ -469,10 +574,12 @@ class StudentRepository {
     _i1.Session session,
     int id, {
     _i1.Transaction? transaction,
+    StudentInclude? include,
   }) async {
     return session.db.findById<Student>(
       id,
       transaction: transaction,
+      include: include,
     );
   }
 
@@ -630,6 +737,59 @@ class StudentRepository {
     return session.db.count<Student>(
       where: where?.call(Student.t),
       limit: limit,
+      transaction: transaction,
+    );
+  }
+}
+
+class StudentAttachRowRepository {
+  const StudentAttachRowRepository._();
+
+  /// Creates a relation between the given [Student] and [Section]
+  /// by setting the [Student]'s foreign key `sectionId` to refer to the [Section].
+  Future<void> sectionRef(
+    _i1.Session session,
+    Student student,
+    _i2.Section sectionRef, {
+    _i1.Transaction? transaction,
+  }) async {
+    if (student.id == null) {
+      throw ArgumentError.notNull('student.id');
+    }
+    if (sectionRef.id == null) {
+      throw ArgumentError.notNull('sectionRef.id');
+    }
+
+    var $student = student.copyWith(sectionId: sectionRef.id);
+    await session.db.updateRow<Student>(
+      $student,
+      columns: [Student.t.sectionId],
+      transaction: transaction,
+    );
+  }
+}
+
+class StudentDetachRowRepository {
+  const StudentDetachRowRepository._();
+
+  /// Detaches the relation between this [Student] and the [Section] set in `sectionRef`
+  /// by setting the [Student]'s foreign key `sectionId` to `null`.
+  ///
+  /// This removes the association between the two models without deleting
+  /// the related record.
+  Future<void> sectionRef(
+    _i1.Session session,
+    Student student, {
+    _i1.Transaction? transaction,
+  }) async {
+    if (student.id == null) {
+      throw ArgumentError.notNull('student.id');
+    }
+
+    var $student = student.copyWith(sectionId: null);
+    await session.db.updateRow<Student>(
+      $student,
+      columns: [Student.t.sectionId],
       transaction: transaction,
     );
   }

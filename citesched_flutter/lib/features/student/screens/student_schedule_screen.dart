@@ -4,6 +4,9 @@ import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class StudentScheduleScreen extends ConsumerWidget {
   const StudentScheduleScreen({super.key});
@@ -27,17 +30,19 @@ class StudentScheduleScreen extends ConsumerWidget {
         backgroundColor: maroonDark,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.print_outlined),
-            onPressed: () {
-              // Printing functionality could be added here
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Print functionality coming soon!'),
-                ),
-              );
-            },
-            tooltip: 'Print Schedule',
+          scheduleAsync.maybeWhen(
+            data: (schedules) => schedules.isEmpty
+                ? const SizedBox()
+                : IconButton(
+                    icon: const Icon(Icons.print_outlined),
+                    onPressed: () => _printSchedulePdf(
+                      profileAsync.value?.name ?? user?.userName ?? 'Student',
+                      profileAsync.value?.section ?? 'Not Assigned',
+                      schedules,
+                    ),
+                    tooltip: 'Print Schedule',
+                  ),
+            orElse: () => const SizedBox(),
           ),
           IconButton(
             onPressed: () => ref.read(authProvider.notifier).signOut(),
@@ -103,6 +108,172 @@ class StudentScheduleScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _printSchedulePdf(
+    String studentName,
+    String section,
+    List<Schedule> schedules,
+  ) async {
+    final pdf = pw.Document();
+
+    final sorted = List<Schedule>.from(schedules);
+    final dayOrder = {
+      DayOfWeek.mon: 0,
+      DayOfWeek.tue: 1,
+      DayOfWeek.wed: 2,
+      DayOfWeek.thu: 3,
+      DayOfWeek.fri: 4,
+      DayOfWeek.sat: 5,
+      DayOfWeek.sun: 6,
+    };
+    sorted.sort((a, b) {
+      final da = dayOrder[a.timeslot?.day] ?? 99;
+      final db = dayOrder[b.timeslot?.day] ?? 99;
+      if (da != db) return da.compareTo(db);
+      return (a.timeslot?.startTime ?? '').compareTo(
+        b.timeslot?.startTime ?? '',
+      );
+    });
+
+    double totalUnits = 0;
+    for (var s in sorted) {
+      totalUnits += s.subject?.units ?? 0;
+    }
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) => [
+          // Header
+          pw.Container(
+            padding: const pw.EdgeInsets.all(20),
+            decoration: pw.BoxDecoration(
+              color: const PdfColor.fromInt(0xFF4f003b),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'UNIVERSITY ENROLLMENT RECORD',
+                  style: pw.TextStyle(
+                    color: PdfColors.white,
+                    fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  studentName.toUpperCase(),
+                  style: const pw.TextStyle(
+                    color: PdfColor(1, 1, 1, 0.9),
+                    fontSize: 14,
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  'Section: $section',
+                  style: const pw.TextStyle(
+                    color: PdfColor(1, 1, 1, 0.9),
+                    fontSize: 12,
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  'Generated: ${DateTime.now().toString().substring(0, 16)}',
+                  style: const pw.TextStyle(
+                    color: PdfColor(1, 1, 1, 0.55),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 20),
+
+          // Table
+          pw.Table(
+            border: pw.TableBorder.all(
+              color: PdfColors.grey300,
+              width: 0.5,
+            ),
+            columnWidths: {
+              0: const pw.FlexColumnWidth(2.5),
+              1: const pw.FlexColumnWidth(1),
+              2: const pw.FlexColumnWidth(2),
+              3: const pw.FlexColumnWidth(1.5),
+              4: const pw.FlexColumnWidth(2.5),
+            },
+            children: [
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(
+                  color: PdfColor.fromInt(0xFF4f003b),
+                ),
+                children: ['SUBJECT', 'UNITS', 'INSTRUCTOR', 'ROOM', 'SCHEDULE']
+                    .map(
+                      (h) => pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        child: pw.Text(
+                          h,
+                          style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+              ...sorted.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final s = entry.value;
+                final bg = idx.isEven ? PdfColors.grey50 : PdfColors.white;
+                final ts = s.timeslot;
+                return pw.TableRow(
+                  decoration: pw.BoxDecoration(color: bg),
+                  children: [
+                    _pdfCell(s.subject?.name ?? s.subject?.code ?? '—'),
+                    _pdfCell(s.subject?.units.toString() ?? '0'),
+                    _pdfCell(s.faculty?.name ?? 'TBA'),
+                    _pdfCell(s.room?.name ?? 'TBA'),
+                    _pdfCell(
+                      ts != null
+                          ? '${ts.day.name.toUpperCase()} ${ts.startTime} - ${ts.endTime}'
+                          : 'N/A',
+                    ),
+                  ],
+                );
+              }),
+            ],
+          ),
+          pw.SizedBox(height: 16),
+          pw.Text(
+            'Total Academic Load: ${totalUnits.toStringAsFixed(1)} Units',
+            style: pw.TextStyle(
+              fontSize: 12,
+              fontWeight: pw.FontWeight.bold,
+              color: const PdfColor.fromInt(0xFF4f003b),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (format) => pdf.save());
+  }
+
+  pw.Widget _pdfCell(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      child: pw.Text(text, style: const pw.TextStyle(fontSize: 10)),
     );
   }
 

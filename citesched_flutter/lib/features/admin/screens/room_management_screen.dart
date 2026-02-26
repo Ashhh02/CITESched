@@ -21,6 +21,7 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
   String _searchQuery = '';
   Program? _selectedProgram;
   bool? _selectedActiveStatus;
+  bool _isShowingArchived = false;
   final TextEditingController _searchController = TextEditingController();
 
   final Color maroonColor = const Color(0xFF720045);
@@ -56,154 +57,168 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
     );
   }
 
-  void _deleteRoom(Room room) async {
+  void _archiveRoom(Room room) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
-        final textPrimary = isDark ? Colors.white : const Color(0xFF333333);
-        final textMuted = isDark ? Colors.grey[400] : Colors.grey[600];
-
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: Container(
-            width: 400,
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.red[700]!, Colors.red[500]!],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(20),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.delete_forever_rounded,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Text(
-                        'Delete Room',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Are you sure you want to delete ${room.name}?',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'This action cannot be undone.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: BorderSide(color: Colors.grey[300]!),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Text(
-                            'Cancel',
-                            style: GoogleFonts.poppins(color: textMuted),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: Text(
-                            'Delete',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Archive Room',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to archive ${room.name}? It will be hidden from assignments.',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
           ),
-        );
-      },
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Archive', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        final archivedRoom = room.copyWith(isActive: false);
+        await client.admin.updateRoom(archivedRoom);
+        ref.refresh(roomListProvider);
+        ref.refresh(archivedRoomListProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Room archived successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error archiving room: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _restoreRoom(Room room) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Restore Room',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to restore ${room.name}? It will reappear in active lists.',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Restore', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        final restoredRoom = room.copyWith(isActive: true);
+        await client.admin.updateRoom(restoredRoom);
+        ref.refresh(roomListProvider);
+        ref.refresh(archivedRoomListProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Room restored successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error restoring room: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _permanentDeleteRoom(Room room) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Text(
+              'Permanent Delete',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to PERMANENTLY delete ${room.name}? This action cannot be undone.',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Delete Permanently', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
     );
 
     if (confirm == true && mounted) {
       try {
         await client.admin.deleteRoom(room.id!);
-        ref.invalidate(roomListProvider);
+        ref.refresh(roomListProvider);
+        ref.refresh(archivedRoomListProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Room deleted successfully'),
+              content: Text('Room permanently deleted'),
               backgroundColor: Colors.green,
             ),
           );
@@ -221,9 +236,64 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
     }
   }
 
+  Widget _buildViewToggle(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.grey[200],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildToggleOption('Active', false, isDark),
+          _buildToggleOption('Archived', true, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleOption(String label, bool isArchived, bool isDark) {
+    final isSelected = _isShowingArchived == isArchived;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isShowingArchived = isArchived;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? maroonColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: maroonColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected
+                ? Colors.white
+                : (isDark ? Colors.grey[400] : Colors.grey[600]),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final roomsAsync = ref.watch(roomListProvider);
+    final roomsAsync = _isShowingArchived
+        ? ref.watch(archivedRoomListProvider)
+        : ref.watch(roomListProvider);
     final conflictsAsync = ref.watch(allConflictsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const bgColor = Colors.white;
@@ -237,201 +307,110 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header Banner
-            isMobile
-                ? Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          maroonColor,
-                          const Color(0xFF8e005b),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: maroonColor.withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.room_preferences_rounded,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Room Management',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Manage classroom facilities and capacities',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      color: Colors.white.withValues(
-                                        alpha: 0.8,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _showAddRoomModal,
-                            icon: const Icon(Icons.add_rounded, size: 20),
-                            label: Text(
-                              'Add New Room',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: maroonColor,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              elevation: 0,
-                            ),
+            // Header (Standardized Maroon Gradient Banner)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    maroonColor,
+                    const Color(0xFF8e005b),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: maroonColor.withValues(alpha: 0.3),
+                    blurRadius: 25,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
                           ),
                         ),
-                      ],
-                    ),
-                  )
-                : Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          maroonColor,
-                          const Color(0xFF8e005b),
-                        ],
+                        child: const Icon(
+                          Icons.room_preferences_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color: maroonColor.withValues(alpha: 0.3),
-                          blurRadius: 25,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.room_preferences_rounded,
-                                color: Colors.white,
-                                size: 32,
-                              ),
-                            ),
-                            const SizedBox(width: 24),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Room Management',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -1,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Manage classroom facilities, capacities, and program-indexed assignments',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: _showAddRoomModal,
-                          icon: const Icon(Icons.add_rounded, size: 20),
-                          label: Text(
-                            'Add New Room',
+                      const SizedBox(width: 24),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Room Management',
                             style: GoogleFonts.poppins(
+                              fontSize: isMobile ? 24 : 32,
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: 0.5,
+                              color: Colors.white,
+                              letterSpacing: -1,
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: maroonColor,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 28,
-                              vertical: 20,
+                          const SizedBox(height: 4),
+                          Text(
+                            'Manage classroom facilities and academic capacities',
+                            style: GoogleFonts.poppins(
+                              fontSize: isMobile ? 12 : 16,
+                              color: Colors.white.withValues(alpha: 0.8),
+                              letterSpacing: 0.2,
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            elevation: 8,
-                            shadowColor: Colors.black.withValues(alpha: 0.2),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
+                    onPressed: _showAddRoomModal,
+                    icon: const Icon(Icons.add_rounded, size: 24),
+                    label: Text(
+                      isMobile ? 'Add' : 'Add New Room',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: maroonColor,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 16 : 28,
+                        vertical: isMobile ? 12 : 18,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
                     ),
                   ),
+                ],
+              ),
+            ),
             const SizedBox(height: 32),
 
             // Search and Filter Row
             isMobile
                 ? Column(
                     children: [
+                      _buildViewToggle(isDark),
+                      const SizedBox(height: 16),
                       _buildSearchBar(isDark),
                       const SizedBox(height: 16),
                       Row(
@@ -459,6 +438,8 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
                         flex: 1,
                         child: _buildStatusFilter(isDark),
                       ),
+                      const SizedBox(width: 16),
+                      _buildViewToggle(isDark),
                     ],
                   ),
             const SizedBox(height: 24),
@@ -591,7 +572,6 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
                                         DataColumn(label: Text('CAPACITY')),
                                         DataColumn(label: Text('TYPE')),
                                         DataColumn(label: Text('PROGRAM')),
-                                        DataColumn(label: Text('BUILDING')),
                                         DataColumn(label: Text('STATUS')),
                                         DataColumn(label: Text('ACTIONS')),
                                       ],
@@ -691,7 +671,6 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
                                                 room.program.name.toUpperCase(),
                                               ),
                                             ),
-                                            DataCell(Text(room.building)),
                                             DataCell(
                                               Container(
                                                 padding:
@@ -727,25 +706,149 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
                                             ),
                                             DataCell(
                                               Row(
+                                                mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  IconButton(
-                                                    icon: const Icon(
-                                                      Icons.edit,
-                                                      color: Colors.blue,
-                                                    ),
-                                                    onPressed: () =>
-                                                        _showEditRoomModal(
-                                                          room,
+                                                  if (!_isShowingArchived) ...[
+                                                    Material(
+                                                      color: Colors.transparent,
+                                                      child: InkWell(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                        onTap: () =>
+                                                            _showEditRoomModal(
+                                                              room,
+                                                            ),
+                                                        child: Container(
+                                                          padding:
+                                                              const EdgeInsets.all(
+                                                                8,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: maroonColor
+                                                                .withOpacity(
+                                                                  0.1,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          child: Icon(
+                                                            Icons.edit_outlined,
+                                                            color: maroonColor,
+                                                            size: 18,
+                                                          ),
                                                         ),
-                                                  ),
-                                                  IconButton(
-                                                    icon: const Icon(
-                                                      Icons.delete,
-                                                      color: Colors.red,
+                                                      ),
                                                     ),
-                                                    onPressed: () =>
-                                                        _deleteRoom(room),
-                                                  ),
+                                                    const SizedBox(width: 8),
+                                                    Material(
+                                                      color: Colors.transparent,
+                                                      child: InkWell(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                        onTap: () =>
+                                                            _archiveRoom(room),
+                                                        child: Container(
+                                                          padding:
+                                                              const EdgeInsets.all(
+                                                                8,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.orange
+                                                                .withOpacity(
+                                                                  0.1,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          child: const Icon(
+                                                            Icons
+                                                                .archive_outlined,
+                                                            color:
+                                                                Colors.orange,
+                                                            size: 18,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ] else ...[
+                                                    Material(
+                                                      color: Colors.transparent,
+                                                      child: InkWell(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                        onTap: () =>
+                                                            _restoreRoom(room),
+                                                        child: Container(
+                                                          padding:
+                                                              const EdgeInsets.all(
+                                                                8,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.green
+                                                                .withOpacity(
+                                                                  0.1,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          child: const Icon(
+                                                            Icons
+                                                                .restore_rounded,
+                                                            color: Colors.green,
+                                                            size: 18,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Material(
+                                                      color: Colors.transparent,
+                                                      child: InkWell(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                        onTap: () =>
+                                                            _permanentDeleteRoom(
+                                                              room,
+                                                            ),
+                                                        child: Container(
+                                                          padding:
+                                                              const EdgeInsets.all(
+                                                                8,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.red
+                                                                .withOpacity(
+                                                                  0.1,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          child: const Icon(
+                                                            Icons
+                                                                .delete_forever_rounded,
+                                                            color: Colors.red,
+                                                            size: 18,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ],
                                               ),
                                             ),
@@ -901,22 +1004,41 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
                       ),
                       Row(
                         children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.edit,
-                              color: Colors.blue,
-                              size: 20,
+                          if (!_isShowingArchived) ...[
+                            IconButton(
+                              icon: const Icon(
+                                Icons.edit,
+                                color: Colors.blue,
+                                size: 20,
+                              ),
+                              onPressed: () => _showEditRoomModal(room),
                             ),
-                            onPressed: () => _showEditRoomModal(room),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.delete,
-                              color: Colors.red,
-                              size: 20,
+                            IconButton(
+                              icon: const Icon(
+                                Icons.archive_outlined,
+                                color: Colors.orange,
+                              ),
+                              tooltip: 'Archive Room',
+                              onPressed: () => _archiveRoom(room),
                             ),
-                            onPressed: () => _deleteRoom(room),
-                          ),
+                          ] else ...[
+                            IconButton(
+                              icon: const Icon(
+                                Icons.restore_rounded,
+                                color: Colors.green,
+                              ),
+                              tooltip: 'Restore Room',
+                              onPressed: () => _restoreRoom(room),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_forever_rounded,
+                                color: Colors.red,
+                              ),
+                              tooltip: 'Delete Permanently',
+                              onPressed: () => _permanentDeleteRoom(room),
+                            ),
+                          ],
                         ],
                       ),
                     ],

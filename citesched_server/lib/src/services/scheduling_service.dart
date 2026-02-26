@@ -4,13 +4,15 @@ import 'conflict_service.dart';
 
 /// Service class for handling scheduling logic.
 /// Uses [ConflictService] to validate schedule entries and generates schedules.
+/// Respects faculty availability preferences from the FacultyAvailability table.
 class SchedulingService {
   final ConflictService _conflictService = ConflictService();
 
   // ─── Schedule Generation ────────────────────────────────────────────
 
   /// Generate schedules using a greedy algorithm.
-  /// Attempts to assign each subject to available timeslots while respecting all constraints.
+  /// Attempts to assign each subject to available timeslots while respecting
+  /// all constraints including faculty day/time availability.
   Future<GenerateScheduleResponse> generateSchedule(
     Session session,
     GenerateScheduleRequest request,
@@ -23,6 +25,9 @@ class SchedulingService {
       return GenerateScheduleResponse(
         success: false,
         message: 'No subjects provided for schedule generation',
+        totalAssigned: 0,
+        conflictsDetected: 0,
+        unassignedSubjects: 0,
       );
     }
 
@@ -30,6 +35,9 @@ class SchedulingService {
       return GenerateScheduleResponse(
         success: false,
         message: 'No sections provided for schedule generation',
+        totalAssigned: 0,
+        conflictsDetected: 0,
+        unassignedSubjects: 0,
       );
     }
 
@@ -53,6 +61,16 @@ class SchedulingService {
     var validRooms = rooms.whereType<Room>().toList();
     var validTimeslots = timeslots.whereType<Timeslot>().toList();
 
+    // Pre-load faculty availability preferences for fast lookup
+    var facultyAvailMap = <int, List<FacultyAvailability>>{};
+    for (var faculty in validFaculties) {
+      var avails = await FacultyAvailability.db.find(
+        session,
+        where: (t) => t.facultyId.equals(faculty.id!),
+      );
+      facultyAvailMap[faculty.id!] = avails;
+    }
+
     // Track faculty assignments for load balancing
     var facultyAssignments = <int, int>{};
     for (var faculty in validFaculties) {
@@ -68,14 +86,34 @@ class SchedulingService {
         for (var faculty in validFaculties) {
           if (assigned) break;
 
-          // Check if faculty can take more classes (Basic maxLoad check)
-          // Detailed check happens inside ConflictService
+          // Quick maxLoad pre-check
           var currentLoad = facultyAssignments[faculty.id!] ?? 0;
-          if (currentLoad >= faculty.maxLoad) continue;
+          if (currentLoad >= (faculty.maxLoad ?? 0)) continue;
 
           // Try each timeslot
           for (var timeslot in validTimeslots) {
             if (assigned) break;
+
+            // ── Faculty availability preference check ──
+            // If faculty has availability preferences, check if this timeslot fits
+            var avails = facultyAvailMap[faculty.id!] ?? [];
+            if (avails.isNotEmpty) {
+              var fitsAvailability = false;
+              for (var avail in avails) {
+                if (avail.dayOfWeek == timeslot.day) {
+                  final tsStart = _parseTimeToMinutes(timeslot.startTime);
+                  final tsEnd = _parseTimeToMinutes(timeslot.endTime);
+                  final avStart = _parseTimeToMinutes(avail.startTime);
+                  final avEnd = _parseTimeToMinutes(avail.endTime);
+                  if (tsStart >= avStart && tsEnd <= avEnd) {
+                    fitsAvailability = true;
+                    break;
+                  }
+                }
+              }
+              if (!fitsAvailability)
+                continue; // Skip this timeslot for this faculty
+            }
 
             // Try each room
             for (var room in validRooms) {
@@ -92,22 +130,18 @@ class SchedulingService {
                 updatedAt: DateTime.now(),
               );
 
-              // Check if this assignment is valid using ConflictService
+              // Validate using ConflictService
               var validationConflicts = await _conflictService.validateSchedule(
                 session,
                 candidate,
               );
 
               if (validationConflicts.isEmpty) {
-                // Valid assignment - add to generated schedules
+                // Valid assignment
                 generatedSchedules.add(candidate);
                 facultyAssignments[faculty.id!] =
                     (facultyAssignments[faculty.id!] ?? 0) + 1;
                 assigned = true;
-              } else {
-                // Conflict found, try next combination
-                // Optionally log debug info here if needed
-                continue;
               }
             }
           }
@@ -119,38 +153,42 @@ class SchedulingService {
             ScheduleConflict(
               type: 'generation_failed',
               message:
-                  'Could not find valid assignment for ${subject.name} (${subject.code}) - Section $section',
+                  'Could not assign ${subject.name} (${subject.code}) - Section $section',
               details:
-                  'No available faculty, room, or timeslot combination found that satisfies all constraints',
+                  'No valid faculty/room/timeslot combination satisfies all constraints (including faculty availability)',
             ),
           );
         }
       }
     }
 
-    // Save successfully generated schedules to the database
+    // Save successfully generated schedules
     if (generatedSchedules.isNotEmpty) {
       for (var s in generatedSchedules) {
         await Schedule.db.insertRow(session, s);
       }
     }
 
-    // Return results
-    if (conflicts.isEmpty) {
-      return GenerateScheduleResponse(
-        success: true,
-        schedules: generatedSchedules,
-        message:
-            'Successfully generated and saved ${generatedSchedules.length} schedule entries',
-      );
-    } else {
-      return GenerateScheduleResponse(
-        success: false,
-        schedules: generatedSchedules,
-        conflicts: conflicts,
-        message:
-            'Partial generation: ${generatedSchedules.length} schedules saved, ${conflicts.length} failed',
-      );
-    }
+    // Return results with summary counts
+    return GenerateScheduleResponse(
+      success: conflicts.isEmpty,
+      schedules: generatedSchedules,
+      conflicts: conflicts.isEmpty ? null : conflicts,
+      totalAssigned: generatedSchedules.length,
+      conflictsDetected: conflicts.length,
+      unassignedSubjects: conflicts.length,
+      message: conflicts.isEmpty
+          ? 'Successfully generated ${generatedSchedules.length} schedule entries'
+          : '${generatedSchedules.length} assigned, ${conflicts.length} unassigned',
+    );
+  }
+
+  /// Helper: parse "HH:MM" to minutes since midnight.
+  int _parseTimeToMinutes(String time) {
+    final parts = time.split(':');
+    if (parts.length != 2) return 0;
+    final hours = int.tryParse(parts[0]) ?? 0;
+    final minutes = int.tryParse(parts[1]) ?? 0;
+    return hours * 60 + minutes;
   }
 }

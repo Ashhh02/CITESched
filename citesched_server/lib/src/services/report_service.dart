@@ -25,21 +25,33 @@ class ReportService {
       );
 
       double totalUnits = 0;
+      double totalHours = 0;
       int totalSubjects = facultySchedules.length;
 
       for (var schedule in facultySchedules) {
         var subject = subjectMap[schedule.subjectId];
-        if (subject != null) {
+        if (schedule.units != null) {
+          totalUnits += schedule.units!;
+        } else if (subject != null) {
           totalUnits += subject.units;
+        }
+
+        if (schedule.hours != null) {
+          totalHours += schedule.hours!;
+        } else if (subject != null) {
+          // Fallback if schedule doesn't have hours
+          totalHours += subject.units;
         }
       }
 
       String status = 'Balanced';
       if (totalSubjects == 0) {
         status = 'No Load';
-      } else if (totalUnits < (faculty.maxLoad * 0.7)) {
+      } else if (totalUnits < ((faculty.maxLoad ?? 0) * 0.7)) {
         status = 'Underloaded';
-      } else if (totalUnits >= faculty.maxLoad) {
+      } else if (totalUnits > (faculty.maxLoad ?? 0)) {
+        status = 'Overloaded';
+      } else if (totalUnits == (faculty.maxLoad ?? 0)) {
         status = 'Max Load';
       }
 
@@ -48,9 +60,10 @@ class ReportService {
           facultyId: faculty.id!,
           facultyName: faculty.name,
           totalUnits: totalUnits,
+          totalHours: totalHours,
           totalSubjects: totalSubjects,
           loadStatus: status,
-          program: faculty.program.name,
+          program: faculty.program?.name,
         ),
       );
     }

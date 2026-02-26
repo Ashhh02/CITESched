@@ -10,5 +10,6 @@ fields:
   types: List<SubjectType>
   program: Program
   studentsCount: int
+  isActive: bool, default=true
   createdAt: DateTime
   updatedAt: DateTime

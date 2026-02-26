@@ -10,8 +10,11 @@ fields:
   timeslotId: int?
   timeslot: Timeslot?, relation(field=timeslotId)
   section: String
+  sectionId: int?
+  sectionRef: Section?, relation(field=sectionId)
   loadTypes: List<SubjectType>?
   units: double?
   hours: double?
+  isActive: bool, default=true
   createdAt: DateTime
   updatedAt: DateTime

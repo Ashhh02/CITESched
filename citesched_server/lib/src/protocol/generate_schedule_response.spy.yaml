@@ -4,3 +4,6 @@ fields:
   schedules: List<Schedule>?
   conflicts: List<ScheduleConflict>?
   message: String?
+  totalAssigned: int?
+  conflictsDetected: int?
+  unassignedSubjects: int?

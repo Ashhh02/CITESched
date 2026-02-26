@@ -7,7 +7,10 @@ fields:
   course: String
   yearLevel: int
   section: String?
+  sectionId: int?
+  sectionRef: Section?, relation(field=sectionId)
   userInfoId: int
+  isActive: bool, default=true
   createdAt: DateTime
   updatedAt: DateTime
 

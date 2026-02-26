@@ -3,13 +3,13 @@ table: faculty
 fields:
   name: String
   email: String
-  maxLoad: int
-  employmentStatus: EmploymentStatus
+  maxLoad: int?
+  employmentStatus: EmploymentStatus?
   shiftPreference: FacultyShiftPreference?
   preferredHours: String?
   facultyId: String
   userInfoId: int
-  program: Program
+  program: Program?
   isActive: bool
   currentLoad: double?
   createdAt: DateTime

@@ -22,48 +22,54 @@ import 'day_of_week.dart' as _i7;
 import 'distribution_data.dart' as _i8;
 import 'employment_status.dart' as _i9;
 import 'faculty.dart' as _i10;
-import 'faculty_load_data.dart' as _i11;
-import 'faculty_shift_preference.dart' as _i12;
-import 'generate_schedule_request.dart' as _i13;
-import 'generate_schedule_response.dart' as _i14;
-import 'greetings/greeting.dart' as _i15;
-import 'nlp_intent.dart' as _i16;
-import 'nlp_response.dart' as _i17;
-import 'program.dart' as _i18;
-import 'reports/conflict_summary_report.dart' as _i19;
-import 'reports/faculty_load_report.dart' as _i20;
-import 'reports/room_utilization_report.dart' as _i21;
-import 'reports/schedule_overview_report.dart' as _i22;
-import 'room.dart' as _i23;
-import 'room_type.dart' as _i24;
-import 'schedule.dart' as _i25;
-import 'schedule_conflict.dart' as _i26;
-import 'schedule_info.dart' as _i27;
-import 'student.dart' as _i28;
-import 'subject.dart' as _i29;
-import 'subject_type.dart' as _i30;
-import 'timeslot.dart' as _i31;
-import 'timetable_filter_request.dart' as _i32;
-import 'timetable_summary.dart' as _i33;
-import 'user_role.dart' as _i34;
-import 'package:citesched_server/src/generated/user_role.dart' as _i35;
-import 'package:citesched_server/src/generated/faculty.dart' as _i36;
-import 'package:citesched_server/src/generated/student.dart' as _i37;
-import 'package:citesched_server/src/generated/room.dart' as _i38;
-import 'package:citesched_server/src/generated/subject.dart' as _i39;
-import 'package:citesched_server/src/generated/timeslot.dart' as _i40;
-import 'package:citesched_server/src/generated/schedule.dart' as _i41;
-import 'package:citesched_server/src/generated/schedule_conflict.dart' as _i42;
+import 'faculty_availability.dart' as _i11;
+import 'faculty_load_data.dart' as _i12;
+import 'faculty_shift_preference.dart' as _i13;
+import 'generate_schedule_request.dart' as _i14;
+import 'generate_schedule_response.dart' as _i15;
+import 'greetings/greeting.dart' as _i16;
+import 'nlp_intent.dart' as _i17;
+import 'nlp_response.dart' as _i18;
+import 'program.dart' as _i19;
+import 'reports/conflict_summary_report.dart' as _i20;
+import 'reports/faculty_load_report.dart' as _i21;
+import 'reports/room_utilization_report.dart' as _i22;
+import 'reports/schedule_overview_report.dart' as _i23;
+import 'room.dart' as _i24;
+import 'room_type.dart' as _i25;
+import 'schedule.dart' as _i26;
+import 'schedule_conflict.dart' as _i27;
+import 'schedule_info.dart' as _i28;
+import 'section.dart' as _i29;
+import 'student.dart' as _i30;
+import 'subject.dart' as _i31;
+import 'subject_type.dart' as _i32;
+import 'timeslot.dart' as _i33;
+import 'timetable_filter_request.dart' as _i34;
+import 'timetable_summary.dart' as _i35;
+import 'user_role.dart' as _i36;
+import 'package:citesched_server/src/generated/user_role.dart' as _i37;
+import 'package:citesched_server/src/generated/faculty.dart' as _i38;
+import 'package:citesched_server/src/generated/student.dart' as _i39;
+import 'package:citesched_server/src/generated/room.dart' as _i40;
+import 'package:citesched_server/src/generated/subject.dart' as _i41;
+import 'package:citesched_server/src/generated/timeslot.dart' as _i42;
+import 'package:citesched_server/src/generated/schedule.dart' as _i43;
+import 'package:citesched_server/src/generated/schedule_conflict.dart' as _i44;
 import 'package:citesched_server/src/generated/reports/faculty_load_report.dart'
-    as _i43;
+    as _i45;
 import 'package:citesched_server/src/generated/reports/room_utilization_report.dart'
-    as _i44;
-import 'package:citesched_server/src/generated/schedule_info.dart' as _i45;
+    as _i46;
+import 'package:citesched_server/src/generated/section.dart' as _i47;
+import 'package:citesched_server/src/generated/faculty_availability.dart'
+    as _i48;
+import 'package:citesched_server/src/generated/schedule_info.dart' as _i49;
 export 'dashboard_stats.dart';
 export 'day_of_week.dart';
 export 'distribution_data.dart';
 export 'employment_status.dart';
 export 'faculty.dart';
+export 'faculty_availability.dart';
 export 'faculty_load_data.dart';
 export 'faculty_shift_preference.dart';
 export 'generate_schedule_request.dart';
@@ -81,6 +87,7 @@ export 'room_type.dart';
 export 'schedule.dart';
 export 'schedule_conflict.dart';
 export 'schedule_info.dart';
+export 'section.dart';
 export 'student.dart';
 export 'subject.dart';
 export 'subject_type.dart';
@@ -125,14 +132,14 @@ class Protocol extends _i1.SerializationManagerServer {
         _i2.ColumnDefinition(
           name: 'maxLoad',
           columnType: _i2.ColumnType.bigint,
-          isNullable: false,
-          dartType: 'int',
+          isNullable: true,
+          dartType: 'int?',
         ),
         _i2.ColumnDefinition(
           name: 'employmentStatus',
           columnType: _i2.ColumnType.text,
-          isNullable: false,
-          dartType: 'protocol:EmploymentStatus',
+          isNullable: true,
+          dartType: 'protocol:EmploymentStatus?',
         ),
         _i2.ColumnDefinition(
           name: 'shiftPreference',
@@ -161,8 +168,8 @@ class Protocol extends _i1.SerializationManagerServer {
         _i2.ColumnDefinition(
           name: 'program',
           columnType: _i2.ColumnType.text,
-          isNullable: false,
-          dartType: 'protocol:Program',
+          isNullable: true,
+          dartType: 'protocol:Program?',
         ),
         _i2.ColumnDefinition(
           name: 'isActive',
@@ -229,6 +236,91 @@ class Protocol extends _i1.SerializationManagerServer {
           type: 'btree',
           isUnique: true,
           isPrimary: false,
+        ),
+      ],
+      managed: true,
+    ),
+    _i2.TableDefinition(
+      name: 'faculty_availability',
+      dartName: 'FacultyAvailability',
+      schema: 'public',
+      module: 'citesched',
+      columns: [
+        _i2.ColumnDefinition(
+          name: 'id',
+          columnType: _i2.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int?',
+          columnDefault: 'nextval(\'faculty_availability_id_seq\'::regclass)',
+        ),
+        _i2.ColumnDefinition(
+          name: 'facultyId',
+          columnType: _i2.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int',
+        ),
+        _i2.ColumnDefinition(
+          name: 'dayOfWeek',
+          columnType: _i2.ColumnType.text,
+          isNullable: false,
+          dartType: 'protocol:DayOfWeek',
+        ),
+        _i2.ColumnDefinition(
+          name: 'startTime',
+          columnType: _i2.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _i2.ColumnDefinition(
+          name: 'endTime',
+          columnType: _i2.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _i2.ColumnDefinition(
+          name: 'isPreferred',
+          columnType: _i2.ColumnType.boolean,
+          isNullable: false,
+          dartType: 'bool',
+        ),
+        _i2.ColumnDefinition(
+          name: 'createdAt',
+          columnType: _i2.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+        _i2.ColumnDefinition(
+          name: 'updatedAt',
+          columnType: _i2.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+      ],
+      foreignKeys: [
+        _i2.ForeignKeyDefinition(
+          constraintName: 'faculty_availability_fk_0',
+          columns: ['facultyId'],
+          referenceTable: 'faculty',
+          referenceTableSchema: 'public',
+          referenceColumns: ['id'],
+          onUpdate: _i2.ForeignKeyAction.noAction,
+          onDelete: _i2.ForeignKeyAction.noAction,
+          matchType: null,
+        ),
+      ],
+      indexes: [
+        _i2.IndexDefinition(
+          indexName: 'faculty_availability_pkey',
+          tableSpace: null,
+          elements: [
+            _i2.IndexElementDefinition(
+              type: _i2.IndexElementDefinitionType.column,
+              definition: 'id',
+            ),
+          ],
+          type: 'btree',
+          isUnique: true,
+          isPrimary: true,
         ),
       ],
       managed: true,
@@ -370,6 +462,12 @@ class Protocol extends _i1.SerializationManagerServer {
           dartType: 'String',
         ),
         _i2.ColumnDefinition(
+          name: 'sectionId',
+          columnType: _i2.ColumnType.bigint,
+          isNullable: true,
+          dartType: 'int?',
+        ),
+        _i2.ColumnDefinition(
           name: 'loadTypes',
           columnType: _i2.ColumnType.json,
           isNullable: true,
@@ -386,6 +484,13 @@ class Protocol extends _i1.SerializationManagerServer {
           columnType: _i2.ColumnType.doublePrecision,
           isNullable: true,
           dartType: 'double?',
+        ),
+        _i2.ColumnDefinition(
+          name: 'isActive',
+          columnType: _i2.ColumnType.boolean,
+          isNullable: false,
+          dartType: 'bool',
+          columnDefault: 'true',
         ),
         _i2.ColumnDefinition(
           name: 'createdAt',
@@ -441,6 +546,16 @@ class Protocol extends _i1.SerializationManagerServer {
           onDelete: _i2.ForeignKeyAction.noAction,
           matchType: null,
         ),
+        _i2.ForeignKeyDefinition(
+          constraintName: 'schedule_fk_4',
+          columns: ['sectionId'],
+          referenceTable: 'section',
+          referenceTableSchema: 'public',
+          referenceColumns: ['id'],
+          onUpdate: _i2.ForeignKeyAction.noAction,
+          onDelete: _i2.ForeignKeyAction.noAction,
+          matchType: null,
+        ),
       ],
       indexes: [
         _i2.IndexDefinition(
@@ -455,6 +570,116 @@ class Protocol extends _i1.SerializationManagerServer {
           type: 'btree',
           isUnique: true,
           isPrimary: true,
+        ),
+      ],
+      managed: true,
+    ),
+    _i2.TableDefinition(
+      name: 'section',
+      dartName: 'Section',
+      schema: 'public',
+      module: 'citesched',
+      columns: [
+        _i2.ColumnDefinition(
+          name: 'id',
+          columnType: _i2.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int?',
+          columnDefault: 'nextval(\'section_id_seq\'::regclass)',
+        ),
+        _i2.ColumnDefinition(
+          name: 'program',
+          columnType: _i2.ColumnType.text,
+          isNullable: false,
+          dartType: 'protocol:Program',
+        ),
+        _i2.ColumnDefinition(
+          name: 'yearLevel',
+          columnType: _i2.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int',
+        ),
+        _i2.ColumnDefinition(
+          name: 'sectionCode',
+          columnType: _i2.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _i2.ColumnDefinition(
+          name: 'academicYear',
+          columnType: _i2.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _i2.ColumnDefinition(
+          name: 'semester',
+          columnType: _i2.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int',
+        ),
+        _i2.ColumnDefinition(
+          name: 'isActive',
+          columnType: _i2.ColumnType.boolean,
+          isNullable: false,
+          dartType: 'bool',
+          columnDefault: 'true',
+        ),
+        _i2.ColumnDefinition(
+          name: 'createdAt',
+          columnType: _i2.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+        _i2.ColumnDefinition(
+          name: 'updatedAt',
+          columnType: _i2.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+      ],
+      foreignKeys: [],
+      indexes: [
+        _i2.IndexDefinition(
+          indexName: 'section_pkey',
+          tableSpace: null,
+          elements: [
+            _i2.IndexElementDefinition(
+              type: _i2.IndexElementDefinitionType.column,
+              definition: 'id',
+            ),
+          ],
+          type: 'btree',
+          isUnique: true,
+          isPrimary: true,
+        ),
+        _i2.IndexDefinition(
+          indexName: 'section_unique_idx',
+          tableSpace: null,
+          elements: [
+            _i2.IndexElementDefinition(
+              type: _i2.IndexElementDefinitionType.column,
+              definition: 'program',
+            ),
+            _i2.IndexElementDefinition(
+              type: _i2.IndexElementDefinitionType.column,
+              definition: 'yearLevel',
+            ),
+            _i2.IndexElementDefinition(
+              type: _i2.IndexElementDefinitionType.column,
+              definition: 'sectionCode',
+            ),
+            _i2.IndexElementDefinition(
+              type: _i2.IndexElementDefinitionType.column,
+              definition: 'academicYear',
+            ),
+            _i2.IndexElementDefinition(
+              type: _i2.IndexElementDefinitionType.column,
+              definition: 'semester',
+            ),
+          ],
+          type: 'btree',
+          isUnique: true,
+          isPrimary: false,
         ),
       ],
       managed: true,
@@ -509,10 +734,23 @@ class Protocol extends _i1.SerializationManagerServer {
           dartType: 'String?',
         ),
         _i2.ColumnDefinition(
+          name: 'sectionId',
+          columnType: _i2.ColumnType.bigint,
+          isNullable: true,
+          dartType: 'int?',
+        ),
+        _i2.ColumnDefinition(
           name: 'userInfoId',
           columnType: _i2.ColumnType.bigint,
           isNullable: false,
           dartType: 'int',
+        ),
+        _i2.ColumnDefinition(
+          name: 'isActive',
+          columnType: _i2.ColumnType.boolean,
+          isNullable: false,
+          dartType: 'bool',
+          columnDefault: 'true',
         ),
         _i2.ColumnDefinition(
           name: 'createdAt',
@@ -527,7 +765,18 @@ class Protocol extends _i1.SerializationManagerServer {
           dartType: 'DateTime',
         ),
       ],
-      foreignKeys: [],
+      foreignKeys: [
+        _i2.ForeignKeyDefinition(
+          constraintName: 'student_fk_0',
+          columns: ['sectionId'],
+          referenceTable: 'section',
+          referenceTableSchema: 'public',
+          referenceColumns: ['id'],
+          onUpdate: _i2.ForeignKeyAction.noAction,
+          onDelete: _i2.ForeignKeyAction.noAction,
+          matchType: null,
+        ),
+      ],
       indexes: [
         _i2.IndexDefinition(
           indexName: 'student_pkey',
@@ -637,6 +886,13 @@ class Protocol extends _i1.SerializationManagerServer {
           columnType: _i2.ColumnType.bigint,
           isNullable: false,
           dartType: 'int',
+        ),
+        _i2.ColumnDefinition(
+          name: 'isActive',
+          columnType: _i2.ColumnType.boolean,
+          isNullable: false,
+          dartType: 'bool',
+          columnDefault: 'true',
         ),
         _i2.ColumnDefinition(
           name: 'createdAt',
@@ -842,77 +1098,83 @@ class Protocol extends _i1.SerializationManagerServer {
     if (t == _i10.Faculty) {
       return _i10.Faculty.fromJson(data) as T;
     }
-    if (t == _i11.FacultyLoadData) {
-      return _i11.FacultyLoadData.fromJson(data) as T;
+    if (t == _i11.FacultyAvailability) {
+      return _i11.FacultyAvailability.fromJson(data) as T;
     }
-    if (t == _i12.FacultyShiftPreference) {
-      return _i12.FacultyShiftPreference.fromJson(data) as T;
+    if (t == _i12.FacultyLoadData) {
+      return _i12.FacultyLoadData.fromJson(data) as T;
     }
-    if (t == _i13.GenerateScheduleRequest) {
-      return _i13.GenerateScheduleRequest.fromJson(data) as T;
+    if (t == _i13.FacultyShiftPreference) {
+      return _i13.FacultyShiftPreference.fromJson(data) as T;
     }
-    if (t == _i14.GenerateScheduleResponse) {
-      return _i14.GenerateScheduleResponse.fromJson(data) as T;
+    if (t == _i14.GenerateScheduleRequest) {
+      return _i14.GenerateScheduleRequest.fromJson(data) as T;
     }
-    if (t == _i15.Greeting) {
-      return _i15.Greeting.fromJson(data) as T;
+    if (t == _i15.GenerateScheduleResponse) {
+      return _i15.GenerateScheduleResponse.fromJson(data) as T;
     }
-    if (t == _i16.NLPIntent) {
-      return _i16.NLPIntent.fromJson(data) as T;
+    if (t == _i16.Greeting) {
+      return _i16.Greeting.fromJson(data) as T;
     }
-    if (t == _i17.NLPResponse) {
-      return _i17.NLPResponse.fromJson(data) as T;
+    if (t == _i17.NLPIntent) {
+      return _i17.NLPIntent.fromJson(data) as T;
     }
-    if (t == _i18.Program) {
-      return _i18.Program.fromJson(data) as T;
+    if (t == _i18.NLPResponse) {
+      return _i18.NLPResponse.fromJson(data) as T;
     }
-    if (t == _i19.ConflictSummaryReport) {
-      return _i19.ConflictSummaryReport.fromJson(data) as T;
+    if (t == _i19.Program) {
+      return _i19.Program.fromJson(data) as T;
     }
-    if (t == _i20.FacultyLoadReport) {
-      return _i20.FacultyLoadReport.fromJson(data) as T;
+    if (t == _i20.ConflictSummaryReport) {
+      return _i20.ConflictSummaryReport.fromJson(data) as T;
     }
-    if (t == _i21.RoomUtilizationReport) {
-      return _i21.RoomUtilizationReport.fromJson(data) as T;
+    if (t == _i21.FacultyLoadReport) {
+      return _i21.FacultyLoadReport.fromJson(data) as T;
     }
-    if (t == _i22.ScheduleOverviewReport) {
-      return _i22.ScheduleOverviewReport.fromJson(data) as T;
+    if (t == _i22.RoomUtilizationReport) {
+      return _i22.RoomUtilizationReport.fromJson(data) as T;
     }
-    if (t == _i23.Room) {
-      return _i23.Room.fromJson(data) as T;
+    if (t == _i23.ScheduleOverviewReport) {
+      return _i23.ScheduleOverviewReport.fromJson(data) as T;
     }
-    if (t == _i24.RoomType) {
-      return _i24.RoomType.fromJson(data) as T;
+    if (t == _i24.Room) {
+      return _i24.Room.fromJson(data) as T;
     }
-    if (t == _i25.Schedule) {
-      return _i25.Schedule.fromJson(data) as T;
+    if (t == _i25.RoomType) {
+      return _i25.RoomType.fromJson(data) as T;
     }
-    if (t == _i26.ScheduleConflict) {
-      return _i26.ScheduleConflict.fromJson(data) as T;
+    if (t == _i26.Schedule) {
+      return _i26.Schedule.fromJson(data) as T;
     }
-    if (t == _i27.ScheduleInfo) {
-      return _i27.ScheduleInfo.fromJson(data) as T;
+    if (t == _i27.ScheduleConflict) {
+      return _i27.ScheduleConflict.fromJson(data) as T;
     }
-    if (t == _i28.Student) {
-      return _i28.Student.fromJson(data) as T;
+    if (t == _i28.ScheduleInfo) {
+      return _i28.ScheduleInfo.fromJson(data) as T;
     }
-    if (t == _i29.Subject) {
-      return _i29.Subject.fromJson(data) as T;
+    if (t == _i29.Section) {
+      return _i29.Section.fromJson(data) as T;
     }
-    if (t == _i30.SubjectType) {
-      return _i30.SubjectType.fromJson(data) as T;
+    if (t == _i30.Student) {
+      return _i30.Student.fromJson(data) as T;
     }
-    if (t == _i31.Timeslot) {
-      return _i31.Timeslot.fromJson(data) as T;
+    if (t == _i31.Subject) {
+      return _i31.Subject.fromJson(data) as T;
     }
-    if (t == _i32.TimetableFilterRequest) {
-      return _i32.TimetableFilterRequest.fromJson(data) as T;
+    if (t == _i32.SubjectType) {
+      return _i32.SubjectType.fromJson(data) as T;
     }
-    if (t == _i33.TimetableSummary) {
-      return _i33.TimetableSummary.fromJson(data) as T;
+    if (t == _i33.Timeslot) {
+      return _i33.Timeslot.fromJson(data) as T;
     }
-    if (t == _i34.UserRole) {
-      return _i34.UserRole.fromJson(data) as T;
+    if (t == _i34.TimetableFilterRequest) {
+      return _i34.TimetableFilterRequest.fromJson(data) as T;
+    }
+    if (t == _i35.TimetableSummary) {
+      return _i35.TimetableSummary.fromJson(data) as T;
+    }
+    if (t == _i36.UserRole) {
+      return _i36.UserRole.fromJson(data) as T;
     }
     if (t == _i1.getType<_i6.DashboardStats?>()) {
       return (data != null ? _i6.DashboardStats.fromJson(data) : null) as T;
@@ -929,96 +1191,103 @@ class Protocol extends _i1.SerializationManagerServer {
     if (t == _i1.getType<_i10.Faculty?>()) {
       return (data != null ? _i10.Faculty.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i11.FacultyLoadData?>()) {
-      return (data != null ? _i11.FacultyLoadData.fromJson(data) : null) as T;
-    }
-    if (t == _i1.getType<_i12.FacultyShiftPreference?>()) {
-      return (data != null ? _i12.FacultyShiftPreference.fromJson(data) : null)
+    if (t == _i1.getType<_i11.FacultyAvailability?>()) {
+      return (data != null ? _i11.FacultyAvailability.fromJson(data) : null)
           as T;
     }
-    if (t == _i1.getType<_i13.GenerateScheduleRequest?>()) {
-      return (data != null ? _i13.GenerateScheduleRequest.fromJson(data) : null)
+    if (t == _i1.getType<_i12.FacultyLoadData?>()) {
+      return (data != null ? _i12.FacultyLoadData.fromJson(data) : null) as T;
+    }
+    if (t == _i1.getType<_i13.FacultyShiftPreference?>()) {
+      return (data != null ? _i13.FacultyShiftPreference.fromJson(data) : null)
           as T;
     }
-    if (t == _i1.getType<_i14.GenerateScheduleResponse?>()) {
+    if (t == _i1.getType<_i14.GenerateScheduleRequest?>()) {
+      return (data != null ? _i14.GenerateScheduleRequest.fromJson(data) : null)
+          as T;
+    }
+    if (t == _i1.getType<_i15.GenerateScheduleResponse?>()) {
       return (data != null
-              ? _i14.GenerateScheduleResponse.fromJson(data)
+              ? _i15.GenerateScheduleResponse.fromJson(data)
               : null)
           as T;
     }
-    if (t == _i1.getType<_i15.Greeting?>()) {
-      return (data != null ? _i15.Greeting.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i16.Greeting?>()) {
+      return (data != null ? _i16.Greeting.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i16.NLPIntent?>()) {
-      return (data != null ? _i16.NLPIntent.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i17.NLPIntent?>()) {
+      return (data != null ? _i17.NLPIntent.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i17.NLPResponse?>()) {
-      return (data != null ? _i17.NLPResponse.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i18.NLPResponse?>()) {
+      return (data != null ? _i18.NLPResponse.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i18.Program?>()) {
-      return (data != null ? _i18.Program.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i19.Program?>()) {
+      return (data != null ? _i19.Program.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i19.ConflictSummaryReport?>()) {
-      return (data != null ? _i19.ConflictSummaryReport.fromJson(data) : null)
+    if (t == _i1.getType<_i20.ConflictSummaryReport?>()) {
+      return (data != null ? _i20.ConflictSummaryReport.fromJson(data) : null)
           as T;
     }
-    if (t == _i1.getType<_i20.FacultyLoadReport?>()) {
-      return (data != null ? _i20.FacultyLoadReport.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i21.FacultyLoadReport?>()) {
+      return (data != null ? _i21.FacultyLoadReport.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i21.RoomUtilizationReport?>()) {
-      return (data != null ? _i21.RoomUtilizationReport.fromJson(data) : null)
+    if (t == _i1.getType<_i22.RoomUtilizationReport?>()) {
+      return (data != null ? _i22.RoomUtilizationReport.fromJson(data) : null)
           as T;
     }
-    if (t == _i1.getType<_i22.ScheduleOverviewReport?>()) {
-      return (data != null ? _i22.ScheduleOverviewReport.fromJson(data) : null)
+    if (t == _i1.getType<_i23.ScheduleOverviewReport?>()) {
+      return (data != null ? _i23.ScheduleOverviewReport.fromJson(data) : null)
           as T;
     }
-    if (t == _i1.getType<_i23.Room?>()) {
-      return (data != null ? _i23.Room.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i24.Room?>()) {
+      return (data != null ? _i24.Room.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i24.RoomType?>()) {
-      return (data != null ? _i24.RoomType.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i25.RoomType?>()) {
+      return (data != null ? _i25.RoomType.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i25.Schedule?>()) {
-      return (data != null ? _i25.Schedule.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i26.Schedule?>()) {
+      return (data != null ? _i26.Schedule.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i26.ScheduleConflict?>()) {
-      return (data != null ? _i26.ScheduleConflict.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i27.ScheduleConflict?>()) {
+      return (data != null ? _i27.ScheduleConflict.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i27.ScheduleInfo?>()) {
-      return (data != null ? _i27.ScheduleInfo.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i28.ScheduleInfo?>()) {
+      return (data != null ? _i28.ScheduleInfo.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i28.Student?>()) {
-      return (data != null ? _i28.Student.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i29.Section?>()) {
+      return (data != null ? _i29.Section.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i29.Subject?>()) {
-      return (data != null ? _i29.Subject.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i30.Student?>()) {
+      return (data != null ? _i30.Student.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i30.SubjectType?>()) {
-      return (data != null ? _i30.SubjectType.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i31.Subject?>()) {
+      return (data != null ? _i31.Subject.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i31.Timeslot?>()) {
-      return (data != null ? _i31.Timeslot.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i32.SubjectType?>()) {
+      return (data != null ? _i32.SubjectType.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i32.TimetableFilterRequest?>()) {
-      return (data != null ? _i32.TimetableFilterRequest.fromJson(data) : null)
+    if (t == _i1.getType<_i33.Timeslot?>()) {
+      return (data != null ? _i33.Timeslot.fromJson(data) : null) as T;
+    }
+    if (t == _i1.getType<_i34.TimetableFilterRequest?>()) {
+      return (data != null ? _i34.TimetableFilterRequest.fromJson(data) : null)
           as T;
     }
-    if (t == _i1.getType<_i33.TimetableSummary?>()) {
-      return (data != null ? _i33.TimetableSummary.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i35.TimetableSummary?>()) {
+      return (data != null ? _i35.TimetableSummary.fromJson(data) : null) as T;
     }
-    if (t == _i1.getType<_i34.UserRole?>()) {
-      return (data != null ? _i34.UserRole.fromJson(data) : null) as T;
+    if (t == _i1.getType<_i36.UserRole?>()) {
+      return (data != null ? _i36.UserRole.fromJson(data) : null) as T;
     }
-    if (t == List<_i11.FacultyLoadData>) {
+    if (t == List<_i12.FacultyLoadData>) {
       return (data as List)
-              .map((e) => deserialize<_i11.FacultyLoadData>(e))
+              .map((e) => deserialize<_i12.FacultyLoadData>(e))
               .toList()
           as T;
     }
-    if (t == List<_i26.ScheduleConflict>) {
+    if (t == List<_i27.ScheduleConflict>) {
       return (data as List)
-              .map((e) => deserialize<_i26.ScheduleConflict>(e))
+              .map((e) => deserialize<_i27.ScheduleConflict>(e))
               .toList()
           as T;
     }
@@ -1034,22 +1303,22 @@ class Protocol extends _i1.SerializationManagerServer {
     if (t == List<String>) {
       return (data as List).map((e) => deserialize<String>(e)).toList() as T;
     }
-    if (t == List<_i25.Schedule>) {
-      return (data as List).map((e) => deserialize<_i25.Schedule>(e)).toList()
+    if (t == List<_i26.Schedule>) {
+      return (data as List).map((e) => deserialize<_i26.Schedule>(e)).toList()
           as T;
     }
-    if (t == _i1.getType<List<_i25.Schedule>?>()) {
+    if (t == _i1.getType<List<_i26.Schedule>?>()) {
       return (data != null
               ? (data as List)
-                    .map((e) => deserialize<_i25.Schedule>(e))
+                    .map((e) => deserialize<_i26.Schedule>(e))
                     .toList()
               : null)
           as T;
     }
-    if (t == _i1.getType<List<_i26.ScheduleConflict>?>()) {
+    if (t == _i1.getType<List<_i27.ScheduleConflict>?>()) {
       return (data != null
               ? (data as List)
-                    .map((e) => deserialize<_i26.ScheduleConflict>(e))
+                    .map((e) => deserialize<_i27.ScheduleConflict>(e))
                     .toList()
               : null)
           as T;
@@ -1060,68 +1329,78 @@ class Protocol extends _i1.SerializationManagerServer {
           )
           as T;
     }
-    if (t == List<_i30.SubjectType>) {
+    if (t == List<_i32.SubjectType>) {
       return (data as List)
-              .map((e) => deserialize<_i30.SubjectType>(e))
+              .map((e) => deserialize<_i32.SubjectType>(e))
               .toList()
           as T;
     }
-    if (t == _i1.getType<List<_i30.SubjectType>?>()) {
+    if (t == _i1.getType<List<_i32.SubjectType>?>()) {
       return (data != null
               ? (data as List)
-                    .map((e) => deserialize<_i30.SubjectType>(e))
+                    .map((e) => deserialize<_i32.SubjectType>(e))
                     .toList()
               : null)
           as T;
     }
-    if (t == List<_i35.UserRole>) {
-      return (data as List).map((e) => deserialize<_i35.UserRole>(e)).toList()
+    if (t == List<_i37.UserRole>) {
+      return (data as List).map((e) => deserialize<_i37.UserRole>(e)).toList()
           as T;
     }
-    if (t == List<_i36.Faculty>) {
-      return (data as List).map((e) => deserialize<_i36.Faculty>(e)).toList()
+    if (t == List<_i38.Faculty>) {
+      return (data as List).map((e) => deserialize<_i38.Faculty>(e)).toList()
           as T;
     }
-    if (t == List<_i37.Student>) {
-      return (data as List).map((e) => deserialize<_i37.Student>(e)).toList()
+    if (t == List<_i39.Student>) {
+      return (data as List).map((e) => deserialize<_i39.Student>(e)).toList()
           as T;
     }
-    if (t == List<_i38.Room>) {
-      return (data as List).map((e) => deserialize<_i38.Room>(e)).toList() as T;
+    if (t == List<_i40.Room>) {
+      return (data as List).map((e) => deserialize<_i40.Room>(e)).toList() as T;
     }
-    if (t == List<_i39.Subject>) {
-      return (data as List).map((e) => deserialize<_i39.Subject>(e)).toList()
+    if (t == List<_i41.Subject>) {
+      return (data as List).map((e) => deserialize<_i41.Subject>(e)).toList()
           as T;
     }
-    if (t == List<_i40.Timeslot>) {
-      return (data as List).map((e) => deserialize<_i40.Timeslot>(e)).toList()
+    if (t == List<_i42.Timeslot>) {
+      return (data as List).map((e) => deserialize<_i42.Timeslot>(e)).toList()
           as T;
     }
-    if (t == List<_i41.Schedule>) {
-      return (data as List).map((e) => deserialize<_i41.Schedule>(e)).toList()
+    if (t == List<_i43.Schedule>) {
+      return (data as List).map((e) => deserialize<_i43.Schedule>(e)).toList()
           as T;
     }
-    if (t == List<_i42.ScheduleConflict>) {
+    if (t == List<_i44.ScheduleConflict>) {
       return (data as List)
-              .map((e) => deserialize<_i42.ScheduleConflict>(e))
+              .map((e) => deserialize<_i44.ScheduleConflict>(e))
               .toList()
           as T;
     }
-    if (t == List<_i43.FacultyLoadReport>) {
+    if (t == List<_i45.FacultyLoadReport>) {
       return (data as List)
-              .map((e) => deserialize<_i43.FacultyLoadReport>(e))
+              .map((e) => deserialize<_i45.FacultyLoadReport>(e))
               .toList()
           as T;
     }
-    if (t == List<_i44.RoomUtilizationReport>) {
+    if (t == List<_i46.RoomUtilizationReport>) {
       return (data as List)
-              .map((e) => deserialize<_i44.RoomUtilizationReport>(e))
+              .map((e) => deserialize<_i46.RoomUtilizationReport>(e))
               .toList()
           as T;
     }
-    if (t == List<_i45.ScheduleInfo>) {
+    if (t == List<_i47.Section>) {
+      return (data as List).map((e) => deserialize<_i47.Section>(e)).toList()
+          as T;
+    }
+    if (t == List<_i48.FacultyAvailability>) {
       return (data as List)
-              .map((e) => deserialize<_i45.ScheduleInfo>(e))
+              .map((e) => deserialize<_i48.FacultyAvailability>(e))
+              .toList()
+          as T;
+    }
+    if (t == List<_i49.ScheduleInfo>) {
+      return (data as List)
+              .map((e) => deserialize<_i49.ScheduleInfo>(e))
               .toList()
           as T;
     }
@@ -1147,30 +1426,32 @@ class Protocol extends _i1.SerializationManagerServer {
       _i8.DistributionData => 'DistributionData',
       _i9.EmploymentStatus => 'EmploymentStatus',
       _i10.Faculty => 'Faculty',
-      _i11.FacultyLoadData => 'FacultyLoadData',
-      _i12.FacultyShiftPreference => 'FacultyShiftPreference',
-      _i13.GenerateScheduleRequest => 'GenerateScheduleRequest',
-      _i14.GenerateScheduleResponse => 'GenerateScheduleResponse',
-      _i15.Greeting => 'Greeting',
-      _i16.NLPIntent => 'NLPIntent',
-      _i17.NLPResponse => 'NLPResponse',
-      _i18.Program => 'Program',
-      _i19.ConflictSummaryReport => 'ConflictSummaryReport',
-      _i20.FacultyLoadReport => 'FacultyLoadReport',
-      _i21.RoomUtilizationReport => 'RoomUtilizationReport',
-      _i22.ScheduleOverviewReport => 'ScheduleOverviewReport',
-      _i23.Room => 'Room',
-      _i24.RoomType => 'RoomType',
-      _i25.Schedule => 'Schedule',
-      _i26.ScheduleConflict => 'ScheduleConflict',
-      _i27.ScheduleInfo => 'ScheduleInfo',
-      _i28.Student => 'Student',
-      _i29.Subject => 'Subject',
-      _i30.SubjectType => 'SubjectType',
-      _i31.Timeslot => 'Timeslot',
-      _i32.TimetableFilterRequest => 'TimetableFilterRequest',
-      _i33.TimetableSummary => 'TimetableSummary',
-      _i34.UserRole => 'UserRole',
+      _i11.FacultyAvailability => 'FacultyAvailability',
+      _i12.FacultyLoadData => 'FacultyLoadData',
+      _i13.FacultyShiftPreference => 'FacultyShiftPreference',
+      _i14.GenerateScheduleRequest => 'GenerateScheduleRequest',
+      _i15.GenerateScheduleResponse => 'GenerateScheduleResponse',
+      _i16.Greeting => 'Greeting',
+      _i17.NLPIntent => 'NLPIntent',
+      _i18.NLPResponse => 'NLPResponse',
+      _i19.Program => 'Program',
+      _i20.ConflictSummaryReport => 'ConflictSummaryReport',
+      _i21.FacultyLoadReport => 'FacultyLoadReport',
+      _i22.RoomUtilizationReport => 'RoomUtilizationReport',
+      _i23.ScheduleOverviewReport => 'ScheduleOverviewReport',
+      _i24.Room => 'Room',
+      _i25.RoomType => 'RoomType',
+      _i26.Schedule => 'Schedule',
+      _i27.ScheduleConflict => 'ScheduleConflict',
+      _i28.ScheduleInfo => 'ScheduleInfo',
+      _i29.Section => 'Section',
+      _i30.Student => 'Student',
+      _i31.Subject => 'Subject',
+      _i32.SubjectType => 'SubjectType',
+      _i33.Timeslot => 'Timeslot',
+      _i34.TimetableFilterRequest => 'TimetableFilterRequest',
+      _i35.TimetableSummary => 'TimetableSummary',
+      _i36.UserRole => 'UserRole',
       _ => null,
     };
   }
@@ -1195,53 +1476,57 @@ class Protocol extends _i1.SerializationManagerServer {
         return 'EmploymentStatus';
       case _i10.Faculty():
         return 'Faculty';
-      case _i11.FacultyLoadData():
+      case _i11.FacultyAvailability():
+        return 'FacultyAvailability';
+      case _i12.FacultyLoadData():
         return 'FacultyLoadData';
-      case _i12.FacultyShiftPreference():
+      case _i13.FacultyShiftPreference():
         return 'FacultyShiftPreference';
-      case _i13.GenerateScheduleRequest():
+      case _i14.GenerateScheduleRequest():
         return 'GenerateScheduleRequest';
-      case _i14.GenerateScheduleResponse():
+      case _i15.GenerateScheduleResponse():
         return 'GenerateScheduleResponse';
-      case _i15.Greeting():
+      case _i16.Greeting():
         return 'Greeting';
-      case _i16.NLPIntent():
+      case _i17.NLPIntent():
         return 'NLPIntent';
-      case _i17.NLPResponse():
+      case _i18.NLPResponse():
         return 'NLPResponse';
-      case _i18.Program():
+      case _i19.Program():
         return 'Program';
-      case _i19.ConflictSummaryReport():
+      case _i20.ConflictSummaryReport():
         return 'ConflictSummaryReport';
-      case _i20.FacultyLoadReport():
+      case _i21.FacultyLoadReport():
         return 'FacultyLoadReport';
-      case _i21.RoomUtilizationReport():
+      case _i22.RoomUtilizationReport():
         return 'RoomUtilizationReport';
-      case _i22.ScheduleOverviewReport():
+      case _i23.ScheduleOverviewReport():
         return 'ScheduleOverviewReport';
-      case _i23.Room():
+      case _i24.Room():
         return 'Room';
-      case _i24.RoomType():
+      case _i25.RoomType():
         return 'RoomType';
-      case _i25.Schedule():
+      case _i26.Schedule():
         return 'Schedule';
-      case _i26.ScheduleConflict():
+      case _i27.ScheduleConflict():
         return 'ScheduleConflict';
-      case _i27.ScheduleInfo():
+      case _i28.ScheduleInfo():
         return 'ScheduleInfo';
-      case _i28.Student():
+      case _i29.Section():
+        return 'Section';
+      case _i30.Student():
         return 'Student';
-      case _i29.Subject():
+      case _i31.Subject():
         return 'Subject';
-      case _i30.SubjectType():
+      case _i32.SubjectType():
         return 'SubjectType';
-      case _i31.Timeslot():
+      case _i33.Timeslot():
         return 'Timeslot';
-      case _i32.TimetableFilterRequest():
+      case _i34.TimetableFilterRequest():
         return 'TimetableFilterRequest';
-      case _i33.TimetableSummary():
+      case _i35.TimetableSummary():
         return 'TimetableSummary';
-      case _i34.UserRole():
+      case _i36.UserRole():
         return 'UserRole';
     }
     className = _i2.Protocol().getClassNameForObject(data);
@@ -1284,77 +1569,83 @@ class Protocol extends _i1.SerializationManagerServer {
     if (dataClassName == 'Faculty') {
       return deserialize<_i10.Faculty>(data['data']);
     }
+    if (dataClassName == 'FacultyAvailability') {
+      return deserialize<_i11.FacultyAvailability>(data['data']);
+    }
     if (dataClassName == 'FacultyLoadData') {
-      return deserialize<_i11.FacultyLoadData>(data['data']);
+      return deserialize<_i12.FacultyLoadData>(data['data']);
     }
     if (dataClassName == 'FacultyShiftPreference') {
-      return deserialize<_i12.FacultyShiftPreference>(data['data']);
+      return deserialize<_i13.FacultyShiftPreference>(data['data']);
     }
     if (dataClassName == 'GenerateScheduleRequest') {
-      return deserialize<_i13.GenerateScheduleRequest>(data['data']);
+      return deserialize<_i14.GenerateScheduleRequest>(data['data']);
     }
     if (dataClassName == 'GenerateScheduleResponse') {
-      return deserialize<_i14.GenerateScheduleResponse>(data['data']);
+      return deserialize<_i15.GenerateScheduleResponse>(data['data']);
     }
     if (dataClassName == 'Greeting') {
-      return deserialize<_i15.Greeting>(data['data']);
+      return deserialize<_i16.Greeting>(data['data']);
     }
     if (dataClassName == 'NLPIntent') {
-      return deserialize<_i16.NLPIntent>(data['data']);
+      return deserialize<_i17.NLPIntent>(data['data']);
     }
     if (dataClassName == 'NLPResponse') {
-      return deserialize<_i17.NLPResponse>(data['data']);
+      return deserialize<_i18.NLPResponse>(data['data']);
     }
     if (dataClassName == 'Program') {
-      return deserialize<_i18.Program>(data['data']);
+      return deserialize<_i19.Program>(data['data']);
     }
     if (dataClassName == 'ConflictSummaryReport') {
-      return deserialize<_i19.ConflictSummaryReport>(data['data']);
+      return deserialize<_i20.ConflictSummaryReport>(data['data']);
     }
     if (dataClassName == 'FacultyLoadReport') {
-      return deserialize<_i20.FacultyLoadReport>(data['data']);
+      return deserialize<_i21.FacultyLoadReport>(data['data']);
     }
     if (dataClassName == 'RoomUtilizationReport') {
-      return deserialize<_i21.RoomUtilizationReport>(data['data']);
+      return deserialize<_i22.RoomUtilizationReport>(data['data']);
     }
     if (dataClassName == 'ScheduleOverviewReport') {
-      return deserialize<_i22.ScheduleOverviewReport>(data['data']);
+      return deserialize<_i23.ScheduleOverviewReport>(data['data']);
     }
     if (dataClassName == 'Room') {
-      return deserialize<_i23.Room>(data['data']);
+      return deserialize<_i24.Room>(data['data']);
     }
     if (dataClassName == 'RoomType') {
-      return deserialize<_i24.RoomType>(data['data']);
+      return deserialize<_i25.RoomType>(data['data']);
     }
     if (dataClassName == 'Schedule') {
-      return deserialize<_i25.Schedule>(data['data']);
+      return deserialize<_i26.Schedule>(data['data']);
     }
     if (dataClassName == 'ScheduleConflict') {
-      return deserialize<_i26.ScheduleConflict>(data['data']);
+      return deserialize<_i27.ScheduleConflict>(data['data']);
     }
     if (dataClassName == 'ScheduleInfo') {
-      return deserialize<_i27.ScheduleInfo>(data['data']);
+      return deserialize<_i28.ScheduleInfo>(data['data']);
+    }
+    if (dataClassName == 'Section') {
+      return deserialize<_i29.Section>(data['data']);
     }
     if (dataClassName == 'Student') {
-      return deserialize<_i28.Student>(data['data']);
+      return deserialize<_i30.Student>(data['data']);
     }
     if (dataClassName == 'Subject') {
-      return deserialize<_i29.Subject>(data['data']);
+      return deserialize<_i31.Subject>(data['data']);
     }
     if (dataClassName == 'SubjectType') {
-      return deserialize<_i30.SubjectType>(data['data']);
+      return deserialize<_i32.SubjectType>(data['data']);
     }
     if (dataClassName == 'Timeslot') {
-      return deserialize<_i31.Timeslot>(data['data']);
+      return deserialize<_i33.Timeslot>(data['data']);
     }
     if (dataClassName == 'TimetableFilterRequest') {
-      return deserialize<_i32.TimetableFilterRequest>(data['data']);
+      return deserialize<_i34.TimetableFilterRequest>(data['data']);
     }
     if (dataClassName == 'TimetableSummary') {
-      return deserialize<_i33.TimetableSummary>(data['data']);
+      return deserialize<_i35.TimetableSummary>(data['data']);
     }
     if (dataClassName == 'UserRole') {
-      return deserialize<_i34.UserRole>(data['data']);
+      return deserialize<_i36.UserRole>(data['data']);
     }
     if (dataClassName.startsWith('serverpod.')) {
       data['className'] = dataClassName.substring(10);
@@ -1404,18 +1695,22 @@ class Protocol extends _i1.SerializationManagerServer {
     switch (t) {
       case _i10.Faculty:
         return _i10.Faculty.t;
-      case _i23.Room:
-        return _i23.Room.t;
-      case _i25.Schedule:
-        return _i25.Schedule.t;
-      case _i28.Student:
-        return _i28.Student.t;
-      case _i29.Subject:
-        return _i29.Subject.t;
-      case _i31.Timeslot:
-        return _i31.Timeslot.t;
-      case _i34.UserRole:
-        return _i34.UserRole.t;
+      case _i11.FacultyAvailability:
+        return _i11.FacultyAvailability.t;
+      case _i24.Room:
+        return _i24.Room.t;
+      case _i26.Schedule:
+        return _i26.Schedule.t;
+      case _i29.Section:
+        return _i29.Section.t;
+      case _i30.Student:
+        return _i30.Student.t;
+      case _i31.Subject:
+        return _i31.Subject.t;
+      case _i33.Timeslot:
+        return _i33.Timeslot.t;
+      case _i36.UserRole:
+        return _i36.UserRole.t;
     }
     return null;
   }

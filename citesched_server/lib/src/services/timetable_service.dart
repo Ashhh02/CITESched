@@ -13,7 +13,7 @@ class TimetableService {
     var query = Schedule.db.find(
       session,
       where: (t) {
-        Expression where = Constant.bool(true);
+        Expression where = t.isActive.equals(true);
 
         if (filter.program != null) {
           where &= t.subject.program.equals(filter.program);

@@ -38,7 +38,7 @@ class AppLayout extends ConsumerWidget {
             foregroundColor: Colors.white,
             icon: const Icon(Icons.auto_awesome),
             label: const Text('Ask Me!'),
-            tooltip: 'Hey Ask Me Nigga!',
+            tooltip: 'Hey ask me some questions!',
           ),
         ),
       ],

@@ -31,13 +31,16 @@ import 'package:citesched_server/src/generated/timeslot.dart' as _i18;
 import 'package:citesched_server/src/generated/schedule.dart' as _i19;
 import 'package:citesched_server/src/generated/generate_schedule_request.dart'
     as _i20;
-import 'package:citesched_server/src/generated/timetable_filter_request.dart'
-    as _i21;
-import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
+import 'package:citesched_server/src/generated/section.dart' as _i21;
+import 'package:citesched_server/src/generated/faculty_availability.dart'
     as _i22;
-import 'package:serverpod_auth_server/serverpod_auth_server.dart' as _i23;
-import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
+import 'package:citesched_server/src/generated/timetable_filter_request.dart'
+    as _i23;
+import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
     as _i24;
+import 'package:serverpod_auth_server/serverpod_auth_server.dart' as _i25;
+import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
+    as _i26;
 
 class Endpoints extends _i1.EndpointDispatch {
   @override
@@ -369,13 +372,22 @@ class Endpoints extends _i1.EndpointDispatch {
         ),
         'getAllFaculty': _i1.MethodConnector(
           name: 'getAllFaculty',
-          params: {},
+          params: {
+            'isActive': _i1.ParameterDescription(
+              name: 'isActive',
+              type: _i1.getType<bool>(),
+              nullable: false,
+            ),
+          },
           call:
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
-                  .getAllFaculty(session),
+              ) async =>
+                  (endpoints['admin'] as _i4.AdminEndpoint).getAllFaculty(
+                    session,
+                    isActive: params['isActive'],
+                  ),
         ),
         'updateFaculty': _i1.MethodConnector(
           name: 'updateFaculty',
@@ -436,13 +448,22 @@ class Endpoints extends _i1.EndpointDispatch {
         ),
         'getAllStudents': _i1.MethodConnector(
           name: 'getAllStudents',
-          params: {},
+          params: {
+            'isActive': _i1.ParameterDescription(
+              name: 'isActive',
+              type: _i1.getType<bool>(),
+              nullable: false,
+            ),
+          },
           call:
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
-                  .getAllStudents(session),
+              ) async =>
+                  (endpoints['admin'] as _i4.AdminEndpoint).getAllStudents(
+                    session,
+                    isActive: params['isActive'],
+                  ),
         ),
         'updateStudent': _i1.MethodConnector(
           name: 'updateStudent',
@@ -502,13 +523,20 @@ class Endpoints extends _i1.EndpointDispatch {
         ),
         'getAllRooms': _i1.MethodConnector(
           name: 'getAllRooms',
-          params: {},
+          params: {
+            'isActive': _i1.ParameterDescription(
+              name: 'isActive',
+              type: _i1.getType<bool>(),
+              nullable: false,
+            ),
+          },
           call:
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async => (endpoints['admin'] as _i4.AdminEndpoint).getAllRooms(
                 session,
+                isActive: params['isActive'],
               ),
         ),
         'updateRoom': _i1.MethodConnector(
@@ -568,13 +596,22 @@ class Endpoints extends _i1.EndpointDispatch {
         ),
         'getAllSubjects': _i1.MethodConnector(
           name: 'getAllSubjects',
-          params: {},
+          params: {
+            'isActive': _i1.ParameterDescription(
+              name: 'isActive',
+              type: _i1.getType<bool>(),
+              nullable: false,
+            ),
+          },
           call:
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
-                  .getAllSubjects(session),
+              ) async =>
+                  (endpoints['admin'] as _i4.AdminEndpoint).getAllSubjects(
+                    session,
+                    isActive: params['isActive'],
+                  ),
         ),
         'updateSubject': _i1.MethodConnector(
           name: 'updateSubject',
@@ -727,13 +764,22 @@ class Endpoints extends _i1.EndpointDispatch {
         ),
         'getAllSchedules': _i1.MethodConnector(
           name: 'getAllSchedules',
-          params: {},
+          params: {
+            'isActive': _i1.ParameterDescription(
+              name: 'isActive',
+              type: _i1.getType<bool?>(),
+              nullable: true,
+            ),
+          },
           call:
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
-                  .getAllSchedules(session),
+              ) async =>
+                  (endpoints['admin'] as _i4.AdminEndpoint).getAllSchedules(
+                    session,
+                    isActive: params['isActive'],
+                  ),
         ),
         'getFacultySchedule': _i1.MethodConnector(
           name: 'getFacultySchedule',
@@ -742,6 +788,11 @@ class Endpoints extends _i1.EndpointDispatch {
               name: 'facultyId',
               type: _i1.getType<int>(),
               nullable: false,
+            ),
+            'isActive': _i1.ParameterDescription(
+              name: 'isActive',
+              type: _i1.getType<bool?>(),
+              nullable: true,
             ),
           },
           call:
@@ -752,6 +803,7 @@ class Endpoints extends _i1.EndpointDispatch {
                   (endpoints['admin'] as _i4.AdminEndpoint).getFacultySchedule(
                     session,
                     params['facultyId'],
+                    isActive: params['isActive'],
                   ),
         ),
         'getSubjectSchedule': _i1.MethodConnector(
@@ -762,6 +814,11 @@ class Endpoints extends _i1.EndpointDispatch {
               type: _i1.getType<int>(),
               nullable: false,
             ),
+            'isActive': _i1.ParameterDescription(
+              name: 'isActive',
+              type: _i1.getType<bool?>(),
+              nullable: true,
+            ),
           },
           call:
               (
@@ -771,6 +828,7 @@ class Endpoints extends _i1.EndpointDispatch {
                   (endpoints['admin'] as _i4.AdminEndpoint).getSubjectSchedule(
                     session,
                     params['subjectId'],
+                    isActive: params['isActive'],
                   ),
         ),
         'getRoomSchedule': _i1.MethodConnector(
@@ -781,6 +839,11 @@ class Endpoints extends _i1.EndpointDispatch {
               type: _i1.getType<int>(),
               nullable: false,
             ),
+            'isActive': _i1.ParameterDescription(
+              name: 'isActive',
+              type: _i1.getType<bool?>(),
+              nullable: true,
+            ),
           },
           call:
               (
@@ -790,6 +853,7 @@ class Endpoints extends _i1.EndpointDispatch {
                   (endpoints['admin'] as _i4.AdminEndpoint).getRoomSchedule(
                     session,
                     params['roomId'],
+                    isActive: params['isActive'],
                   ),
         ),
         'updateSchedule': _i1.MethodConnector(
@@ -927,6 +991,166 @@ class Endpoints extends _i1.EndpointDispatch {
                 Map<String, dynamic> params,
               ) async => (endpoints['admin'] as _i4.AdminEndpoint)
                   .getScheduleOverviewReport(session),
+        ),
+        'createSection': _i1.MethodConnector(
+          name: 'createSection',
+          params: {
+            'section': _i1.ParameterDescription(
+              name: 'section',
+              type: _i1.getType<_i21.Section>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['admin'] as _i4.AdminEndpoint).createSection(
+                    session,
+                    params['section'],
+                  ),
+        ),
+        'getAllSections': _i1.MethodConnector(
+          name: 'getAllSections',
+          params: {},
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+                  .getAllSections(session),
+        ),
+        'updateSection': _i1.MethodConnector(
+          name: 'updateSection',
+          params: {
+            'section': _i1.ParameterDescription(
+              name: 'section',
+              type: _i1.getType<_i21.Section>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['admin'] as _i4.AdminEndpoint).updateSection(
+                    session,
+                    params['section'],
+                  ),
+        ),
+        'deleteSection': _i1.MethodConnector(
+          name: 'deleteSection',
+          params: {
+            'id': _i1.ParameterDescription(
+              name: 'id',
+              type: _i1.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['admin'] as _i4.AdminEndpoint).deleteSection(
+                    session,
+                    params['id'],
+                  ),
+        ),
+        'setFacultyAvailability': _i1.MethodConnector(
+          name: 'setFacultyAvailability',
+          params: {
+            'facultyId': _i1.ParameterDescription(
+              name: 'facultyId',
+              type: _i1.getType<int>(),
+              nullable: false,
+            ),
+            'availabilities': _i1.ParameterDescription(
+              name: 'availabilities',
+              type: _i1.getType<List<_i22.FacultyAvailability>>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+                  .setFacultyAvailability(
+                    session,
+                    params['facultyId'],
+                    params['availabilities'],
+                  ),
+        ),
+        'getFacultyAvailability': _i1.MethodConnector(
+          name: 'getFacultyAvailability',
+          params: {
+            'facultyId': _i1.ParameterDescription(
+              name: 'facultyId',
+              type: _i1.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+                  .getFacultyAvailability(
+                    session,
+                    params['facultyId'],
+                  ),
+        ),
+        'getAllFacultyAvailabilities': _i1.MethodConnector(
+          name: 'getAllFacultyAvailabilities',
+          params: {},
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+                  .getAllFacultyAvailabilities(session),
+        ),
+        'deleteFacultyAvailability': _i1.MethodConnector(
+          name: 'deleteFacultyAvailability',
+          params: {
+            'id': _i1.ParameterDescription(
+              name: 'id',
+              type: _i1.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+                  .deleteFacultyAvailability(
+                    session,
+                    params['id'],
+                  ),
+        ),
+        'precheckSchedule': _i1.MethodConnector(
+          name: 'precheckSchedule',
+          params: {},
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+                  .precheckSchedule(session),
+        ),
+        'regenerateSchedule': _i1.MethodConnector(
+          name: 'regenerateSchedule',
+          params: {},
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+                  .regenerateSchedule(session),
         ),
       },
     );
@@ -1070,6 +1294,11 @@ class Endpoints extends _i1.EndpointDispatch {
               type: _i1.getType<String?>(),
               nullable: true,
             ),
+            'section': _i1.ParameterDescription(
+              name: 'section',
+              type: _i1.getType<String?>(),
+              nullable: true,
+            ),
           },
           call:
               (
@@ -1084,6 +1313,7 @@ class Endpoints extends _i1.EndpointDispatch {
                     role: params['role'],
                     studentId: params['studentId'],
                     facultyId: params['facultyId'],
+                    section: params['section'],
                   ),
         ),
       },
@@ -1218,7 +1448,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'filter': _i1.ParameterDescription(
               name: 'filter',
-              type: _i1.getType<_i21.TimetableFilterRequest>(),
+              type: _i1.getType<_i23.TimetableFilterRequest>(),
               nullable: false,
             ),
           },
@@ -1237,7 +1467,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'filter': _i1.ParameterDescription(
               name: 'filter',
-              type: _i1.getType<_i21.TimetableFilterRequest>(),
+              type: _i1.getType<_i23.TimetableFilterRequest>(),
               nullable: false,
             ),
           },
@@ -1287,10 +1517,10 @@ class Endpoints extends _i1.EndpointDispatch {
         ),
       },
     );
-    modules['serverpod_auth_idp'] = _i22.Endpoints()
+    modules['serverpod_auth_idp'] = _i24.Endpoints()
       ..initializeEndpoints(server);
-    modules['serverpod_auth'] = _i23.Endpoints()..initializeEndpoints(server);
-    modules['serverpod_auth_core'] = _i24.Endpoints()
+    modules['serverpod_auth'] = _i25.Endpoints()..initializeEndpoints(server);
+    modules['serverpod_auth_core'] = _i26.Endpoints()
       ..initializeEndpoints(server);
   }
 }

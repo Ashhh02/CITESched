@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:citesched_client/citesched_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:citesched_flutter/core/providers/conflict_provider.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
 
 class FacultyLoadDetailsScreen extends ConsumerWidget {
@@ -18,6 +19,13 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final maroonColor = const Color(0xFF800000);
+
+    // Watch all conflicts and filter for this faculty
+    final allConflictsAsync = ref.watch(allConflictsProvider);
+    final allConflicts = allConflictsAsync.value ?? <ScheduleConflict>[];
+    final facultyConflicts = allConflicts
+        .where((c) => c.facultyId == faculty.id)
+        .toList();
 
     // Filter schedules for this faculty
     final facultySchedules = initialSchedules;
@@ -37,7 +45,7 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
           'Faculty Load: ${faculty.name}',
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFF720045),
         elevation: 0,
         foregroundColor: isDark ? Colors.white : Colors.black87,
       ),
@@ -51,7 +59,7 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
               children: [
                 _buildStatCard(
                   'Total Units',
-                  '$totalUnits / ${faculty.maxLoad}',
+                  '$totalUnits / ${faculty.maxLoad ?? 0}',
                   Icons.menu_book,
                   maroonColor,
                   isDark,
@@ -67,7 +75,7 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
                 const SizedBox(width: 16),
                 _buildStatCard(
                   'Remaining Load',
-                  '${faculty.maxLoad - totalUnits}',
+                  '${(faculty.maxLoad ?? 0) - totalUnits}',
                   Icons.assignment_ind,
                   Colors.green,
                   isDark,
@@ -100,9 +108,16 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
               ),
               child: WeeklyCalendarView(
                 maroonColor: maroonColor,
-                schedules: facultySchedules
-                    .map((s) => ScheduleInfo(schedule: s, conflicts: []))
-                    .toList(),
+                schedules: facultySchedules.map((s) {
+                  final sConflicts = facultyConflicts
+                      .where(
+                        (c) =>
+                            c.scheduleId == s.id ||
+                            c.conflictingScheduleId == s.id,
+                      )
+                      .toList();
+                  return ScheduleInfo(schedule: s, conflicts: sConflicts);
+                }).toList(),
               ),
             ),
             const SizedBox(height: 32),
@@ -117,7 +132,7 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildAssignmentsTable(facultySchedules, isDark),
+            _buildAssignmentsTable(facultySchedules, facultyConflicts, isDark),
           ],
         ),
       ),
@@ -169,7 +184,11 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAssignmentsTable(List<Schedule> schedules, bool isDark) {
+  Widget _buildAssignmentsTable(
+    List<Schedule> schedules,
+    List<ScheduleConflict> facultyConflicts,
+    bool isDark,
+  ) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -183,8 +202,15 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
           DataColumn(label: Text('UNITS')),
           DataColumn(label: Text('ROOM')),
           DataColumn(label: Text('SCHEDULE')),
+          DataColumn(label: Text('STATUS')),
         ],
         rows: schedules.map((s) {
+          final sConflicts = facultyConflicts
+              .where(
+                (c) => c.scheduleId == s.id || c.conflictingScheduleId == s.id,
+              )
+              .toList();
+
           return DataRow(
             cells: [
               DataCell(Text(s.subject?.name ?? 'Unknown')),
@@ -197,6 +223,37 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
                       ? '${s.timeslot!.day.name.substring(0, 3)} ${s.timeslot!.startTime}-${s.timeslot!.endTime}'
                       : 'TBA',
                 ),
+              ),
+              DataCell(
+                sConflicts.isEmpty
+                    ? const Icon(
+                        Icons.check_circle_outline,
+                        color: Colors.green,
+                      )
+                    : Tooltip(
+                        message: sConflicts
+                            .map((c) => '• ${c.message}')
+                            .join('\n'),
+                        child: Icon(
+                          sConflicts.any(
+                                (c) =>
+                                    c.type != 'capacity_exceeded' &&
+                                    c.type != 'faculty_unavailable' &&
+                                    c.type != 'program_mismatch',
+                              )
+                              ? Icons.error_outline
+                              : Icons.warning_amber_rounded,
+                          color:
+                              sConflicts.any(
+                                (c) =>
+                                    c.type != 'capacity_exceeded' &&
+                                    c.type != 'faculty_unavailable' &&
+                                    c.type != 'program_mismatch',
+                              )
+                              ? Colors.red
+                              : Colors.orange,
+                        ),
+                      ),
               ),
             ],
           );

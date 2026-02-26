@@ -11,6 +11,8 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod_client/serverpod_client.dart' as _i1;
+import 'section.dart' as _i2;
+import 'package:citesched_client/src/protocol/protocol.dart' as _i3;
 
 abstract class Student implements _i1.SerializableModel {
   Student._({
@@ -21,10 +23,13 @@ abstract class Student implements _i1.SerializableModel {
     required this.course,
     required this.yearLevel,
     this.section,
+    this.sectionId,
+    this.sectionRef,
     required this.userInfoId,
+    bool? isActive,
     required this.createdAt,
     required this.updatedAt,
-  });
+  }) : isActive = isActive ?? true;
 
   factory Student({
     int? id,
@@ -34,7 +39,10 @@ abstract class Student implements _i1.SerializableModel {
     required String course,
     required int yearLevel,
     String? section,
+    int? sectionId,
+    _i2.Section? sectionRef,
     required int userInfoId,
+    bool? isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _StudentImpl;
@@ -48,7 +56,14 @@ abstract class Student implements _i1.SerializableModel {
       course: jsonSerialization['course'] as String,
       yearLevel: jsonSerialization['yearLevel'] as int,
       section: jsonSerialization['section'] as String?,
+      sectionId: jsonSerialization['sectionId'] as int?,
+      sectionRef: jsonSerialization['sectionRef'] == null
+          ? null
+          : _i3.Protocol().deserialize<_i2.Section>(
+              jsonSerialization['sectionRef'],
+            ),
       userInfoId: jsonSerialization['userInfoId'] as int,
+      isActive: jsonSerialization['isActive'] as bool?,
       createdAt: _i1.DateTimeJsonExtension.fromJson(
         jsonSerialization['createdAt'],
       ),
@@ -75,7 +90,13 @@ abstract class Student implements _i1.SerializableModel {
 
   String? section;
 
+  int? sectionId;
+
+  _i2.Section? sectionRef;
+
   int userInfoId;
+
+  bool isActive;
 
   DateTime createdAt;
 
@@ -92,7 +113,10 @@ abstract class Student implements _i1.SerializableModel {
     String? course,
     int? yearLevel,
     String? section,
+    int? sectionId,
+    _i2.Section? sectionRef,
     int? userInfoId,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   });
@@ -107,7 +131,10 @@ abstract class Student implements _i1.SerializableModel {
       'course': course,
       'yearLevel': yearLevel,
       if (section != null) 'section': section,
+      if (sectionId != null) 'sectionId': sectionId,
+      if (sectionRef != null) 'sectionRef': sectionRef?.toJson(),
       'userInfoId': userInfoId,
+      'isActive': isActive,
       'createdAt': createdAt.toJson(),
       'updatedAt': updatedAt.toJson(),
     };
@@ -130,7 +157,10 @@ class _StudentImpl extends Student {
     required String course,
     required int yearLevel,
     String? section,
+    int? sectionId,
+    _i2.Section? sectionRef,
     required int userInfoId,
+    bool? isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : super._(
@@ -141,7 +171,10 @@ class _StudentImpl extends Student {
          course: course,
          yearLevel: yearLevel,
          section: section,
+         sectionId: sectionId,
+         sectionRef: sectionRef,
          userInfoId: userInfoId,
+         isActive: isActive,
          createdAt: createdAt,
          updatedAt: updatedAt,
        );
@@ -158,7 +191,10 @@ class _StudentImpl extends Student {
     String? course,
     int? yearLevel,
     Object? section = _Undefined,
+    Object? sectionId = _Undefined,
+    Object? sectionRef = _Undefined,
     int? userInfoId,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -170,7 +206,12 @@ class _StudentImpl extends Student {
       course: course ?? this.course,
       yearLevel: yearLevel ?? this.yearLevel,
       section: section is String? ? section : this.section,
+      sectionId: sectionId is int? ? sectionId : this.sectionId,
+      sectionRef: sectionRef is _i2.Section?
+          ? sectionRef
+          : this.sectionRef?.copyWith(),
       userInfoId: userInfoId ?? this.userInfoId,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

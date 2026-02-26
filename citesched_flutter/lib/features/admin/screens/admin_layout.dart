@@ -1,4 +1,5 @@
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
+import 'package:citesched_flutter/core/theme/design_system.dart';
 import 'package:citesched_flutter/features/admin/screens/admin_dashboard_screen.dart';
 import 'package:citesched_flutter/features/admin/screens/faculty_management_screen.dart';
 import 'package:citesched_flutter/features/admin/screens/faculty_loading_screen.dart';
@@ -8,9 +9,9 @@ import 'package:citesched_flutter/features/admin/screens/timetable_screen.dart';
 import 'package:citesched_flutter/features/admin/screens/conflict_screen.dart';
 import 'package:citesched_flutter/features/admin/screens/report_screen.dart';
 import 'package:citesched_flutter/features/admin/widgets/admin_sidebar.dart';
-import 'package:citesched_flutter/core/widgets/nlp_query_dialog.dart';
-
+import 'package:citesched_flutter/core/widgets/app_header.dart';
 import 'package:citesched_flutter/core/widgets/draggable_fab.dart';
+import 'package:citesched_flutter/core/widgets/nlp_query_dialog.dart';
 import 'package:flutter/material.dart';
 
 class AdminLayout extends StatefulWidget {
@@ -50,25 +51,23 @@ class _AdminLayoutState extends State<AdminLayout> {
     final isDesktop = ResponsiveHelper.isDesktop(context);
 
     final scaffold = Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: DesignSystem.backgroundColor,
       appBar: !isDesktop
-          ? AppBar(
-              title: Text(_titles[_selectedIndex]),
-              backgroundColor: const Color(0xFF720045),
-              foregroundColor: Colors.white,
+          ? AppHeader(
+              title: _titles[_selectedIndex],
             )
           : null,
       drawer: !isDesktop
           ? Drawer(
               width: 260,
-              backgroundColor: const Color(0xFF720045),
+              backgroundColor: DesignSystem.headerColor,
               child: AdminSidebar(
                 selectedIndex: _selectedIndex,
                 onDestinationSelected: (index) {
                   setState(() {
                     _selectedIndex = index;
                   });
-                  Navigator.pop(context); // Close drawer
+                  Navigator.pop(context);
                 },
               ),
             )
@@ -79,9 +78,6 @@ class _AdminLayoutState extends State<AdminLayout> {
             AdminSidebar(
               selectedIndex: _selectedIndex,
               onDestinationSelected: (index) {
-                if (index == 8) {
-                  return;
-                }
                 setState(() {
                   _selectedIndex = index;
                 });
@@ -109,7 +105,7 @@ class _AdminLayoutState extends State<AdminLayout> {
             foregroundColor: Colors.white,
             icon: const Icon(Icons.auto_awesome),
             label: const Text('Ask Me!'),
-            tooltip: 'Hey Ask Me Nigga!',
+            tooltip: 'Hey ask me some questions!',
           ),
         ),
       ],

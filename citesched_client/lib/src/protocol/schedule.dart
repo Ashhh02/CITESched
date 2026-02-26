@@ -15,8 +15,9 @@ import 'subject.dart' as _i2;
 import 'faculty.dart' as _i3;
 import 'room.dart' as _i4;
 import 'timeslot.dart' as _i5;
-import 'subject_type.dart' as _i6;
-import 'package:citesched_client/src/protocol/protocol.dart' as _i7;
+import 'section.dart' as _i6;
+import 'subject_type.dart' as _i7;
+import 'package:citesched_client/src/protocol/protocol.dart' as _i8;
 
 abstract class Schedule implements _i1.SerializableModel {
   Schedule._({
@@ -30,12 +31,15 @@ abstract class Schedule implements _i1.SerializableModel {
     this.timeslotId,
     this.timeslot,
     required this.section,
+    this.sectionId,
+    this.sectionRef,
     this.loadTypes,
     this.units,
     this.hours,
+    bool? isActive,
     required this.createdAt,
     required this.updatedAt,
-  });
+  }) : isActive = isActive ?? true;
 
   factory Schedule({
     int? id,
@@ -48,9 +52,12 @@ abstract class Schedule implements _i1.SerializableModel {
     int? timeslotId,
     _i5.Timeslot? timeslot,
     required String section,
-    List<_i6.SubjectType>? loadTypes,
+    int? sectionId,
+    _i6.Section? sectionRef,
+    List<_i7.SubjectType>? loadTypes,
     double? units,
     double? hours,
+    bool? isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _ScheduleImpl;
@@ -61,33 +68,40 @@ abstract class Schedule implements _i1.SerializableModel {
       subjectId: jsonSerialization['subjectId'] as int,
       subject: jsonSerialization['subject'] == null
           ? null
-          : _i7.Protocol().deserialize<_i2.Subject>(
+          : _i8.Protocol().deserialize<_i2.Subject>(
               jsonSerialization['subject'],
             ),
       facultyId: jsonSerialization['facultyId'] as int,
       faculty: jsonSerialization['faculty'] == null
           ? null
-          : _i7.Protocol().deserialize<_i3.Faculty>(
+          : _i8.Protocol().deserialize<_i3.Faculty>(
               jsonSerialization['faculty'],
             ),
       roomId: jsonSerialization['roomId'] as int?,
       room: jsonSerialization['room'] == null
           ? null
-          : _i7.Protocol().deserialize<_i4.Room>(jsonSerialization['room']),
+          : _i8.Protocol().deserialize<_i4.Room>(jsonSerialization['room']),
       timeslotId: jsonSerialization['timeslotId'] as int?,
       timeslot: jsonSerialization['timeslot'] == null
           ? null
-          : _i7.Protocol().deserialize<_i5.Timeslot>(
+          : _i8.Protocol().deserialize<_i5.Timeslot>(
               jsonSerialization['timeslot'],
             ),
       section: jsonSerialization['section'] as String,
+      sectionId: jsonSerialization['sectionId'] as int?,
+      sectionRef: jsonSerialization['sectionRef'] == null
+          ? null
+          : _i8.Protocol().deserialize<_i6.Section>(
+              jsonSerialization['sectionRef'],
+            ),
       loadTypes: jsonSerialization['loadTypes'] == null
           ? null
-          : _i7.Protocol().deserialize<List<_i6.SubjectType>>(
+          : _i8.Protocol().deserialize<List<_i7.SubjectType>>(
               jsonSerialization['loadTypes'],
             ),
       units: (jsonSerialization['units'] as num?)?.toDouble(),
       hours: (jsonSerialization['hours'] as num?)?.toDouble(),
+      isActive: jsonSerialization['isActive'] as bool?,
       createdAt: _i1.DateTimeJsonExtension.fromJson(
         jsonSerialization['createdAt'],
       ),
@@ -120,11 +134,17 @@ abstract class Schedule implements _i1.SerializableModel {
 
   String section;
 
-  List<_i6.SubjectType>? loadTypes;
+  int? sectionId;
+
+  _i6.Section? sectionRef;
+
+  List<_i7.SubjectType>? loadTypes;
 
   double? units;
 
   double? hours;
+
+  bool isActive;
 
   DateTime createdAt;
 
@@ -144,9 +164,12 @@ abstract class Schedule implements _i1.SerializableModel {
     int? timeslotId,
     _i5.Timeslot? timeslot,
     String? section,
-    List<_i6.SubjectType>? loadTypes,
+    int? sectionId,
+    _i6.Section? sectionRef,
+    List<_i7.SubjectType>? loadTypes,
     double? units,
     double? hours,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   });
@@ -164,10 +187,13 @@ abstract class Schedule implements _i1.SerializableModel {
       if (timeslotId != null) 'timeslotId': timeslotId,
       if (timeslot != null) 'timeslot': timeslot?.toJson(),
       'section': section,
+      if (sectionId != null) 'sectionId': sectionId,
+      if (sectionRef != null) 'sectionRef': sectionRef?.toJson(),
       if (loadTypes != null)
         'loadTypes': loadTypes?.toJson(valueToJson: (v) => v.toJson()),
       if (units != null) 'units': units,
       if (hours != null) 'hours': hours,
+      'isActive': isActive,
       'createdAt': createdAt.toJson(),
       'updatedAt': updatedAt.toJson(),
     };
@@ -193,9 +219,12 @@ class _ScheduleImpl extends Schedule {
     int? timeslotId,
     _i5.Timeslot? timeslot,
     required String section,
-    List<_i6.SubjectType>? loadTypes,
+    int? sectionId,
+    _i6.Section? sectionRef,
+    List<_i7.SubjectType>? loadTypes,
     double? units,
     double? hours,
+    bool? isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : super._(
@@ -209,9 +238,12 @@ class _ScheduleImpl extends Schedule {
          timeslotId: timeslotId,
          timeslot: timeslot,
          section: section,
+         sectionId: sectionId,
+         sectionRef: sectionRef,
          loadTypes: loadTypes,
          units: units,
          hours: hours,
+         isActive: isActive,
          createdAt: createdAt,
          updatedAt: updatedAt,
        );
@@ -231,9 +263,12 @@ class _ScheduleImpl extends Schedule {
     Object? timeslotId = _Undefined,
     Object? timeslot = _Undefined,
     String? section,
+    Object? sectionId = _Undefined,
+    Object? sectionRef = _Undefined,
     Object? loadTypes = _Undefined,
     Object? units = _Undefined,
     Object? hours = _Undefined,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -250,11 +285,16 @@ class _ScheduleImpl extends Schedule {
           ? timeslot
           : this.timeslot?.copyWith(),
       section: section ?? this.section,
-      loadTypes: loadTypes is List<_i6.SubjectType>?
+      sectionId: sectionId is int? ? sectionId : this.sectionId,
+      sectionRef: sectionRef is _i6.Section?
+          ? sectionRef
+          : this.sectionRef?.copyWith(),
+      loadTypes: loadTypes is List<_i7.SubjectType>?
           ? loadTypes
           : this.loadTypes?.map((e0) => e0).toList(),
       units: units is double? ? units : this.units,
       hours: hours is double? ? hours : this.hours,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

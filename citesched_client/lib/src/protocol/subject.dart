@@ -27,9 +27,10 @@ abstract class Subject implements _i1.SerializableModel {
     required this.types,
     required this.program,
     required this.studentsCount,
+    bool? isActive,
     required this.createdAt,
     required this.updatedAt,
-  });
+  }) : isActive = isActive ?? true;
 
   factory Subject({
     int? id,
@@ -42,6 +43,7 @@ abstract class Subject implements _i1.SerializableModel {
     required List<_i2.SubjectType> types,
     required _i3.Program program,
     required int studentsCount,
+    bool? isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _SubjectImpl;
@@ -60,6 +62,7 @@ abstract class Subject implements _i1.SerializableModel {
       ),
       program: _i3.Program.fromJson((jsonSerialization['program'] as String)),
       studentsCount: jsonSerialization['studentsCount'] as int,
+      isActive: jsonSerialization['isActive'] as bool?,
       createdAt: _i1.DateTimeJsonExtension.fromJson(
         jsonSerialization['createdAt'],
       ),
@@ -92,6 +95,8 @@ abstract class Subject implements _i1.SerializableModel {
 
   int studentsCount;
 
+  bool isActive;
+
   DateTime createdAt;
 
   DateTime updatedAt;
@@ -110,6 +115,7 @@ abstract class Subject implements _i1.SerializableModel {
     List<_i2.SubjectType>? types,
     _i3.Program? program,
     int? studentsCount,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   });
@@ -127,6 +133,7 @@ abstract class Subject implements _i1.SerializableModel {
       'types': types.toJson(valueToJson: (v) => v.toJson()),
       'program': program.toJson(),
       'studentsCount': studentsCount,
+      'isActive': isActive,
       'createdAt': createdAt.toJson(),
       'updatedAt': updatedAt.toJson(),
     };
@@ -152,6 +159,7 @@ class _SubjectImpl extends Subject {
     required List<_i2.SubjectType> types,
     required _i3.Program program,
     required int studentsCount,
+    bool? isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : super._(
@@ -165,6 +173,7 @@ class _SubjectImpl extends Subject {
          types: types,
          program: program,
          studentsCount: studentsCount,
+         isActive: isActive,
          createdAt: createdAt,
          updatedAt: updatedAt,
        );
@@ -184,6 +193,7 @@ class _SubjectImpl extends Subject {
     List<_i2.SubjectType>? types,
     _i3.Program? program,
     int? studentsCount,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -198,6 +208,7 @@ class _SubjectImpl extends Subject {
       types: types ?? this.types.map((e0) => e0).toList(),
       program: program ?? this.program,
       studentsCount: studentsCount ?? this.studentsCount,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
