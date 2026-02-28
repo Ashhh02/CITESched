@@ -73,8 +73,8 @@ class _ReportModalState extends State<ReportModal>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    primaryPurple,
-                    const Color(0xFFb5179e),
+                    const Color(0xFF720045),
+                    const Color(0xFF8e005b),
                   ],
                 ),
                 borderRadius: const BorderRadius.vertical(
@@ -111,7 +111,7 @@ class _ReportModalState extends State<ReportModal>
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () => Navigator.of(context).pop(),
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.2),
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
                     ),
                   ),
                 ],
@@ -131,7 +131,9 @@ class _ReportModalState extends State<ReportModal>
                 child: TabBar(
                   controller: _tabController,
                   indicator: BoxDecoration(
-                    color: primaryPurple,
+                    gradient: LinearGradient(
+                      colors: [primaryPurple, const Color(0xFF8e005b)],
+                    ),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   dividerColor: Colors.transparent,

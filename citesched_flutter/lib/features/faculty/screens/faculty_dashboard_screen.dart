@@ -1,6 +1,8 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/main.dart';
+import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
+import 'package:citesched_flutter/features/auth/widgets/logout_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,7 +12,21 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 final facultyScheduleProvider = FutureProvider<List<ScheduleInfo>>((ref) async {
+  ref.watch(scheduleSyncTriggerProvider);
   return await client.timetable.getPersonalSchedule();
+});
+
+final facultyAvailabilityProvider = FutureProvider<List<FacultyAvailability>>((
+  ref,
+) async {
+  ref.watch(scheduleSyncTriggerProvider);
+  try {
+    final myFaculty = await client.faculty.getMyProfile();
+    if (myFaculty?.id == null) return [];
+    return await client.admin.getFacultyAvailability(myFaculty!.id!);
+  } catch (e) {
+    return [];
+  }
 });
 
 class FacultyDashboardScreen extends ConsumerStatefulWidget {
@@ -58,6 +74,151 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
       default:
         return '—';
     }
+  }
+
+  int _parseTimeToMinutes(String hhmm) {
+    final parts = hhmm.split(':');
+    if (parts.length != 2) return 0;
+    final hour = int.tryParse(parts[0]) ?? 0;
+    final minute = int.tryParse(parts[1]) ?? 0;
+    return hour * 60 + minute;
+  }
+
+  bool _isWithinPreferredAvailability(
+    Schedule schedule,
+    List<FacultyAvailability> availabilities,
+  ) {
+    final timeslot = schedule.timeslot;
+    if (timeslot == null) return true;
+    final preferred = availabilities.where((a) => a.isPreferred).toList();
+    if (preferred.isEmpty) return true;
+
+    final tsStart = _parseTimeToMinutes(timeslot.startTime);
+    final tsEnd = _parseTimeToMinutes(timeslot.endTime);
+    for (final a in preferred) {
+      if (a.dayOfWeek != timeslot.day) continue;
+      final aStart = _parseTimeToMinutes(a.startTime);
+      final aEnd = _parseTimeToMinutes(a.endTime);
+      if (tsStart >= aStart && tsEnd <= aEnd) return true;
+    }
+    return false;
+  }
+
+  double _computeAssignedHours(List<ScheduleInfo> schedules) {
+    double totalMinutes = 0;
+    for (final info in schedules) {
+      final ts = info.schedule.timeslot;
+      if (ts == null) continue;
+      final start = _parseTimeToMinutes(ts.startTime);
+      final end = _parseTimeToMinutes(ts.endTime);
+      if (end > start) totalMinutes += (end - start);
+    }
+    return totalMinutes / 60.0;
+  }
+
+  double _computePreferredHours(List<FacultyAvailability> availabilities) {
+    double totalMinutes = 0;
+    for (final a in availabilities.where((a) => a.isPreferred)) {
+      final start = _parseTimeToMinutes(a.startTime);
+      final end = _parseTimeToMinutes(a.endTime);
+      if (end > start) totalMinutes += (end - start);
+    }
+    return totalMinutes / 60.0;
+  }
+
+  double _computeAssignedHoursWithinPreferred(
+    List<ScheduleInfo> schedules,
+    List<FacultyAvailability> availabilities,
+  ) {
+    final preferred = availabilities.where((a) => a.isPreferred).toList();
+    double overlapMinutes = 0;
+
+    for (final info in schedules) {
+      final ts = info.schedule.timeslot;
+      if (ts == null) continue;
+      final tsStart = _parseTimeToMinutes(ts.startTime);
+      final tsEnd = _parseTimeToMinutes(ts.endTime);
+
+      for (final a in preferred) {
+        if (a.dayOfWeek != ts.day) continue;
+        final aStart = _parseTimeToMinutes(a.startTime);
+        final aEnd = _parseTimeToMinutes(a.endTime);
+        final overlapStart = tsStart > aStart ? tsStart : aStart;
+        final overlapEnd = tsEnd < aEnd ? tsEnd : aEnd;
+        if (overlapEnd > overlapStart) {
+          overlapMinutes += (overlapEnd - overlapStart);
+        }
+      }
+    }
+
+    return overlapMinutes / 60.0;
+  }
+
+  List<String> _computeFreeSlotLabels(
+    List<ScheduleInfo> schedules,
+    List<FacultyAvailability> availabilities,
+  ) {
+    final preferred = availabilities.where((a) => a.isPreferred).toList();
+    if (preferred.isEmpty) return const [];
+
+    final assignedByDay = <DayOfWeek, List<_MinuteRange>>{};
+    for (final info in schedules) {
+      final ts = info.schedule.timeslot;
+      if (ts == null) continue;
+      final start = _parseTimeToMinutes(ts.startTime);
+      final end = _parseTimeToMinutes(ts.endTime);
+      assignedByDay.putIfAbsent(ts.day, () => []).add(_MinuteRange(start, end));
+    }
+
+    for (final entry in assignedByDay.entries) {
+      entry.value.sort((a, b) => a.start.compareTo(b.start));
+    }
+
+    final freeSlots = <String>[];
+    for (final a in preferred) {
+      final window = _MinuteRange(
+        _parseTimeToMinutes(a.startTime),
+        _parseTimeToMinutes(a.endTime),
+      );
+
+      var segments = <_MinuteRange>[window];
+      final assigned = assignedByDay[a.dayOfWeek] ?? const <_MinuteRange>[];
+      for (final block in assigned) {
+        segments = segments.expand((segment) {
+          if (block.end <= segment.start || block.start >= segment.end) {
+            return [segment];
+          }
+          final next = <_MinuteRange>[];
+          if (block.start > segment.start) {
+            next.add(_MinuteRange(segment.start, block.start));
+          }
+          if (block.end < segment.end) {
+            next.add(_MinuteRange(block.end, segment.end));
+          }
+          return next;
+        }).toList();
+      }
+
+      for (final s in segments) {
+        if ((s.end - s.start) >= 30) {
+          freeSlots.add(
+            '${_getDayName(a.dayOfWeek)} ${_formatMinutes(s.start)}-${_formatMinutes(s.end)}',
+          );
+        }
+      }
+    }
+
+    return freeSlots;
+  }
+
+  String _formatMinutes(int totalMinutes) {
+    final hour24 = totalMinutes ~/ 60;
+    final minute = totalMinutes % 60;
+    final period = hour24 >= 12 ? 'PM' : 'AM';
+    var hour12 = hour24 % 12;
+    if (hour12 == 0) hour12 = 12;
+    final minuteText = minute.toString().padLeft(2, '0');
+    return '$hour12:$minuteText$period';
   }
 
   Future<void> _printSchedulePdf(
@@ -223,6 +384,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
   @override
   Widget build(BuildContext context) {
     final scheduleAsync = ref.watch(facultyScheduleProvider);
+    final availabilityAsync = ref.watch(facultyAvailabilityProvider);
     final user = ref.watch(authProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
@@ -293,46 +455,232 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                       ],
                     ),
                   ),
-                  // Print button
-                  scheduleAsync.maybeWhen(
-                    data: (schedules) => schedules.isEmpty
-                        ? const SizedBox()
-                        : ElevatedButton.icon(
-                            onPressed: () => _printSchedulePdf(
-                              user?.userName ?? 'Faculty',
-                              schedules,
-                            ),
-                            icon: const Icon(
-                              Icons.print_rounded,
-                              size: 18,
-                            ),
-                            label: Text(
-                              'Print Schedule',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                  // Action Buttons
+                  Row(
+                    children: [
+                      scheduleAsync.maybeWhen(
+                        data: (schedules) => schedules.isEmpty
+                            ? const SizedBox()
+                            : ElevatedButton.icon(
+                                onPressed: () => _printSchedulePdf(
+                                  user?.userName ?? 'Faculty',
+                                  schedules,
+                                ),
+                                icon: const Icon(Icons.print_rounded, size: 18),
+                                label: Text(
+                                  'Print Schedule',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: maroonColor,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  elevation: 0,
+                                ),
                               ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: maroonColor,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 14,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              elevation: 0,
-                            ),
+                        orElse: () => const SizedBox(),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) =>
+                                const LogoutConfirmationDialog(),
+                          );
+                          if (confirm == true) {
+                            ref.read(authProvider.notifier).signOut();
+                          }
+                        },
+                        icon: const Icon(Icons.logout_rounded, size: 18),
+                        label: Text(
+                          'Sign Out',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
-                    orElse: () => const SizedBox(),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            side: const BorderSide(color: Colors.white30),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
 
             const SizedBox(height: 28),
+
+            scheduleAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (schedules) {
+                final availabilities = availabilityAsync.maybeWhen(
+                  data: (v) => v,
+                  orElse: () => <FacultyAvailability>[],
+                );
+                final totalUnits = schedules.fold<double>(
+                  0,
+                  (sum, s) =>
+                      sum +
+                      (s.schedule.units ??
+                          s.schedule.subject?.units.toDouble() ??
+                          0),
+                );
+                final maxLoad = schedules.isNotEmpty
+                    ? schedules.first.schedule.faculty?.maxLoad?.toDouble()
+                    : null;
+                final outsidePreferred = schedules
+                    .where(
+                      (s) => !_isWithinPreferredAvailability(
+                        s.schedule,
+                        availabilities,
+                      ),
+                    )
+                    .length;
+                final assignedHours = _computeAssignedHours(schedules);
+                final preferredHours = _computePreferredHours(availabilities);
+                final assignedWithinPreferred = _computeAssignedHoursWithinPreferred(
+                  schedules,
+                  availabilities,
+                );
+                final vacantHours = preferredHours > assignedWithinPreferred
+                    ? preferredHours - assignedWithinPreferred
+                    : 0.0;
+                final freeSlots = _computeFreeSlotLabels(
+                  schedules,
+                  availabilities,
+                );
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _metricCard(
+                            label: 'Assigned Units',
+                            value: totalUnits.toStringAsFixed(1),
+                            icon: Icons.stacked_bar_chart_rounded,
+                            color: Colors.blue,
+                            cardBg: cardBg,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _metricCard(
+                            label: 'Max Load',
+                            value: maxLoad?.toStringAsFixed(1) ?? '--',
+                            icon: Icons.speed_rounded,
+                            color: Colors.green,
+                            cardBg: cardBg,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _metricCard(
+                            label: 'Outside Preferred',
+                            value: outsidePreferred.toString(),
+                            icon: Icons.warning_amber_rounded,
+                            color: outsidePreferred > 0
+                                ? Colors.red
+                                : Colors.orange,
+                            cardBg: cardBg,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (outsidePreferred > 0) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.red.withOpacity(0.28)),
+                        ),
+                        child: Text(
+                          '$outsidePreferred class(es) are outside your preferred availability window.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.red[800],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _metricCard(
+                            label: 'Assigned Hours',
+                            value: assignedHours.toStringAsFixed(1),
+                            icon: Icons.access_time_rounded,
+                            color: Colors.indigo,
+                            cardBg: cardBg,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _metricCard(
+                            label: 'Vacant Hours',
+                            value: vacantHours.toStringAsFixed(1),
+                            icon: Icons.hourglass_bottom_rounded,
+                            color: Colors.teal,
+                            cardBg: cardBg,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (freeSlots.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.teal.withOpacity(0.28),
+                          ),
+                        ),
+                        child: Text(
+                          'Free Slots: ${freeSlots.take(6).join(' | ')}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.teal[900],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                  ],
+                );
+              },
+            ),
 
             // ── Tab bar ─────────────────────────────────────────────
             Container(
@@ -429,9 +777,19 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                     controller: _tabController,
                     children: [
                       // ── Tab 1: Calendar ──────────────────────────
-                      WeeklyCalendarView(
-                        schedules: schedules,
-                        maroonColor: maroonColor,
+                      availabilityAsync.when(
+                        data: (availabilities) => WeeklyCalendarView(
+                          schedules: schedules,
+                          availabilities: availabilities,
+                          maroonColor: maroonColor,
+                        ),
+                        loading: () => const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                        error: (err, _) => WeeklyCalendarView(
+                          schedules: schedules,
+                          maroonColor: maroonColor,
+                        ),
                       ),
 
                       // ── Tab 2: Schedule Table ───────────────────
@@ -680,6 +1038,51 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
     );
   }
 
+  Widget _metricCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required Color cardBg,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.22)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _tableHeader(String label, {int flex = 1}) {
     return Expanded(
       flex: flex,
@@ -698,4 +1101,11 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
   Widget _tableCell({required int flex, required Widget child}) {
     return Expanded(flex: flex, child: child);
   }
+}
+
+class _MinuteRange {
+  final int start;
+  final int end;
+
+  const _MinuteRange(this.start, this.end);
 }

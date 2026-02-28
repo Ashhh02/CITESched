@@ -60,6 +60,13 @@ class SchedulingService {
     var validFaculties = faculties.whereType<Faculty>().toList();
     var validRooms = rooms.whereType<Room>().toList();
     var validTimeslots = timeslots.whereType<Timeslot>().toList();
+    var allSections = await Section.db.find(session);
+    var sectionIdByCode = <String, int>{};
+    for (var s in allSections) {
+      if (s.id != null) {
+        sectionIdByCode[s.sectionCode] = s.id!;
+      }
+    }
 
     // Pre-load faculty availability preferences for fast lookup
     var facultyAvailMap = <int, List<FacultyAvailability>>{};
@@ -72,7 +79,7 @@ class SchedulingService {
     }
 
     // Track faculty assignments for load balancing
-    var facultyAssignments = <int, int>{};
+    var facultyAssignments = <int, double>{};
     for (var faculty in validFaculties) {
       facultyAssignments[faculty.id!] = 0;
     }
@@ -88,7 +95,8 @@ class SchedulingService {
 
           // Quick maxLoad pre-check
           var currentLoad = facultyAssignments[faculty.id!] ?? 0;
-          if (currentLoad >= (faculty.maxLoad ?? 0)) continue;
+          var subjectUnits = subject.units.toDouble();
+          if ((currentLoad + subjectUnits) > (faculty.maxLoad ?? 0)) continue;
 
           // Try each timeslot
           for (var timeslot in validTimeslots) {
@@ -111,8 +119,9 @@ class SchedulingService {
                   }
                 }
               }
-              if (!fitsAvailability)
+              if (!fitsAvailability) {
                 continue; // Skip this timeslot for this faculty
+              }
             }
 
             // Try each room
@@ -126,6 +135,8 @@ class SchedulingService {
                 roomId: room.id!,
                 timeslotId: timeslot.id!,
                 section: section,
+                sectionId: sectionIdByCode[section],
+                units: subject.units.toDouble(),
                 createdAt: DateTime.now(),
                 updatedAt: DateTime.now(),
               );
@@ -140,7 +151,8 @@ class SchedulingService {
                 // Valid assignment
                 generatedSchedules.add(candidate);
                 facultyAssignments[faculty.id!] =
-                    (facultyAssignments[faculty.id!] ?? 0) + 1;
+                    (facultyAssignments[faculty.id!] ?? 0) +
+                    subject.units.toDouble();
                 assigned = true;
               }
             }

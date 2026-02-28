@@ -1,10 +1,12 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/main.dart';
+import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final allConflictsProvider = FutureProvider<List<ScheduleConflict>>((
   ref,
 ) async {
+  ref.watch(scheduleSyncTriggerProvider);
   return await client.admin.getAllConflicts();
 });
 

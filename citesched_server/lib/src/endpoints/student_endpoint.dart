@@ -6,6 +6,24 @@ import '../generated/protocol.dart';
 /// Student-only endpoint for viewing schedules and managing own profile.
 /// Only users with the 'student' scope can access these methods.
 class StudentEndpoint extends Endpoint {
+  Future<Student?> _findCurrentStudent(Session session, dynamic authInfo) async {
+    final userIdentifier = authInfo.userIdentifier.toString();
+    final userInfoId = int.tryParse(userIdentifier);
+
+    if (userInfoId != null) {
+      final byUserInfoId = await Student.db.findFirstRow(
+        session,
+        where: (t) => t.userInfoId.equals(userInfoId),
+      );
+      if (byUserInfoId != null) return byUserInfoId;
+    }
+
+    return await Student.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(userIdentifier),
+    );
+  }
+
   @override
   Set<Scope> get requiredScopes => {AppScopes.student};
 
@@ -27,11 +45,7 @@ class StudentEndpoint extends Endpoint {
   Future<Student?> getMyProfile(Session session) async {
     var authInfo = session.authenticated;
     if (authInfo == null) return null;
-
-    return await Student.db.findFirstRow(
-      session,
-      where: (t) => t.email.equals(authInfo.userIdentifier),
-    );
+    return await _findCurrentStudent(session, authInfo);
   }
 
   /// Update the current student's profile.
@@ -43,10 +57,7 @@ class StudentEndpoint extends Endpoint {
     if (authInfo == null) return null;
 
     // Only allow updating own profile
-    var existing = await Student.db.findFirstRow(
-      session,
-      where: (t) => t.email.equals(authInfo.userIdentifier),
-    );
+    var existing = await _findCurrentStudent(session, authInfo);
 
     if (existing == null) return null;
 

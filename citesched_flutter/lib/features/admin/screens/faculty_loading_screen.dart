@@ -1,4 +1,4 @@
-import 'package:citesched_client/citesched_client.dart';
+﻿import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/core/utils/date_utils.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/features/admin/screens/faculty_load_details_screen.dart';
@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:citesched_flutter/core/providers/conflict_provider.dart';
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
-import 'package:citesched_flutter/core/utils/responsive_helper.dart';
+import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 
 class FacultyLoadingScreen extends ConsumerStatefulWidget {
   const FacultyLoadingScreen({super.key});
@@ -20,7 +20,6 @@ class FacultyLoadingScreen extends ConsumerStatefulWidget {
 class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
   String _searchQuery = '';
   String? _selectedFaculty;
-  bool _showArchived = false;
   bool _showConflictDetails = false;
   final TextEditingController _searchController = TextEditingController();
 
@@ -40,6 +39,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
       builder: (context) => _NewAssignmentModal(
         maroonColor: maroonColor,
         onSuccess: () {
+          notifyScheduleDataChanged(ref);
           ref.invalidate(schedulesProvider);
         },
       ),
@@ -53,58 +53,24 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
         schedule: schedule,
         maroonColor: maroonColor,
         onSuccess: () {
+          notifyScheduleDataChanged(ref);
           ref.invalidate(schedulesProvider);
         },
       ),
     );
-    if (!mounted) return;
   }
 
-  void _restoreSchedule(Schedule schedule) async {
-    try {
-      final toRestore = schedule.copyWith(isActive: true);
-      await client.admin.updateSchedule(toRestore);
-      ref.invalidate(schedulesProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Assignment restored successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error restoring assignment: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  void _permanentDeleteSchedule(Schedule schedule) async {
+  void _deleteSchedule(Schedule schedule) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.red),
-            const SizedBox(width: 8),
-            Text(
-              'Permanent Delete',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                color: Colors.red,
-              ),
-            ),
-          ],
+        title: Text(
+          'Delete Assignment',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'Are you sure you want to PERMANENTLY delete this assignment? This action cannot be undone.',
+          'Are you sure you want to delete this schedule assignment?',
           style: GoogleFonts.poppins(),
         ),
         actions: [
@@ -118,7 +84,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text('Delete Permanently', style: GoogleFonts.poppins()),
+            child: Text('Delete', style: GoogleFonts.poppins()),
           ),
         ],
       ),
@@ -126,14 +92,13 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
 
     if (confirm == true && mounted) {
       try {
-        await client.admin.deleteSchedule(
-          schedule.id!,
-        ); // Assuming it calls serverpod deleteRow if modified properly, or we create physical delete
+        await client.admin.deleteSchedule(schedule.id!);
+        notifyScheduleDataChanged(ref);
         ref.invalidate(schedulesProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Assignment permanently deleted'),
+              content: Text('Assignment deleted successfully'),
               backgroundColor: Colors.green,
             ),
           );
@@ -151,214 +116,80 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
     }
   }
 
-  void _archiveSchedule(Schedule schedule) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Archive Assignment',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          'Are you sure you want to archive this schedule assignment?',
-          style: GoogleFonts.poppins(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: GoogleFonts.poppins()),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-            child: Text('Archive', style: GoogleFonts.poppins()),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true && mounted) {
-      try {
-        await client.admin.deleteSchedule(schedule.id!);
-        ref.invalidate(schedulesProvider);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Assignment archived successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error archiving assignment: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  Widget _buildToggleBtn({
-    required String title,
-    required bool isActive,
-    required VoidCallback onTap,
-    required IconData icon,
-    required bool isDark,
-    required Color maroonColor,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isActive
-              ? maroonColor
-              : (isDark ? Colors.transparent : Colors.grey[100]),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isActive
-                  ? Colors.white
-                  : (isDark ? Colors.grey[400] : Colors.grey[600]),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                color: isActive
-                    ? Colors.white
-                    : (isDark ? Colors.grey[400] : Colors.grey[600]),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final schedulesAsync = ref.watch(schedulesProvider);
     final facultyAsync = ref.watch(facultyListProvider);
     final subjectsAsync = ref.watch(subjectsProvider);
-    final roomsAsync = ref.watch(roomListProvider);
+    final roomsAsync = ref.watch(roomsProvider);
     final timeslotsAsync = ref.watch(timeslotsProvider);
-    final allConflictsAsync = ref.watch(allConflictsProvider);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
-    final isMobile = ResponsiveHelper.isMobile(context);
 
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         backgroundColor: bgColor,
         body: Padding(
-          padding: EdgeInsets.all(isMobile ? 16 : 32),
+          padding: const EdgeInsets.all(32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header (Standardized Maroon Gradient Banner)
+              // Header
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(32),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      maroonColor,
-                      const Color(0xFF8e005b),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(28),
+                  color: maroonColor,
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: maroonColor.withValues(alpha: 0.3),
-                      blurRadius: 25,
-                      offset: const Offset(0, 12),
+                      color: maroonColor.withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.assignment_ind_outlined,
+                        Text(
+                          'Faculty Loading',
+                          style: GoogleFonts.poppins(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
                             color: Colors.white,
-                            size: 32,
                           ),
                         ),
-                        const SizedBox(width: 24),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Faculty Loading',
-                              style: GoogleFonts.poppins(
-                                fontSize: isMobile ? 24 : 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -1,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Manage faculty schedule assignments and workload',
-                              style: GoogleFonts.poppins(
-                                fontSize: isMobile ? 12 : 16,
-                                color: Colors.white.withValues(alpha: 0.8),
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 8),
+                        Text(
+                          'Manage faculty schedule assignments and workload',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(width: 16),
                     ElevatedButton.icon(
                       onPressed: _showNewAssignmentModal,
-                      icon: const Icon(Icons.add_rounded, size: 24),
+                      icon: const Icon(Icons.add_rounded, size: 20),
                       label: Text(
-                        isMobile ? 'Add' : 'Assign Subject',
+                        'Assign Subject',
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.bold,
-                          fontSize: 15,
                           letterSpacing: 0.5,
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: maroonColor,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isMobile ? 16 : 28,
-                          vertical: isMobile ? 12 : 18,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 18,
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -372,7 +203,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
               const SizedBox(height: 24),
 
               // Conflict Warning Banner
-              _buildConflictBanner(allConflictsAsync),
+              _buildConflictBanner(schedulesAsync, facultyAsync),
               const SizedBox(height: 20),
 
               // Search and Filter Row
@@ -395,7 +226,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                           BoxShadow(
                             color: const Color(
                               0xFF1E293B,
-                            ).withOpacity(0.03),
+                            ).withValues(alpha: 0.03),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -448,39 +279,6 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                             ),
                         ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-
-                  // View Toggle (Active/Archived)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark ? Colors.transparent : Colors.grey[300]!,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildToggleBtn(
-                          title: 'Active',
-                          isActive: !_showArchived,
-                          onTap: () => setState(() => _showArchived = false),
-                          icon: Icons.check_circle_outline,
-                          isDark: isDark,
-                          maroonColor: maroonColor,
-                        ),
-                        _buildToggleBtn(
-                          title: 'Archived',
-                          isActive: _showArchived,
-                          onTap: () => setState(() => _showArchived = true),
-                          icon: Icons.archive_outlined,
-                          isDark: isDark,
-                          maroonColor: maroonColor,
-                        ),
-                      ],
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -550,7 +348,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -558,10 +356,10 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                 ),
                 child: TabBar(
                   indicator: BoxDecoration(
-                    color: maroonColor.withOpacity(0.1),
+                    color: maroonColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: maroonColor.withOpacity(0.2),
+                      color: maroonColor.withValues(alpha: 0.2),
                     ),
                   ),
                   indicatorColor: maroonColor,
@@ -722,12 +520,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                     schedule.facultyId.toString() ==
                                         _selectedFaculty;
 
-                                final matchesArchived =
-                                    schedule.isActive == !_showArchived;
-
-                                return matchesSearch &&
-                                    matchesFaculty &&
-                                    matchesArchived;
+                                return matchesSearch && matchesFaculty;
                               }).toList();
 
                               if (filteredSchedules.isEmpty) {
@@ -877,6 +670,9 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                     ),
                                                     DataColumn(
                                                       label: Text('SECTION'),
+                                                    ),
+                                                    DataColumn(
+                                                      label: Text('YEAR'),
                                                     ),
                                                     DataColumn(
                                                       label: Text('LOAD'),
@@ -1094,6 +890,19 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                                 color:
                                                                     maroonColor,
                                                               ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        DataCell(
+                                                          Text(
+                                                            subject?.yearLevel
+                                                                    ?.toString() ??
+                                                                '-',
+                                                            style: GoogleFonts.poppins(
+                                                              fontSize: 13,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
                                                             ),
                                                           ),
                                                         ),
@@ -1382,170 +1191,85 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                                 MainAxisSize
                                                                     .min,
                                                             children: [
-                                                              if (!_showArchived) ...[
-                                                                Material(
-                                                                  color: Colors
-                                                                      .transparent,
-                                                                  child: InkWell(
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
+                                                              Material(
+                                                                color: Colors
+                                                                    .transparent,
+                                                                child: InkWell(
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        8,
+                                                                      ),
+                                                                  onTap: () =>
+                                                                      _showEditAssignmentModal(
+                                                                        schedule,
+                                                                      ),
+                                                                  child: Container(
+                                                                    padding:
+                                                                        const EdgeInsets.all(
                                                                           8,
                                                                         ),
-                                                                    onTap: () =>
-                                                                        _showEditAssignmentModal(
-                                                                          schedule,
-                                                                        ),
-                                                                    child: Container(
-                                                                      padding:
-                                                                          const EdgeInsets.all(
+                                                                    decoration: BoxDecoration(
+                                                                      color: maroonColor.withValues(
+                                                                        alpha:
+                                                                            0.1,
+                                                                      ),
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
                                                                             8,
                                                                           ),
-                                                                      decoration: BoxDecoration(
-                                                                        color: maroonColor.withValues(
-                                                                          alpha:
-                                                                              0.1,
-                                                                        ),
-                                                                        borderRadius:
-                                                                            BorderRadius.circular(
-                                                                              8,
-                                                                            ),
-                                                                      ),
-                                                                      child: Icon(
-                                                                        Icons
-                                                                            .edit_outlined,
-                                                                        color:
-                                                                            maroonColor,
-                                                                        size:
-                                                                            18,
-                                                                      ),
+                                                                    ),
+                                                                    child: Icon(
+                                                                      Icons
+                                                                          .edit_outlined,
+                                                                      color:
+                                                                          maroonColor,
+                                                                      size: 18,
                                                                     ),
                                                                   ),
                                                                 ),
-                                                                const SizedBox(
-                                                                  width: 8,
-                                                                ),
-                                                                Material(
-                                                                  color: Colors
-                                                                      .transparent,
-                                                                  child: InkWell(
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
+                                                              ),
+                                                              const SizedBox(
+                                                                width: 8,
+                                                              ),
+                                                              Material(
+                                                                color: Colors
+                                                                    .transparent,
+                                                                child: InkWell(
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        8,
+                                                                      ),
+                                                                  onTap: () =>
+                                                                      _deleteSchedule(
+                                                                        schedule,
+                                                                      ),
+                                                                  child: Container(
+                                                                    padding:
+                                                                        const EdgeInsets.all(
                                                                           8,
                                                                         ),
-                                                                    onTap: () =>
-                                                                        _archiveSchedule(
-                                                                          schedule,
-                                                                        ),
-                                                                    child: Container(
-                                                                      padding:
-                                                                          const EdgeInsets.all(
+                                                                    decoration: BoxDecoration(
+                                                                      color: Colors
+                                                                          .red
+                                                                          .withValues(
+                                                                            alpha:
+                                                                                0.1,
+                                                                          ),
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
                                                                             8,
                                                                           ),
-                                                                      decoration: BoxDecoration(
-                                                                        color: Colors
-                                                                            .orange
-                                                                            .withValues(
-                                                                              alpha: 0.1,
-                                                                            ),
-                                                                        borderRadius:
-                                                                            BorderRadius.circular(
-                                                                              8,
-                                                                            ),
-                                                                      ),
-                                                                      child: const Icon(
-                                                                        Icons
-                                                                            .archive_outlined,
-                                                                        color: Colors
-                                                                            .orange,
-                                                                        size:
-                                                                            18,
-                                                                      ),
+                                                                    ),
+                                                                    child: const Icon(
+                                                                      Icons
+                                                                          .delete_outline,
+                                                                      color: Colors
+                                                                          .red,
+                                                                      size: 18,
                                                                     ),
                                                                   ),
                                                                 ),
-                                                              ] else ...[
-                                                                Material(
-                                                                  color: Colors
-                                                                      .transparent,
-                                                                  child: InkWell(
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                          8,
-                                                                        ),
-                                                                    onTap: () =>
-                                                                        _restoreSchedule(
-                                                                          schedule,
-                                                                        ),
-                                                                    child: Container(
-                                                                      padding:
-                                                                          const EdgeInsets.all(
-                                                                            8,
-                                                                          ),
-                                                                      decoration: BoxDecoration(
-                                                                        color: Colors
-                                                                            .green
-                                                                            .withValues(
-                                                                              alpha: 0.1,
-                                                                            ),
-                                                                        borderRadius:
-                                                                            BorderRadius.circular(
-                                                                              8,
-                                                                            ),
-                                                                      ),
-                                                                      child: const Icon(
-                                                                        Icons
-                                                                            .restore_rounded,
-                                                                        color: Colors
-                                                                            .green,
-                                                                        size:
-                                                                            18,
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                                const SizedBox(
-                                                                  width: 8,
-                                                                ),
-                                                                Material(
-                                                                  color: Colors
-                                                                      .transparent,
-                                                                  child: InkWell(
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                          8,
-                                                                        ),
-                                                                    onTap: () =>
-                                                                        _permanentDeleteSchedule(
-                                                                          schedule,
-                                                                        ),
-                                                                    child: Container(
-                                                                      padding:
-                                                                          const EdgeInsets.all(
-                                                                            8,
-                                                                          ),
-                                                                      decoration: BoxDecoration(
-                                                                        color: Colors
-                                                                            .red
-                                                                            .withValues(
-                                                                              alpha: 0.1,
-                                                                            ),
-                                                                        borderRadius:
-                                                                            BorderRadius.circular(
-                                                                              8,
-                                                                            ),
-                                                                      ),
-                                                                      child: const Icon(
-                                                                        Icons
-                                                                            .delete_forever_rounded,
-                                                                        color: Colors
-                                                                            .red,
-                                                                        size:
-                                                                            18,
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ],
+                                                              ),
                                                             ],
                                                           ),
                                                         ),
@@ -1674,7 +1398,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                   'totalUnits': totalUnits,
                   'totalHours': totalHours,
                   'hasConflicts': hasConflicts,
-                  'remainingLoad': (faculty.maxLoad ?? 0) - totalHours,
+                  'remainingLoad': (faculty.maxLoad ?? 0) - totalUnits,
                 };
               })
               .toList();
@@ -1899,12 +1623,27 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
   }
 
   Widget _buildConflictBanner(
-    AsyncValue<List<ScheduleConflict>> conflictsAsync,
+    AsyncValue<List<Schedule>> schedulesAsync,
+    AsyncValue<List<Faculty>> facultyAsync,
   ) {
-    return conflictsAsync.when(
+    return schedulesAsync.when(
       loading: () => const SizedBox(),
       error: (error, stack) => const SizedBox(),
-      data: (conflicts) {
+      data: (schedules) {
+        // Simple conflict detection - check for duplicate timeslots
+        final conflicts = <String>[];
+        for (var i = 0; i < schedules.length; i++) {
+          for (var j = i + 1; j < schedules.length; j++) {
+            if (schedules[i].facultyId == schedules[j].facultyId &&
+                schedules[i].timeslotId == schedules[j].timeslotId &&
+                schedules[i].timeslotId != -1) {
+              conflicts.add(
+                'Faculty ${schedules[i].facultyId} has overlapping schedules',
+              );
+            }
+          }
+        }
+
         final hasConflicts = conflicts.isNotEmpty;
 
         return AnimatedContainer(
@@ -2005,15 +1744,15 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
               if (hasConflicts && _showConflictDetails)
                 Container(
                   padding: const EdgeInsets.all(20),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.only(
+                    borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(12),
                       bottomRight: Radius.circular(12),
                     ),
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Conflict Details:',
@@ -2025,98 +1764,26 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                       ),
                       const SizedBox(height: 12),
                       ...conflicts.take(5).map((conflict) {
-                        final isWarning =
-                            conflict.type == 'capacity_exceeded' ||
-                            conflict.type == 'program_mismatch' ||
-                            conflict.type == 'faculty_unavailable';
-                        final color = isWarning ? Colors.orange : Colors.red;
-
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: color.withValues(alpha: 0.2),
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 16,
+                                color: Colors.red[700],
                               ),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  isWarning
-                                      ? Icons.info_outline
-                                      : Icons.error_outline,
-                                  size: 18,
-                                  color: color[700],
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: color,
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              conflict.type
-                                                  .toUpperCase()
-                                                  .replaceAll('_', ' '),
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            isWarning ? 'WARNING' : 'CRITICAL',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: color[700],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        conflict.message,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey[800],
-                                        ),
-                                      ),
-                                      if (conflict.details != null &&
-                                          conflict.details!.isNotEmpty) ...[
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          conflict.details!,
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 12,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ],
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  conflict,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: Colors.grey[700],
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         );
                       }),
@@ -2165,10 +1832,9 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
 
   int? _selectedFacultyId;
   int? _selectedSubjectId;
+  int? _selectedSectionId;
   int? _selectedRoomId;
   int? _selectedTimeslotId;
-  int? _selectedSectionId;
-  String? _selectedSectionCode;
   final List<SubjectType> _selectedLoadTypes = [];
   bool _isAutoAssign = false;
   bool _isLoading = false;
@@ -2186,12 +1852,31 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
     setState(() => _isLoading = true);
 
     try {
+      final sections = ref.read(sectionListProvider).maybeWhen(
+            data: (s) => s,
+            orElse: () => <Section>[],
+          );
+      final section = sections.firstWhere(
+        (s) => s.id == _selectedSectionId,
+        orElse: () => sections.isNotEmpty
+            ? sections.first
+            : Section(
+                sectionCode: '',
+                program: Program.it,
+                yearLevel: 1,
+                semester: 1,
+                academicYear: '',
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ),
+      );
+
       final schedule = Schedule(
         facultyId: _selectedFacultyId!,
         subjectId: _selectedSubjectId!,
         roomId: _isAutoAssign ? null : _selectedRoomId,
         timeslotId: _isAutoAssign ? null : _selectedTimeslotId,
-        section: _selectedSectionCode ?? '',
+        section: section?.sectionCode ?? '',
         sectionId: _selectedSectionId,
         loadTypes: _selectedLoadTypes,
         units: double.tryParse(_unitsController.text),
@@ -2232,9 +1917,10 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
   Widget build(BuildContext context) {
     final facultyAsync = ref.watch(facultyListProvider);
     final subjectsAsync = ref.watch(subjectsProvider);
-    final roomsAsync = ref.watch(roomListProvider);
+    final roomsAsync = ref.watch(roomsProvider);
     final timeslotsAsync = ref.watch(timeslotsProvider);
     final sectionsAsync = ref.watch(sectionListProvider);
+    final sectionCodesAsync = ref.watch(studentSectionsProvider);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -2326,29 +2012,42 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Section Dropdown
-                      sectionsAsync.when(
+                      // Section (only sections that still have students)
+                      sectionCodesAsync.when(
                         loading: () => const CircularProgressIndicator(),
                         error: (error, stack) =>
                             const Text('Error loading sections'),
-                        data: (sectionList) => _buildDropdown<int>(
-                          label: 'Section',
-                          value: _selectedSectionId,
-                          items: sectionList.map((s) => s.id!).toList(),
-                          itemLabel: (id) {
-                            final s = sectionList.firstWhere((s) => s.id == id);
-                            return '${s.program.name.toUpperCase()} ${s.yearLevel}-${s.sectionCode}';
+                        data: (sectionCodes) => sectionsAsync.when(
+                          loading: () => const CircularProgressIndicator(),
+                          error: (error, stack) =>
+                              const Text('Error loading sections'),
+                          data: (sections) {
+                            final filtered = sections
+                                .where(
+                                  (s) => sectionCodes.contains(s.sectionCode),
+                                )
+                                .toList();
+
+                            if (filtered.isEmpty) {
+                              return const Text('No sections available');
+                            }
+
+                            final initialId = _selectedSectionId ??
+                                (filtered.isNotEmpty ? filtered.first.id : null);
+
+                            return _buildDropdown<int>(
+                              label: 'Section',
+                              value: initialId,
+                              items: filtered.map((s) => s.id!).toList(),
+                              itemLabel: (id) => filtered
+                                  .firstWhere((s) => s.id == id)
+                                  .sectionCode,
+                              onChanged: (value) =>
+                                  setState(() => _selectedSectionId = value),
+                              validator: (value) =>
+                                  value == null ? 'Required' : null,
+                            );
                           },
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedSectionId = value;
-                              _selectedSectionCode = sectionList
-                                  .firstWhere((s) => s.id == value)
-                                  .sectionCode;
-                            });
-                          },
-                          validator: (value) =>
-                              value == null ? 'Required' : null,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -2377,13 +2076,6 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                               setState(() {
                                 if (selected) {
                                   _selectedLoadTypes.add(type);
-                                  if (_hoursController.text.isEmpty) {
-                                    if (type == SubjectType.lecture) {
-                                      _hoursController.text = '2';
-                                    } else if (type == SubjectType.laboratory) {
-                                      _hoursController.text = '3';
-                                    }
-                                  }
                                 } else {
                                   _selectedLoadTypes.remove(type);
                                 }
@@ -2642,10 +2334,9 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
 
   late int _selectedFacultyId;
   late int _selectedSubjectId;
+  int? _selectedSectionId;
   int? _selectedRoomId;
   int? _selectedTimeslotId;
-  int? _selectedSectionId;
-  String? _selectedSectionCode;
   List<SubjectType> _selectedLoadTypes = [];
   bool _isAutoAssign = false;
   bool _isLoading = false;
@@ -2653,14 +2344,13 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
   @override
   void initState() {
     super.initState();
-    _selectedSectionId = widget.schedule.sectionId;
-    _selectedSectionCode = widget.schedule.section;
     _unitsController = TextEditingController(
       text: widget.schedule.units?.toString() ?? '',
     );
     _hoursController = TextEditingController(
       text: widget.schedule.hours?.toString() ?? '',
     );
+    _selectedSectionId = widget.schedule.sectionId;
     _selectedFacultyId = widget.schedule.facultyId;
     _selectedSubjectId = widget.schedule.subjectId;
     _selectedRoomId = widget.schedule.roomId == -1
@@ -2687,14 +2377,38 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
     setState(() => _isLoading = true);
 
     try {
+      final sections = ref
+          .read(sectionListProvider)
+          .maybeWhen(
+            data: (s) => s,
+            orElse: () => <Section>[],
+          );
+      final section = sections.firstWhere(
+        (s) => s.id == _selectedSectionId,
+        orElse: () => sections.firstWhere(
+          (s) => s.sectionCode == widget.schedule.section,
+          orElse: () => sections.isNotEmpty
+              ? sections.first
+              : Section(
+                  sectionCode: widget.schedule.section,
+                  program: Program.it,
+                  yearLevel: 1,
+                  semester: 1,
+                  academicYear: '',
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                ),
+        ),
+      );
+
       final updatedSchedule = Schedule(
         id: widget.schedule.id,
         facultyId: _selectedFacultyId,
         subjectId: _selectedSubjectId,
         roomId: _isAutoAssign ? null : _selectedRoomId,
         timeslotId: _isAutoAssign ? null : _selectedTimeslotId,
-        section: _selectedSectionCode ?? '',
-        sectionId: _selectedSectionId,
+        section: section?.sectionCode ?? widget.schedule.section,
+        sectionId: _selectedSectionId ?? widget.schedule.sectionId,
         loadTypes: _selectedLoadTypes,
         units: double.tryParse(_unitsController.text),
         hours: double.tryParse(_hoursController.text),
@@ -2734,9 +2448,10 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
   Widget build(BuildContext context) {
     final facultyAsync = ref.watch(facultyListProvider);
     final subjectsAsync = ref.watch(subjectsProvider);
-    final roomsAsync = ref.watch(roomListProvider);
+    final roomsAsync = ref.watch(roomsProvider);
     final timeslotsAsync = ref.watch(timeslotsProvider);
     final sectionsAsync = ref.watch(sectionListProvider);
+    final sectionCodesAsync = ref.watch(studentSectionsProvider);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -2824,33 +2539,49 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Section Dropdown
-                      sectionsAsync.when(
+                      // Section (only sections that still have students)
+                      sectionCodesAsync.when(
                         loading: () => const CircularProgressIndicator(),
                         error: (error, stack) =>
                             const Text('Error loading sections'),
-                        data: (sectionList) => _buildDropdown<int>(
-                          label: 'Section',
-                          // If current ID is not in the list, Fallback to null forcing selection
-                          value:
-                              sectionList.any((s) => s.id == _selectedSectionId)
-                              ? _selectedSectionId
-                              : null,
-                          items: sectionList.map((s) => s.id!).toList(),
-                          itemLabel: (id) {
-                            final s = sectionList.firstWhere((s) => s.id == id);
-                            return '${s.program.name.toUpperCase()} ${s.yearLevel}-${s.sectionCode}';
+                        data: (sectionCodes) => sectionsAsync.when(
+                          loading: () => const CircularProgressIndicator(),
+                          error: (error, stack) =>
+                              const Text('Error loading sections'),
+                          data: (sections) {
+                            final filtered = sections
+                                .where(
+                                  (s) => sectionCodes.contains(s.sectionCode),
+                                )
+                                .toList();
+
+                            if (filtered.isEmpty) {
+                              return const Text('No sections available');
+                            }
+
+                            final initialId = _selectedSectionId ??
+                                filtered
+                                    .firstWhere(
+                                      (s) =>
+                                          s.sectionCode ==
+                                          widget.schedule.section,
+                                      orElse: () => filtered.first,
+                                    )
+                                    .id;
+
+                            return _buildDropdown<int>(
+                              label: 'Section',
+                              value: initialId,
+                              items: filtered.map((s) => s.id!).toList(),
+                              itemLabel: (id) => filtered
+                                  .firstWhere((s) => s.id == id)
+                                  .sectionCode,
+                              onChanged: (value) =>
+                                  setState(() => _selectedSectionId = value),
+                              validator: (value) =>
+                                  value == null ? 'Required' : null,
+                            );
                           },
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedSectionId = value;
-                              _selectedSectionCode = sectionList
-                                  .firstWhere((s) => s.id == value)
-                                  .sectionCode;
-                            });
-                          },
-                          validator: (value) =>
-                              value == null ? 'Required' : null,
                         ),
                       ),
                       const SizedBox(height: 16),

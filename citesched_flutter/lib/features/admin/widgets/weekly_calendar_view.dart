@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 class WeeklyCalendarView extends StatelessWidget {
   final List<ScheduleInfo> schedules;
+  final List<FacultyAvailability>? availabilities;
   final Function(Schedule)? onEdit;
   final Color maroonColor;
   final bool isInstructorView;
@@ -13,6 +14,7 @@ class WeeklyCalendarView extends StatelessWidget {
     super.key,
     required this.schedules,
     required this.maroonColor,
+    this.availabilities,
     this.isInstructorView = false,
     this.selectedFaculty,
     this.onEdit,
@@ -57,8 +59,22 @@ class WeeklyCalendarView extends StatelessWidget {
                 gridColor,
               ),
 
-              // 2. Shift Preference Watermarks (Faded vertical labels)
-              if (selectedFaculty != null)
+              // 2. Preference Cardboxes (High Visibility Black/Faded Highlight)
+              if (availabilities != null)
+                ...availabilities!
+                    .where((a) => a.isPreferred)
+                    .map(
+                      (avail) => _buildPreferenceCardbox(
+                        avail,
+                        days,
+                        startHour,
+                        hourHeight,
+                        dayWidth,
+                      ),
+                    ),
+
+              // 3. Shift Preference Watermarks (Faded vertical labels)
+              if (selectedFaculty != null && availabilities == null)
                 ...days.map(
                   (day) => _buildShiftWatermark(
                     day,
@@ -69,7 +85,7 @@ class WeeklyCalendarView extends StatelessWidget {
                   ),
                 ),
 
-              // 3. Schedule Blocks
+              // 4. Schedule Blocks
               ...schedules.map(
                 (info) => _buildScheduleBlock(
                   context,
@@ -267,6 +283,80 @@ class WeeklyCalendarView extends StatelessWidget {
     return TimeOfDay(hour: hour, minute: minute);
   }
 
+  Widget _buildPreferenceCardbox(
+    FacultyAvailability avail,
+    List<DayOfWeek> days,
+    int startHour,
+    double hourHeight,
+    double dayWidth,
+  ) {
+    final dayIndex = days.indexOf(avail.dayOfWeek);
+    if (dayIndex == -1) return const SizedBox.shrink();
+
+    final start = _parseTime(avail.startTime);
+    final end = _parseTime(avail.endTime);
+
+    final double top =
+        40 + (start.hour - startHour + start.minute / 60.0) * hourHeight;
+    final double height =
+        (end.hour - start.hour + (end.minute - start.minute) / 60.0) *
+        hourHeight;
+    final double left = 80 + (dayIndex * dayWidth);
+
+    return Positioned(
+      top: top + 2,
+      left: left + 4,
+      width: dayWidth - 8,
+      height: height - 4,
+      child: IgnorePointer(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.black.withOpacity(0.2),
+              width: 2.5,
+              style: BorderStyle
+                  .none, // Dashed look via custom painter? No, just use a solid faded border for now
+            ),
+          ),
+          child: Container(
+            margin: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Colors.black.withOpacity(0.1),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.stars_rounded,
+                    size: 24,
+                    color: Colors.black.withOpacity(0.15),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'PREFERRED SLOT',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black.withOpacity(0.2),
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildShiftWatermark(
     DayOfWeek day,
     List<DayOfWeek> days,
@@ -317,13 +407,14 @@ class WeeklyCalendarView extends StatelessWidget {
       height: height - 8,
       child: IgnorePointer(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           decoration: BoxDecoration(
-            color: maroonColor.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(10),
+            color: maroonColor.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: maroonColor.withOpacity(0.25),
-              width: 1.5,
+              color: maroonColor.withOpacity(0.35),
+              width: 2.0,
+              style: BorderStyle.solid,
             ),
           ),
           child: Column(
@@ -331,44 +422,46 @@ class WeeklyCalendarView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Icon(
-                Icons.star_rounded,
-                size: 16,
-                color: maroonColor.withOpacity(0.5),
+                Icons.stars_rounded,
+                size: 20,
+                color: maroonColor.withOpacity(0.6),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
-                'Preferred',
+                'PREFERRED',
                 style: GoogleFonts.poppins(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: maroonColor.withOpacity(0.7),
-                  letterSpacing: 0.5,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: maroonColor.withOpacity(0.8),
+                  letterSpacing: 1.0,
                 ),
               ),
               Text(
-                shiftLabel,
+                shiftLabel.toUpperCase(),
                 style: GoogleFonts.poppins(
-                  fontSize: 8,
-                  color: maroonColor.withOpacity(0.55),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: maroonColor.withOpacity(0.6),
+                  letterSpacing: 0.5,
                 ),
                 textAlign: TextAlign.center,
               ),
               if (timeRange.isNotEmpty) ...[
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 2,
+                    horizontal: 7,
+                    vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: maroonColor.withOpacity(0.12),
+                    color: maroonColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     timeRange,
                     style: GoogleFonts.poppins(
-                      fontSize: 7,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
                       color: maroonColor,
                     ),
                     textAlign: TextAlign.center,
@@ -410,7 +503,10 @@ class WeeklyCalendarView extends StatelessWidget {
         hourHeight;
     final double left = 80 + (dayIndex * dayWidth);
 
-    final bool hasConflict = info.conflicts.isNotEmpty;
+    final bool hasAvailabilityViolation =
+        _isOutsidePreferredAvailability(schedule);
+    final bool hasConflict =
+        info.conflicts.isNotEmpty || hasAvailabilityViolation;
 
     // Black card design per specification
     final Color blockColor = hasConflict
@@ -432,87 +528,140 @@ class WeeklyCalendarView extends StatelessWidget {
           onTap: () => _showScheduleDetails(context, info),
           borderRadius: BorderRadius.circular(10),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: blockColor,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: borderColor,
-                width: hasConflict ? 2 : 1,
+                width: hasConflict ? 2.5 : 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.25),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
+                  color: Colors.black.withOpacity(0.5),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
                 ),
-                if (hasConflict)
-                  BoxShadow(
-                    color: Colors.red.withOpacity(0.2),
-                    blurRadius: 12,
-                    spreadRadius: 2,
-                  ),
               ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Top Label: "Preferred Time"
-                Text(
-                  'Preferred Time',
-                  style: GoogleFonts.poppins(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white.withOpacity(0.7),
-                    letterSpacing: 0.3,
+                // Faculty Name (Robust Header)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: maroonColor.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.15),
+                    ),
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      (schedule.faculty?.name ?? 'UNASSIGNED').toUpperCase(),
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 9,
+                        color: Colors.white,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
                   ),
                 ),
+                const SizedBox(height: 8),
+
+                // Subject Code (Maximum Visibility)
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                schedule.subject?.code ?? 'TBA',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  height: 1.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          // Subject Name
+                          Expanded(
+                            child: Text(
+                              schedule.subject?.name ?? 'No Subject Title',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.normal,
+                                color: Colors.white.withOpacity(0.8),
+                                height: 1.1,
+                              ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            'SEC ${schedule.section} | Y${schedule.subject?.yearLevel?.toString() ?? '-'}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white.withOpacity(0.75),
+                              height: 1.0,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+
                 const SizedBox(height: 4),
-                // Main Text: Faculty Name (Bold)
-                Text(
-                  selectedFaculty != null
-                      ? selectedFaculty!.name
-                      : (schedule.faculty?.name ?? 'Unassigned'),
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: Colors.white,
-                    height: 1.2,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                // Sub Text: Subject Name
-                Text(
-                  schedule.subject?.name ?? schedule.subject?.code ?? 'N/A',
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white.withOpacity(0.85),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const Spacer(),
-                // Bottom: Time range + conflict icon
+
+                // Footer section: Time
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Text(
-                        '${timeslot.startTime} – ${timeslot.endTime}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white.withOpacity(0.6),
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '${timeslot.startTime} - ${timeslot.endTime}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                     if (hasConflict)
                       Icon(
                         Icons.warning_amber_rounded,
-                        size: 16,
+                        size: 14,
                         color: Colors.red[300],
                       ),
                   ],
@@ -528,6 +677,9 @@ class WeeklyCalendarView extends StatelessWidget {
   void _showScheduleDetails(BuildContext context, ScheduleInfo info) {
     final schedule = info.schedule;
     final hasConflict = info.conflicts.isNotEmpty;
+    final hasAvailabilityViolation =
+        _isOutsidePreferredAvailability(schedule);
+    final shouldShowConflict = hasConflict || hasAvailabilityViolation;
 
     showDialog(
       context: context,
@@ -535,8 +687,8 @@ class WeeklyCalendarView extends StatelessWidget {
         title: Row(
           children: [
             Icon(
-              hasConflict ? Icons.warning_rounded : Icons.event_note,
-              color: hasConflict ? Colors.red : maroonColor,
+              shouldShowConflict ? Icons.warning_rounded : Icons.event_note,
+              color: shouldShowConflict ? Colors.red : maroonColor,
             ),
             const SizedBox(width: 12),
             const Text('Schedule Details'),
@@ -555,10 +707,14 @@ class WeeklyCalendarView extends StatelessWidget {
             _buildDetailItem('Room', schedule.room?.name ?? 'N/A'),
             _buildDetailItem('Section', schedule.section),
             _buildDetailItem(
+              'Year Level',
+              schedule.subject?.yearLevel?.toString() ?? 'N/A',
+            ),
+            _buildDetailItem(
               'Time',
               '${schedule.timeslot?.day.name.toUpperCase()} ${schedule.timeslot?.startTime} - ${schedule.timeslot?.endTime}',
             ),
-            if (hasConflict) ...[
+            if (shouldShowConflict) ...[
               const Divider(height: 24),
               Text(
                 'CONFLICT DETECTED:',
@@ -637,6 +793,32 @@ class WeeklyCalendarView extends StatelessWidget {
       final end = _parseTime(ts.endTime);
       return hour >= start.hour && hour < end.hour;
     });
+  }
+
+  bool _isOutsidePreferredAvailability(Schedule schedule) {
+    if (availabilities == null) return false;
+    final preferred = availabilities!.where((a) => a.isPreferred).toList();
+    if (preferred.isEmpty) return false;
+    final timeslot = schedule.timeslot;
+    if (timeslot == null) return false;
+
+    final tsStart = _parseTime(timeslot.startTime);
+    final tsEnd = _parseTime(timeslot.endTime);
+    final tsStartMinutes = tsStart.hour * 60 + tsStart.minute;
+    final tsEndMinutes = tsEnd.hour * 60 + tsEnd.minute;
+
+    for (final a in preferred) {
+      if (a.dayOfWeek != timeslot.day) continue;
+      final aStart = _parseTime(a.startTime);
+      final aEnd = _parseTime(a.endTime);
+      final aStartMinutes = aStart.hour * 60 + aStart.minute;
+      final aEndMinutes = aEnd.hour * 60 + aEnd.minute;
+      if (tsStartMinutes >= aStartMinutes && tsEndMinutes <= aEndMinutes) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   TimeOfDay _parseTime(String time) {

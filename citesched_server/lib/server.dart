@@ -176,6 +176,7 @@ Future<void> _onAfterAccountCreated(
   required UuidValue emailAccountId,
   required Transaction? transaction,
 }) async {
+  // 1. Assign the default 'student' role in our UserRole table
   await UserRole.db.insertRow(
     session,
     UserRole(
@@ -184,5 +185,28 @@ Future<void> _onAfterAccountCreated(
     ),
     transaction: transaction,
   );
+
+  // 2. Sync the role to UserInfo.scopeNames so the client picks it up
+  try {
+    var userInfo = await auth_legacy.UserInfo.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(email),
+      transaction: transaction,
+    );
+    if (userInfo != null) {
+      if (userInfo.scopeNames.contains('student')) return;
+      var scopes = userInfo.scopeNames.toSet();
+      scopes.add('student');
+      userInfo.scopeNames = scopes.toList();
+      await auth_legacy.UserInfo.db.updateRow(
+        session,
+        userInfo,
+        transaction: transaction,
+      );
+    }
+  } catch (e) {
+    session.log('Error syncing scope to UserInfo: $e');
+  }
+
   session.log('[Auth] Default role "student" assigned to user $authUserId');
 }

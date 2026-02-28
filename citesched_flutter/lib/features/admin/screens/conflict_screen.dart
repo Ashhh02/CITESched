@@ -140,80 +140,91 @@ class _ConflictScreenState extends State<ConflictScreen> {
         : const Color(0xFF720045);
     final bgBody = isDark ? const Color(0xFF0F172A) : const Color(0xFFEEF1F6);
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Container(
       color: bgBody,
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Hero Header ──
+          // Header (Standardized Maroon Gradient Banner)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [maroonColor, const Color(0xFFb5179e)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
+                colors: [maroonColor, const Color(0xFF8e005b)],
               ),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: maroonColor.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
+                  color: maroonColor.withValues(alpha: 0.3),
+                  blurRadius: 25,
+                  offset: const Offset(0, 12),
                 ),
               ],
             ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'System Conflicts',
-                        style: GoogleFonts.poppins(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          height: 1.2,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _isLoading
-                            ? 'Scanning all modules for conflicts...'
-                            : _conflicts.isEmpty
-                            ? 'No scheduling conflicts detected ✓'
-                            : '${_conflicts.length} conflict${_conflicts.length == 1 ? '' : 's'} detected across modules',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          color: Colors.white.withOpacity(0.9),
+                      child: const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'System Conflicts',
+                          style: GoogleFonts.poppins(
+                            fontSize: isMobile ? 24 : 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: -1,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      // Module source indicators
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: [
-                          _moduleSourceChip('Faculty Loading'),
-                          _moduleSourceChip('Faculty Management'),
-                          _moduleSourceChip('Subjects'),
-                          _moduleSourceChip('Rooms'),
-                          _moduleSourceChip('Timetable'),
-                        ],
-                      ),
-                    ],
-                  ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _isLoading
+                              ? 'Scanning all modules for conflicts...'
+                              : _conflicts.isEmpty
+                              ? 'No scheduling conflicts detected ✓'
+                              : '${_conflicts.length} conflict${_conflicts.length == 1 ? '' : 's'} detected across modules',
+                          style: GoogleFonts.poppins(
+                            fontSize: isMobile ? 12 : 16,
+                            color: Colors.white.withValues(alpha: 0.8),
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                // Refresh button
+                const SizedBox(width: 16),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: IconButton(
                     onPressed: _isLoading ? null : _fetchConflicts,
@@ -255,25 +266,6 @@ class _ConflictScreenState extends State<ConflictScreen> {
                 : _buildConflictList(isDark, cardBg),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _moduleSourceChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.poppins(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: Colors.white.withOpacity(0.9),
-        ),
       ),
     );
   }

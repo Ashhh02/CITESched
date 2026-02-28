@@ -6,6 +6,42 @@ import '../auth/scopes.dart';
 class TimetableEndpoint extends Endpoint {
   final TimetableService _timetableService = TimetableService();
 
+  Future<Student?> _findCurrentStudent(Session session, dynamic authInfo) async {
+    final userIdentifier = authInfo.userIdentifier.toString();
+    final userInfoId = int.tryParse(userIdentifier);
+
+    if (userInfoId != null) {
+      final byUserInfoId = await Student.db.findFirstRow(
+        session,
+        where: (t) => t.userInfoId.equals(userInfoId),
+      );
+      if (byUserInfoId != null) return byUserInfoId;
+    }
+
+    return await Student.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(userIdentifier),
+    );
+  }
+
+  Future<Faculty?> _findCurrentFaculty(Session session, dynamic authInfo) async {
+    final userIdentifier = authInfo.userIdentifier.toString();
+    final userInfoId = int.tryParse(userIdentifier);
+
+    if (userInfoId != null) {
+      final byUserInfoId = await Faculty.db.findFirstRow(
+        session,
+        where: (t) => t.userInfoId.equals(userInfoId),
+      );
+      if (byUserInfoId != null) return byUserInfoId;
+    }
+
+    return await Faculty.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(userIdentifier),
+    );
+  }
+
   @override
   bool get requireLogin => true;
 
@@ -24,7 +60,7 @@ class TimetableEndpoint extends Endpoint {
   }
 
   Future<List<ScheduleInfo>> getPersonalSchedule(Session session) async {
-    var authInfo = await session.authenticated;
+    var authInfo = session.authenticated;
     if (authInfo == null) {
       throw Exception('Authentication required');
     }
@@ -33,21 +69,27 @@ class TimetableEndpoint extends Endpoint {
     var scopes = authInfo.scopes;
 
     if (scopes.contains(AppScopes.student)) {
-      var student = await Student.db.findFirstRow(
-        session,
-        where: (t) => t.email.equals(authInfo.userIdentifier),
-      );
+      var student = await _findCurrentStudent(session, authInfo);
       if (student == null) return [];
+
+      if (student.sectionId != null) {
+        return await _timetableService.fetchSchedulesBySectionId(
+          session,
+          student.sectionId!,
+          fallbackSectionCode: student.section,
+        );
+      }
+
+      if (student.section == null || student.section!.isEmpty) {
+        return [];
+      }
 
       return await _timetableService.fetchSchedulesWithFilters(
         session,
         TimetableFilterRequest(section: student.section),
       );
     } else if (scopes.contains(AppScopes.faculty)) {
-      var faculty = await Faculty.db.findFirstRow(
-        session,
-        where: (t) => t.email.equals(authInfo.userIdentifier),
-      );
+      var faculty = await _findCurrentFaculty(session, authInfo);
       if (faculty == null) return [];
 
       return await _timetableService.fetchSchedulesWithFilters(

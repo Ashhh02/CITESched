@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'faculty_details_screen.dart';
 import 'package:citesched_flutter/core/providers/conflict_provider.dart';
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
+import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
 
@@ -44,7 +45,8 @@ class _FacultyManagementScreenState
         maroonColor: maroonColor,
         onSuccess: () {
           debugPrint('Add Faculty Success!');
-          ref.refresh(facultyListProvider);
+          notifyScheduleDataChanged(ref);
+          ref.invalidate(facultyListProvider);
         },
       ),
     );
@@ -59,7 +61,8 @@ class _FacultyManagementScreenState
         maroonColor: maroonColor,
         onSuccess: () {
           debugPrint('Edit Faculty Success!');
-          ref.refresh(facultyListProvider);
+          notifyScheduleDataChanged(ref);
+          ref.invalidate(facultyListProvider);
         },
       ),
     );
@@ -99,8 +102,8 @@ class _FacultyManagementScreenState
       try {
         final archivedFaculty = faculty.copyWith(isActive: false);
         await client.admin.updateFaculty(archivedFaculty);
-        ref.refresh(facultyListProvider);
-        ref.refresh(archivedFacultyListProvider);
+        ref.invalidate(facultyListProvider);
+        ref.invalidate(archivedFacultyListProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -156,8 +159,8 @@ class _FacultyManagementScreenState
       try {
         final restoredFaculty = faculty.copyWith(isActive: true);
         await client.admin.updateFaculty(restoredFaculty);
-        ref.refresh(facultyListProvider);
-        ref.refresh(archivedFacultyListProvider);
+        ref.invalidate(facultyListProvider);
+        ref.invalidate(archivedFacultyListProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -221,8 +224,8 @@ class _FacultyManagementScreenState
     if (confirm == true && mounted) {
       try {
         await client.admin.deleteFaculty(faculty.id!);
-        ref.refresh(facultyListProvider);
-        ref.refresh(archivedFacultyListProvider);
+        ref.invalidate(facultyListProvider);
+        ref.invalidate(archivedFacultyListProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -991,7 +994,7 @@ class _FacultyManagementScreenState
                                                         ],
                                                         Text(
                                                           hasConflict
-                                                              ? '$conflictCount âš '
+                                                              ? '$conflictCount conflict'
                                                               : '—',
                                                           style:
                                                               GoogleFonts.poppins(
@@ -1348,7 +1351,7 @@ class _FacultyManagementScreenState
         border: Border.all(
           color: isDark
               ? Colors.grey[800]!
-              : const Color.fromARGB(255, 0, 0, 0)!,
+              : const Color.fromARGB(255, 0, 0, 0),
         ),
         boxShadow: [
           BoxShadow(
@@ -1412,11 +1415,6 @@ class _FacultyManagementScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildLabel(
-          'Program',
-          Icons.school_outlined,
-          isDark ? Colors.white : Colors.black87,
-        ),
         _buildDropdown<Program?>(
           value: _selectedProgram,
           items: [null, ...Program.values],
@@ -2420,7 +2418,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                   final p = await showTimePicker(
                     context: context,
                     initialTime: _startTime,
-                    helpText: 'Start Time',
+                    helpText: 'Select Start Time',
                   );
                   if (p != null) {
                     setState(() {
@@ -2485,7 +2483,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                   final p = await showTimePicker(
                     context: context,
                     initialTime: _endTime,
-                    helpText: 'End Time',
+                    helpText: 'Select End Time',
                   );
                   if (p != null) {
                     setState(() {
@@ -2562,7 +2560,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                   if (sM < ee && es < eM) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Overlapping availability'),
+                        content: Text('Overlapping availability for same day'),
                         backgroundColor: Colors.orange,
                       ),
                     );
@@ -2610,7 +2608,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Added (${_availabilities.length})',
+                  'Added Availability (${_availabilities.length})',
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -2703,6 +2701,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
   Program? _program;
   late bool _isActive;
   bool _isLoading = false;
+  bool _isLoadingAvailability = false;
   String? _customPreferredHours;
 
   // Faculty Availability (Day Picker)
@@ -2731,6 +2730,48 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
     _program = widget.faculty.program;
     _isActive = widget.faculty.isActive;
     _customPreferredHours = widget.faculty.preferredHours;
+    _loadExistingAvailability();
+  }
+
+  Future<void> _loadExistingAvailability() async {
+    if (widget.faculty.id == null) return;
+    setState(() => _isLoadingAvailability = true);
+    try {
+      final existing = await client.admin.getFacultyAvailability(
+        widget.faculty.id!,
+      );
+      if (!mounted) return;
+      setState(() {
+        _availabilities
+          ..clear()
+          ..addAll(
+            existing.map(
+              (a) => _AvailabilityEntry(
+                day: a.dayOfWeek,
+                start: _timeOfDayFromHHmm(a.startTime),
+                end: _timeOfDayFromHHmm(a.endTime),
+              ),
+            ),
+          );
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not load availability: $e'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoadingAvailability = false);
+    }
+  }
+
+  TimeOfDay _timeOfDayFromHHmm(String hhmm) {
+    final parts = hhmm.split(':');
+    final hour = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 0 : 0;
+    final minute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    return TimeOfDay(hour: hour, minute: minute);
   }
 
   @override
@@ -2769,6 +2810,25 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
       );
 
       await client.admin.updateFaculty(updatedFaculty);
+
+      if (widget.faculty.id != null) {
+        final avails = _availabilities
+            .map(
+              (e) => FacultyAvailability(
+                facultyId: widget.faculty.id!,
+                dayOfWeek: e.day,
+                startTime:
+                    '${e.start.hour.toString().padLeft(2, '0')}:${e.start.minute.toString().padLeft(2, '0')}',
+                endTime:
+                    '${e.end.hour.toString().padLeft(2, '0')}:${e.end.minute.toString().padLeft(2, '0')}',
+                isPreferred: true,
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ),
+            )
+            .toList();
+        await client.admin.setFacultyAvailability(widget.faculty.id!, avails);
+      }
 
       if (mounted) {
         Navigator.pop(context);
@@ -3141,6 +3201,46 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                 status == EmploymentStatus.fullTime ? 'Full-Time' : 'Part-Time',
           ),
 
+          const SizedBox(height: 20),
+          _buildLabel('Shift Preference', Icons.schedule_rounded, textPrimary),
+          _buildDropdown<FacultyShiftPreference>(
+            value: _shiftPreference,
+            bgBody: bgBody,
+            textPrimary: textPrimary,
+            textMuted: textMuted,
+            primaryPurple: primaryPurple,
+            items: FacultyShiftPreference.values,
+            onChanged: (value) => setState(() => _shiftPreference = value),
+            itemLabel: (pref) {
+              switch (pref) {
+                case FacultyShiftPreference.any:
+                  return 'Any Time (Flexible)';
+                case FacultyShiftPreference.morning:
+                  return 'Morning (7:00 AM to 12:00 PM)';
+                case FacultyShiftPreference.afternoon:
+                  return 'Afternoon (1:00 PM to 6:00 PM)';
+                case FacultyShiftPreference.evening:
+                  return 'Evening (6:00 PM to 9:00 PM)';
+                case FacultyShiftPreference.custom:
+                  return 'Custom';
+              }
+            },
+          ),
+
+          const SizedBox(height: 24),
+          if (_isLoadingAvailability)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else
+            _buildDayPickerSection(
+              primaryPurple,
+              textPrimary,
+              textMuted,
+              bgBody,
+            ),
+
           const SizedBox(height: 24),
           _buildLabel('Program Assignment', Icons.school_outlined, textPrimary),
           _buildDropdown<Program>(
@@ -3432,7 +3532,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 10),
               child: Text(
-                'â†’',
+                '->',
                 style: TextStyle(fontSize: 18, color: Colors.black45),
               ),
             ),
@@ -3616,7 +3716,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '${e.start.format(context)} â€“ ${e.end.format(context)}',
+                            '${e.start.format(context)} - ${e.end.format(context)}',
                             style: GoogleFonts.poppins(
                               fontSize: 13,
                               color: textPrimary,

@@ -1,5 +1,6 @@
 ﻿import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/main.dart';
+import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
 import 'package:citesched_flutter/features/admin/widgets/timetable_filter_panel.dart';
 import 'package:citesched_flutter/features/admin/widgets/timetable_summary_panel.dart';
@@ -255,6 +256,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
       if (mounted) Navigator.pop(context);
 
       if (mounted) {
+        notifyScheduleDataChanged(ref);
         ref.invalidate(filteredSchedulesProvider);
         ref.invalidate(timetableSummaryProvider);
         _showSummaryDialog(response);
@@ -419,46 +421,93 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                // Header (Standardized Maroon Gradient Banner)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [maroonColor, const Color(0xFF8e005b)],
+                    ),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: maroonColor.withValues(alpha: 0.3),
+                        blurRadius: 25,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
                         children: [
-                          Text(
-                            'Weekly Timetable',
-                            style: GoogleFonts.poppins(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.calendar_view_week_rounded,
+                              color: Colors.white,
+                              size: 32,
                             ),
                           ),
-                          Text(
-                            'Visualizing class schedules and conflicts',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
+                          const SizedBox(width: 24),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Weekly Timetable',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: -1,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Visualizing class schedules and potential conflicts',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                       ElevatedButton.icon(
                         onPressed: _generateSchedule,
-                        icon: const Icon(Icons.auto_awesome_rounded),
-                        label: const Text('RE-GENERATE AI SCHEDULE'),
+                        icon: const Icon(Icons.auto_awesome_rounded, size: 24),
+                        label: Text(
+                          'GENERATE AI SCHEDULE',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: maroonColor,
-                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white,
+                          foregroundColor: maroonColor,
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
+                            horizontal: 28,
+                            vertical: 18,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(16),
                           ),
+                          elevation: 0,
                         ),
                       ),
                     ],
@@ -481,6 +530,18 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                             child: WeeklyCalendarView(
                               schedules: schedules,
                               maroonColor: maroonColor,
+                              availabilities: currentFilter.facultyId != null
+                                  ? ref
+                                      .watch(
+                                        facultyAvailabilityProvider(
+                                          currentFilter.facultyId!,
+                                        ),
+                                      )
+                                      .maybeWhen(
+                                        data: (v) => v,
+                                        orElse: () => null,
+                                      )
+                                  : null,
                               selectedFaculty: currentFilter.facultyId != null
                                   ? _facultyList.firstWhere(
                                       (f) => f.id == currentFilter.facultyId,

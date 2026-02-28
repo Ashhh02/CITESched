@@ -52,8 +52,55 @@ class TimetableService {
     );
 
     var schedules = await query;
+    return _toScheduleInfo(
+      session,
+      schedules,
+      hasConflictsFilter: filter.hasConflicts,
+      loadTypeFilter: filter.loadType,
+    );
+  }
 
-    // Map to ScheduleInfo and check for conflicts
+  Future<List<ScheduleInfo>> fetchSchedulesBySectionId(
+    Session session,
+    int sectionId, {
+    String? fallbackSectionCode,
+  }) async {
+    var schedules = await Schedule.db.find(
+      session,
+      where: (t) => t.sectionId.equals(sectionId) & t.isActive.equals(true),
+      include: Schedule.include(
+        subject: Subject.include(),
+        faculty: Faculty.include(),
+        room: Room.include(),
+        timeslot: Timeslot.include(),
+      ),
+    );
+
+    if (schedules.isEmpty &&
+        fallbackSectionCode != null &&
+        fallbackSectionCode.isNotEmpty) {
+      schedules = await Schedule.db.find(
+        session,
+        where: (t) =>
+            t.section.equals(fallbackSectionCode) & t.isActive.equals(true),
+        include: Schedule.include(
+          subject: Subject.include(),
+          faculty: Faculty.include(),
+          room: Room.include(),
+          timeslot: Timeslot.include(),
+        ),
+      );
+    }
+
+    return _toScheduleInfo(session, schedules);
+  }
+
+  Future<List<ScheduleInfo>> _toScheduleInfo(
+    Session session,
+    List<Schedule> schedules, {
+    bool? hasConflictsFilter,
+    SubjectType? loadTypeFilter,
+  }) async {
     var result = <ScheduleInfo>[];
     for (var s in schedules) {
       var conflicts = await _conflictService.validateSchedule(
@@ -62,15 +109,13 @@ class TimetableService {
         excludeScheduleId: s.id,
       );
 
-      // If hasConflicts filter is set, filter accordingly
-      if (filter.hasConflicts != null) {
-        if (filter.hasConflicts! && conflicts.isEmpty) continue;
-        if (!filter.hasConflicts! && conflicts.isNotEmpty) continue;
+      if (hasConflictsFilter != null) {
+        if (hasConflictsFilter && conflicts.isEmpty) continue;
+        if (!hasConflictsFilter && conflicts.isNotEmpty) continue;
       }
 
-      // Filter by loadType (post-query since loadTypes is a List)
-      if (filter.loadType != null) {
-        if (!(s.loadTypes?.contains(filter.loadType) ?? false)) continue;
+      if (loadTypeFilter != null) {
+        if (!(s.loadTypes?.contains(loadTypeFilter) ?? false)) continue;
       }
 
       result.add(

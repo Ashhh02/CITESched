@@ -363,12 +363,6 @@ class Protocol extends _i1.SerializationManagerServer {
           dartType: 'protocol:Program',
         ),
         _i2.ColumnDefinition(
-          name: 'building',
-          columnType: _i2.ColumnType.text,
-          isNullable: false,
-          dartType: 'String',
-        ),
-        _i2.ColumnDefinition(
           name: 'isActive',
           columnType: _i2.ColumnType.boolean,
           isNullable: false,
@@ -1354,6 +1348,9 @@ class Protocol extends _i1.SerializationManagerServer {
     if (t == List<_i39.Student>) {
       return (data as List).map((e) => deserialize<_i39.Student>(e)).toList()
           as T;
+    }
+    if (t == List<String>) {
+      return (data as List).map((e) => deserialize<String>(e)).toList() as T;
     }
     if (t == List<_i40.Room>) {
       return (data as List).map((e) => deserialize<_i40.Room>(e)).toList() as T;

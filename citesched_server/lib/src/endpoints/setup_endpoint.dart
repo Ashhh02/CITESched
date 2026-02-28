@@ -40,16 +40,13 @@ class SetupEndpoint extends Endpoint {
         }
       }
 
-      if (userInfo.scopeNames == null) {
-        userInfo.scopeNames = [];
+      // Sync the role to scopeNames for the client
+      var currentScopes = userInfo.scopeNames.toSet();
+      if (!currentScopes.contains(role)) {
+        currentScopes.add(role);
+        userInfo.scopeNames = currentScopes.toList();
+        await UserInfo.db.updateRow(session, userInfo);
       }
-
-      // Fix: Only add the role if it doesn't already exist (and clear duplicates)
-      var currentScopes = userInfo.scopeNames!.toSet();
-      currentScopes.add(role);
-      userInfo.scopeNames = currentScopes.toList();
-
-      await UserInfo.db.updateRow(session, userInfo);
 
       // Create linked profile based on role
       if (role == 'student' && studentId != null) {
@@ -58,16 +55,58 @@ class SetupEndpoint extends Endpoint {
           where: (t) => t.email.equals(email),
         );
         if (existingStudent == null) {
+          int? sectionId;
+          if (section != null && section.isNotEmpty) {
+            try {
+              var existingSection = await Section.db.findFirstRow(
+                session,
+                where: (t) => t.sectionCode.equals(section),
+              );
+
+              if (existingSection != null) {
+                sectionId = existingSection.id;
+              } else {
+                var prog = Program.it;
+                var year = 1;
+                if (section.toUpperCase().contains('EMC')) {
+                  prog = Program.emc;
+                }
+                final yearMatch = RegExp(r'\d').firstMatch(section);
+                if (yearMatch != null) {
+                  year = int.parse(yearMatch.group(0)!);
+                }
+
+                final newSection = await Section.db.insertRow(
+                  session,
+                  Section(
+                    sectionCode: section,
+                    program: prog,
+                    yearLevel: year,
+                    semester: 1,
+                    academicYear:
+                        '${DateTime.now().year}-${DateTime.now().year + 1}',
+                    createdAt: DateTime.now(),
+                    updatedAt: DateTime.now(),
+                  ),
+                );
+                sectionId = newSection.id;
+              }
+            } catch (e) {
+              session.log('Error syncing section: $e');
+            }
+          }
+
           await Student.db.insertRow(
             session,
             Student(
               name: userName,
               email: email,
               studentNumber: studentId,
-              course: 'BSIT', // Default
-              yearLevel: 1, // Default
+              course: 'BSIT',
+              yearLevel: 1,
               section: section,
-              userInfoId: userInfo!.id!,
+              sectionId: sectionId,
+              userInfoId: userInfo.id!,
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             ),
@@ -88,7 +127,7 @@ class SetupEndpoint extends Endpoint {
               employmentStatus: EmploymentStatus.fullTime,
               shiftPreference: FacultyShiftPreference.any,
               facultyId: facultyId,
-              userInfoId: userInfo!.id!,
+              userInfoId: userInfo.id!,
               program: Program.it, // Default
               isActive: true,
               createdAt: DateTime.now(),
@@ -99,19 +138,24 @@ class SetupEndpoint extends Endpoint {
       }
 
       // Add UserRole entry to ensure authenticationHandler picks it up
+      var userIdStr = userInfo.id!.toString();
       var existingRole = await UserRole.db.findFirstRow(
         session,
-        where: (t) => t.userId.equals(userInfo!.id.toString()),
+        where: (t) => t.userId.equals(userIdStr),
       );
 
       if (existingRole == null) {
         await UserRole.db.insertRow(
           session,
           UserRole(
-            userId: userInfo!.id.toString(),
+            userId: userIdStr,
             role: role,
           ),
         );
+      } else if (existingRole.role != role) {
+        // Update existing role if it differs
+        existingRole.role = role;
+        await UserRole.db.updateRow(session, existingRole);
       }
 
       session.log(

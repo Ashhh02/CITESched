@@ -1,4 +1,5 @@
 import 'package:serverpod/serverpod.dart';
+import 'package:serverpod_auth_server/serverpod_auth_server.dart';
 
 import '../auth/scopes.dart';
 import '../generated/protocol.dart';
@@ -61,30 +62,107 @@ class AdminEndpoint extends Endpoint {
 
   /// Create a new faculty member with validation.
   Future<Faculty> createFaculty(Session session, Faculty faculty) async {
-    // Validate email format
-    if (!_isValidEmail(faculty.email)) {
-      throw Exception('Invalid email format: ${faculty.email}');
+    try {
+      print('--- CREATE FACULTY DEBUG ---');
+      print('Name: ${faculty.name}');
+      print('Email: ${faculty.email}');
+      print('FacultyID: ${faculty.facultyId}');
+      print('userInfoId: ${faculty.userInfoId}');
+
+      // Validate email format
+      if (!_isValidEmail(faculty.email)) {
+        print('FAIL: Invalid email format');
+        throw Exception('Invalid email format: ${faculty.email}');
+      }
+
+      // Check email uniqueness in Faculty table
+      var existingEmail = await Faculty.db.findFirstRow(
+        session,
+        where: (t) => t.email.equals(faculty.email),
+      );
+      if (existingEmail != null) {
+        print('FAIL: Email already exists in Faculty table');
+        throw Exception('Faculty with email ${faculty.email} already exists');
+      }
+
+      // Check facultyId uniqueness
+      var existingId = await Faculty.db.findFirstRow(
+        session,
+        where: (t) => t.facultyId.equals(faculty.facultyId),
+      );
+      if (existingId != null) {
+        print('FAIL: Faculty ID already exists');
+        throw Exception('Faculty with ID ${faculty.facultyId} already exists');
+      }
+
+      // --- HANDLE USER ACCOUNT CREATION ---
+      // We need a real UserInfo record. If the frontend sent 0 or nothing, we create one.
+      UserInfo? userInfo;
+
+      // Try to find if a UserInfo already exists for this email
+      userInfo = await UserInfo.db.findFirstRow(
+        session,
+        where: (t) => t.email.equals(faculty.email),
+      );
+
+      if (userInfo == null) {
+        print('CREATING NEW UserInfo for ${faculty.email}...');
+        // Create a new user account with a default password (same as facultyId or random)
+        // Note: In a real app, you'd send a reset link, but here we'll use a placeholder.
+        userInfo = await Emails.createUser(
+          session,
+          faculty.name,
+          faculty.email,
+          'JMC-${faculty.facultyId}', // Default password
+        );
+
+        if (userInfo == null) {
+          throw Exception('Failed to create UserInfo for ${faculty.email}');
+        }
+      }
+
+      // Ensure the user has the 'faculty' role scope
+      var currentScopes = userInfo.scopeNames.toSet();
+      if (!currentScopes.contains('faculty')) {
+        currentScopes.add('faculty');
+        userInfo.scopeNames = currentScopes.toList();
+        await UserInfo.db.updateRow(session, userInfo);
+      }
+
+      // Also ensure a UserRole record exists (used by the custom login)
+      var userIdStr = userInfo.id?.toString() ?? '';
+      var existingRole = await UserRole.db.findFirstRow(
+        session,
+        where: (t) => t.userId.equals(userIdStr),
+      );
+      if (existingRole == null && userIdStr.isNotEmpty) {
+        await UserRole.db.insertRow(
+          session,
+          UserRole(userId: userIdStr, role: 'faculty'),
+        );
+      }
+
+      // Set the correct userInfoId
+      faculty.userInfoId = userInfo.id!;
+
+      // Validate maxLoad
+      if ((faculty.maxLoad ?? 0) <= 0) {
+        print('FAIL: Invalid maxLoad');
+        throw Exception('Max load must be greater than 0');
+      }
+
+      // Set timestamps
+      faculty.createdAt = DateTime.now();
+      faculty.updatedAt = DateTime.now();
+
+      final created = await Faculty.db.insertRow(session, faculty);
+      print('SUCCESS: Created faculty with database ID: ${created.id}');
+      return created;
+    } catch (e, stack) {
+      print('CRITICAL ERROR IN createFaculty: $e');
+      print(stack);
+      rethrow;
     }
-
-    // Check email uniqueness
-    var existing = await Faculty.db.findFirstRow(
-      session,
-      where: (t) => t.email.equals(faculty.email),
-    );
-    if (existing != null) {
-      throw Exception('Faculty with email ${faculty.email} already exists');
-    }
-
-    // Validate maxLoad
-    if ((faculty.maxLoad ?? 0) <= 0) {
-      throw Exception('Max load must be greater than 0');
-    }
-
-    // Set timestamps
-    faculty.createdAt = DateTime.now();
-    faculty.updatedAt = DateTime.now();
-
-    return await Faculty.db.insertRow(session, faculty);
   }
 
   /// Get all faculty members.
@@ -132,7 +210,7 @@ class AdminEndpoint extends Endpoint {
   }
 
   /// Delete a faculty member by ID.
-  /// Checks for active schedules before deletion.
+  /// Checks for active schedules before deletion and cleans up related records.
   Future<bool> deleteFaculty(Session session, int id) async {
     var faculty = await Faculty.db.findById(session, id);
     if (faculty == null) return false;
@@ -149,6 +227,18 @@ class AdminEndpoint extends Endpoint {
       );
     }
 
+    // Clean up availability records
+    await FacultyAvailability.db.deleteWhere(
+      session,
+      where: (t) => t.facultyId.equals(id),
+    );
+
+    // Clean up UserRole
+    await UserRole.db.deleteWhere(
+      session,
+      where: (t) => t.userId.equals(faculty.userInfoId.toString()),
+    );
+
     await Faculty.db.deleteRow(session, faculty);
     return true;
   }
@@ -157,36 +247,88 @@ class AdminEndpoint extends Endpoint {
 
   /// Create a new student with validation.
   Future<Student> createStudent(Session session, Student student) async {
-    // Validate email format
-    if (!_isValidEmail(student.email)) {
-      throw Exception('Invalid email format: ${student.email}');
-    }
+    try {
+      // Validate email format
+      if (!_isValidEmail(student.email)) {
+        throw Exception('Invalid email format: ${student.email}');
+      }
 
-    // Check email uniqueness
-    var existing = await Student.db.findFirstRow(
-      session,
-      where: (t) => t.email.equals(student.email),
-    );
-    if (existing != null) {
-      throw Exception('Student with email ${student.email} already exists');
-    }
-
-    // Check student number uniqueness
-    var existingNumber = await Student.db.findFirstRow(
-      session,
-      where: (t) => t.studentNumber.equals(student.studentNumber),
-    );
-    if (existingNumber != null) {
-      throw Exception(
-        'Student with number ${student.studentNumber} already exists',
+      // Check email uniqueness
+      var existing = await Student.db.findFirstRow(
+        session,
+        where: (t) => t.email.equals(student.email),
       );
+      if (existing != null) {
+        throw Exception('Student with email ${student.email} already exists');
+      }
+
+      // Check student number uniqueness
+      var existingNumber = await Student.db.findFirstRow(
+        session,
+        where: (t) => t.studentNumber.equals(student.studentNumber),
+      );
+      if (existingNumber != null) {
+        throw Exception(
+          'Student with number ${student.studentNumber} already exists',
+        );
+      }
+
+      // --- HANDLE USER ACCOUNT CREATION ---
+      UserInfo? userInfo;
+
+      // Try to find if a UserInfo already exists for this email
+      userInfo = await UserInfo.db.findFirstRow(
+        session,
+        where: (t) => t.email.equals(student.email),
+      );
+
+      if (userInfo == null) {
+        // Create a new user account with a default password
+        userInfo = await Emails.createUser(
+          session,
+          student.name,
+          student.email,
+          'JMC-${student.studentNumber}', // Default password
+        );
+
+        if (userInfo == null) {
+          throw Exception('Failed to create UserInfo for ${student.email}');
+        }
+      }
+
+      // Ensure the user has the 'student' role scope
+      var currentScopes = userInfo.scopeNames.toSet();
+      if (!currentScopes.contains('student')) {
+        currentScopes.add('student');
+        userInfo.scopeNames = currentScopes.toList();
+        await UserInfo.db.updateRow(session, userInfo);
+      }
+
+      // Also ensure a UserRole record exists (used by the custom login)
+      var userIdStr = userInfo.id?.toString() ?? '';
+      var existingRole = await UserRole.db.findFirstRow(
+        session,
+        where: (t) => t.userId.equals(userIdStr),
+      );
+      if (existingRole == null && userIdStr.isNotEmpty) {
+        await UserRole.db.insertRow(
+          session,
+          UserRole(userId: userIdStr, role: 'student'),
+        );
+      }
+
+      // Set the correct userInfoId
+      student.userInfoId = userInfo.id!;
+
+      // Set timestamps
+      student.createdAt = DateTime.now();
+      student.updatedAt = DateTime.now();
+
+      return await Student.db.insertRow(session, student);
+    } catch (e) {
+      print('ERROR IN createStudent: $e');
+      rethrow;
     }
-
-    // Set timestamps
-    student.createdAt = DateTime.now();
-    student.updatedAt = DateTime.now();
-
-    return await Student.db.insertRow(session, student);
   }
 
   /// Get all students.
@@ -200,7 +342,7 @@ class AdminEndpoint extends Endpoint {
     );
   }
 
-  /// Update a student with validation.
+  /// Update a student with validation and section synchronization.
   Future<Student> updateStudent(Session session, Student student) async {
     // Ensure student exists
     var existing = await Student.db.findById(session, student.id!);
@@ -233,10 +375,71 @@ class AdminEndpoint extends Endpoint {
       );
     }
 
+    // Section Synchronization
+    if (student.section != existing.section || student.sectionId == null) {
+      if (student.section != null && student.section!.isNotEmpty) {
+        try {
+          var existingSection = await Section.db.findFirstRow(
+            session,
+            where: (t) => t.sectionCode.equals(student.section!),
+          );
+
+          if (existingSection != null) {
+            student.sectionId = existingSection.id;
+          } else {
+            // Parse basic info if possible: e.g. "BSIT-3A"
+            var prog = Program.it;
+            var year = 1;
+            if (student.section!.toUpperCase().contains('EMC')) {
+              prog = Program.emc;
+            }
+            final yearMatch = RegExp(r'\d').firstMatch(student.section!);
+            if (yearMatch != null) {
+              year = int.parse(yearMatch.group(0)!);
+            }
+
+            final newSection = await Section.db.insertRow(
+              session,
+              Section(
+                sectionCode: student.section!,
+                program: prog,
+                yearLevel: year,
+                semester: 1,
+                academicYear:
+                    '${DateTime.now().year}-${DateTime.now().year + 1}',
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ),
+            );
+            student.sectionId = newSection.id;
+          }
+        } catch (e) {
+          session.log('Error syncing section during update: $e');
+        }
+      } else {
+        student.sectionId = null;
+      }
+    }
+
     // Update timestamp
     student.updatedAt = DateTime.now();
 
     return await Student.db.updateRow(session, student);
+  }
+
+  /// Get all unique section codes currently assigned to students.
+  Future<List<String>> getDistinctStudentSections(Session session) async {
+    final students = await Student.db.find(
+      session,
+      where: (t) => t.section.notEquals(null) & t.isActive.equals(true),
+    );
+    final sections = students
+        .map((s) => s.section!)
+        .where((s) => s.isNotEmpty)
+        .toSet()
+        .toList();
+    sections.sort();
+    return sections;
   }
 
   /// Delete a student by ID.
@@ -244,8 +447,13 @@ class AdminEndpoint extends Endpoint {
     var student = await Student.db.findById(session, id);
     if (student == null) return false;
 
-    student.isActive = false;
-    await Student.db.updateRow(session, student);
+    // Clean up UserRole
+    await UserRole.db.deleteWhere(
+      session,
+      where: (t) => t.userId.equals(student.userInfoId.toString()),
+    );
+
+    await Student.db.deleteRow(session, student);
     return true;
   }
 
@@ -253,38 +461,28 @@ class AdminEndpoint extends Endpoint {
 
   /// Create a new room with validation.
   Future<Room> createRoom(Session session, Room room) async {
-    // Enforce 3-room limit
     var allRooms = await Room.db.find(session);
-    if (allRooms.length >= 3) {
-      throw Exception(
-        'Limit Exceeded: Only 3 rooms are allowed in the system.',
-      );
-    }
-
-    // Enforce Program Distribution (2 IT, 1 EMC)
-    var itRooms = allRooms.where((r) => r.program == Program.it).length;
-    var emcRooms = allRooms.where((r) => r.program == Program.emc).length;
-
-    if (room.program == Program.it && itRooms >= 2) {
-      throw Exception('Limit Exceeded: Already have 2 IT rooms.');
-    }
-    if (room.program == Program.emc && emcRooms >= 1) {
-      throw Exception('Limit Exceeded: Already have 1 EMC room.');
-    }
+    _validateRoomCatalogRules(room);
 
     // Validate capacity
     if (room.capacity <= 0) {
       throw Exception('Room capacity must be greater than 0');
     }
 
-    // Check room name uniqueness per building
+    // Check room name uniqueness
     var existing = await Room.db.findFirstRow(
       session,
-      where: (t) => t.name.equals(room.name) & t.building.equals(room.building),
+      where: (t) => t.name.equals(room.name),
     );
     if (existing != null) {
       throw Exception(
-        'Room ${room.name} already exists in building ${room.building}',
+        'Room ${room.name} already exists',
+      );
+    }
+
+    if (allRooms.length >= 3) {
+      throw Exception(
+        'Limit Exceeded: Only 3 rooms are allowed in the system.',
       );
     }
 
@@ -314,33 +512,21 @@ class AdminEndpoint extends Endpoint {
       throw Exception('Room not found with ID: ${room.id}');
     }
 
-    // If program is changing, check distribution
-    if (existing.program != room.program) {
-      var allRooms = await Room.db.find(session);
-      var itRooms = allRooms.where((r) => r.program == Program.it).length;
-      var emcRooms = allRooms.where((r) => r.program == Program.emc).length;
-
-      if (room.program == Program.it && itRooms >= 2) {
-        throw Exception('Limit Exceeded: Already have 2 IT rooms.');
-      }
-      if (room.program == Program.emc && emcRooms >= 1) {
-        throw Exception('Limit Exceeded: Already have 1 EMC room.');
-      }
-    }
+    _validateRoomCatalogRules(room);
 
     // Validate capacity
     if (room.capacity <= 0) {
       throw Exception('Room capacity must be greater than 0');
     }
 
-    // Check room name uniqueness per building (excluding current room)
+    // Check room name uniqueness (excluding current room)
     var nameConflict = await Room.db.findFirstRow(
       session,
-      where: (t) => t.name.equals(room.name) & t.building.equals(room.building),
+      where: (t) => t.name.equals(room.name),
     );
     if (nameConflict != null && nameConflict.id != room.id) {
       throw Exception(
-        'Room ${room.name} already exists in building ${room.building}',
+        'Room ${room.name} already exists',
       );
     }
 
@@ -368,8 +554,7 @@ class AdminEndpoint extends Endpoint {
       );
     }
 
-    room.isActive = false;
-    await Room.db.updateRow(session, room);
+    await Room.db.deleteRow(session, room);
     return true;
   }
 
@@ -457,8 +642,7 @@ class AdminEndpoint extends Endpoint {
       );
     }
 
-    subject.isActive = false;
-    await Subject.db.updateRow(session, subject);
+    await Subject.db.deleteRow(session, subject);
     return true;
   }
 
@@ -555,6 +739,7 @@ class AdminEndpoint extends Endpoint {
     // Normalize sentinel values from frontend
     if (schedule.roomId == -1) schedule.roomId = null;
     if (schedule.timeslotId == -1) schedule.timeslotId = null;
+    await _syncScheduleSectionReference(session, schedule);
 
     // Validate schedule entry against all conflicts
     var conflicts = await ConflictService().validateSchedule(session, schedule);
@@ -685,6 +870,7 @@ class AdminEndpoint extends Endpoint {
     // Normalize sentinel values from frontend
     if (schedule.roomId == -1) schedule.roomId = null;
     if (schedule.timeslotId == -1) schedule.timeslotId = null;
+    await _syncScheduleSectionReference(session, schedule);
 
     // Ensure schedule exists
     var existing = await Schedule.db.findById(session, schedule.id!);
@@ -710,13 +896,12 @@ class AdminEndpoint extends Endpoint {
     return await Schedule.db.updateRow(session, schedule);
   }
 
-  /// Delete (Archive) a schedule entry by ID.
+  /// Delete a schedule entry by ID.
   Future<bool> deleteSchedule(Session session, int id) async {
     var schedule = await Schedule.db.findById(session, id);
     if (schedule == null) return false;
 
-    schedule.isActive = false;
-    await Schedule.db.updateRow(session, schedule);
+    await Schedule.db.deleteRow(session, schedule);
     return true;
   }
 
@@ -761,6 +946,55 @@ class AdminEndpoint extends Endpoint {
     } catch (e) {
       return false;
     }
+  }
+
+  static const Set<String> _allowedRoomNames = {
+    'IT LAB',
+    'EMC LAB',
+    'ROOM 1',
+  };
+
+  String _normalizedRoomName(String value) => value.trim().toUpperCase();
+
+  void _validateRoomCatalogRules(Room room) {
+    final roomName = _normalizedRoomName(room.name);
+
+    if (!_allowedRoomNames.contains(roomName)) {
+      throw Exception(
+        'Invalid room name. Only IT LAB, EMC LAB, and ROOM 1 are allowed.',
+      );
+    }
+
+    if (roomName == 'ROOM 1' && room.type != RoomType.lecture) {
+      throw Exception('ROOM 1 must be a lecture room.');
+    }
+
+    if ((roomName == 'IT LAB' || roomName == 'EMC LAB') &&
+        room.type != RoomType.laboratory) {
+      throw Exception('$roomName must be a laboratory room.');
+    }
+
+    if (roomName == 'IT LAB' && room.program != Program.it) {
+      throw Exception('IT LAB must be assigned to IT program.');
+    }
+
+    if (roomName == 'EMC LAB' && room.program != Program.emc) {
+      throw Exception('EMC LAB must be assigned to EMC program.');
+    }
+  }
+
+  Future<void> _syncScheduleSectionReference(
+    Session session,
+    Schedule schedule,
+  ) async {
+    schedule.section = schedule.section.trim();
+    if (schedule.section.isEmpty) return;
+
+    var section = await Section.db.findFirstRow(
+      session,
+      where: (t) => t.sectionCode.equals(schedule.section),
+    );
+    schedule.sectionId = section?.id;
   }
   // ─── Dashboard Stats ─────────────────────────────────────────────────
 
@@ -986,8 +1220,7 @@ class AdminEndpoint extends Endpoint {
       );
     }
 
-    section.isActive = false;
-    await Section.db.updateRow(session, section);
+    await Section.db.deleteRow(session, section);
     return true;
   }
 
@@ -999,67 +1232,77 @@ class AdminEndpoint extends Endpoint {
     int facultyId,
     List<FacultyAvailability> availabilities,
   ) async {
-    // Validate faculty exists
-    var faculty = await Faculty.db.findById(session, facultyId);
-    if (faculty == null) {
-      throw Exception('Faculty not found with ID: $facultyId');
-    }
+    try {
+      print('--- SET FACULTY AVAILABILITY DEBUG ---');
+      print('FacultyID: $facultyId');
+      print('Availabilities count: ${availabilities.length}');
 
-    // Validate each availability entry
-    for (var avail in availabilities) {
-      if (!_isValidTimeFormat(avail.startTime)) {
-        throw Exception('Invalid start time: ${avail.startTime}');
+      // Validate faculty exists
+      var faculty = await Faculty.db.findById(session, facultyId);
+      if (faculty == null) {
+        throw Exception('Faculty not found with ID: $facultyId');
       }
-      if (!_isValidTimeFormat(avail.endTime)) {
-        throw Exception('Invalid end time: ${avail.endTime}');
-      }
-      if (!_isStartBeforeEnd(avail.startTime, avail.endTime)) {
-        throw Exception(
-          'Start time must be before end time: ${avail.startTime} - ${avail.endTime}',
-        );
-      }
-    }
 
-    // Check for overlapping availability for same faculty on same day
-    for (var i = 0; i < availabilities.length; i++) {
-      for (var j = i + 1; j < availabilities.length; j++) {
-        if (availabilities[i].dayOfWeek == availabilities[j].dayOfWeek) {
-          if (_timesOverlap(
-            availabilities[i].startTime,
-            availabilities[i].endTime,
-            availabilities[j].startTime,
-            availabilities[j].endTime,
-          )) {
-            throw Exception(
-              'Overlapping availability on ${availabilities[i].dayOfWeek.name}: '
-              '${availabilities[i].startTime}-${availabilities[i].endTime} and '
-              '${availabilities[j].startTime}-${availabilities[j].endTime}',
-            );
+      // Validate each availability entry
+      for (var avail in availabilities) {
+        if (!_isValidTimeFormat(avail.startTime)) {
+          throw Exception('Invalid start time: ${avail.startTime}');
+        }
+        if (!_isValidTimeFormat(avail.endTime)) {
+          throw Exception('Invalid end time: ${avail.endTime}');
+        }
+        if (!_isStartBeforeEnd(avail.startTime, avail.endTime)) {
+          throw Exception(
+            'Start time must be before end time: ${avail.startTime} - ${avail.endTime}',
+          );
+        }
+      }
+
+      // Check for overlapping availability for same faculty on same day
+      for (var i = 0; i < availabilities.length; i++) {
+        for (var j = i + 1; j < availabilities.length; j++) {
+          if (availabilities[i].dayOfWeek == availabilities[j].dayOfWeek) {
+            if (_timesOverlap(
+              availabilities[i].startTime,
+              availabilities[i].endTime,
+              availabilities[j].startTime,
+              availabilities[j].endTime,
+            )) {
+              throw Exception(
+                'Overlapping availability on ${availabilities[i].dayOfWeek.name}: '
+                '${availabilities[i].startTime}-${availabilities[i].endTime} and '
+                '${availabilities[j].startTime}-${availabilities[j].endTime}',
+              );
+            }
           }
         }
       }
-    }
 
-    // Delete existing availability for this faculty
-    var existing = await FacultyAvailability.db.find(
-      session,
-      where: (t) => t.facultyId.equals(facultyId),
-    );
-    for (var e in existing) {
-      await FacultyAvailability.db.deleteRow(session, e);
-    }
+      // Delete existing availability for this faculty
+      var existing = await FacultyAvailability.db.find(
+        session,
+        where: (t) => t.facultyId.equals(facultyId),
+      );
+      for (var e in existing) {
+        await FacultyAvailability.db.deleteRow(session, e);
+      }
 
-    // Insert new entries
-    var now = DateTime.now();
-    var results = <FacultyAvailability>[];
-    for (var avail in availabilities) {
-      avail.facultyId = facultyId;
-      avail.createdAt = now;
-      avail.updatedAt = now;
-      results.add(await FacultyAvailability.db.insertRow(session, avail));
-    }
+      // Insert new entries
+      var now = DateTime.now();
+      var results = <FacultyAvailability>[];
+      for (var avail in availabilities) {
+        avail.facultyId = facultyId;
+        avail.createdAt = now;
+        avail.updatedAt = now;
+        results.add(await FacultyAvailability.db.insertRow(session, avail));
+      }
 
-    return results;
+      return results;
+    } catch (e, stack) {
+      print('CRITICAL ERROR IN setFacultyAvailability: $e');
+      print(stack);
+      rethrow;
+    }
   }
 
   /// Get all availability entries for a specific faculty.

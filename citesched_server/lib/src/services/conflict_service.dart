@@ -14,6 +14,51 @@ import '../generated/protocol.dart';
 ///   room_inactive       – Room is marked inactive
 ///   faculty_unavailable – Timeslot falls outside faculty availability
 class ConflictService {
+  static const Set<String> _labRoomNames = {'IT LAB', 'EMC LAB'};
+  static const String _lectureRoomName = 'ROOM 1';
+
+  String _normalizeRoomName(String name) => name.trim().toUpperCase();
+
+  bool _isLabSubject(Subject subject) {
+    return subject.types.contains(SubjectType.laboratory);
+  }
+
+  ScheduleConflict? _buildRoomTypeConflict({
+    required Schedule schedule,
+    required Subject subject,
+    required Room room,
+  }) {
+    final normalizedRoomName = _normalizeRoomName(room.name);
+    final isLabSubject = _isLabSubject(subject);
+
+    if (isLabSubject && !_labRoomNames.contains(normalizedRoomName)) {
+      return ScheduleConflict(
+        type: 'room_type_mismatch',
+        message: 'Lab subjects can only be assigned to IT LAB or EMC LAB',
+        facultyId: schedule.facultyId,
+        roomId: room.id,
+        subjectId: schedule.subjectId,
+        scheduleId: schedule.id,
+        details:
+            '${subject.name} requires a laboratory room, but was assigned to ${room.name}',
+      );
+    }
+
+    if (!isLabSubject && normalizedRoomName != _lectureRoomName) {
+      return ScheduleConflict(
+        type: 'room_type_mismatch',
+        message: 'Non-lab subjects can only be assigned to ROOM 1',
+        facultyId: schedule.facultyId,
+        roomId: room.id,
+        subjectId: schedule.subjectId,
+        scheduleId: schedule.id,
+        details:
+            '${subject.name} is non-laboratory, but was assigned to ${room.name}',
+      );
+    }
+
+    return null;
+  }
   // ─── Individual Conflict Checks ────────────────────────────────────
 
   /// Check if a room is available at a given timeslot.
@@ -105,9 +150,24 @@ class ConflictService {
       schedules = schedules.where((s) => s.id != excludeScheduleId).toList();
     }
 
+    // Resolve subject units for rows where schedule.units is null.
+    var subjectUnitsById = <int, double>{};
+    var subjectIds = schedules.map((s) => s.subjectId).toSet().toList();
+    if (subjectIds.isNotEmpty) {
+      var subjects = await Subject.db.find(
+        session,
+        where: (t) => t.id.inSet(subjectIds.toSet()),
+      );
+      for (var subject in subjects) {
+        if (subject.id != null) {
+          subjectUnitsById[subject.id!] = subject.units.toDouble();
+        }
+      }
+    }
+
     double currentLoad = 0;
     for (var s in schedules) {
-      currentLoad += s.units ?? 0;
+      currentLoad += s.units ?? (subjectUnitsById[s.subjectId] ?? 0);
     }
 
     return (currentLoad + newUnits) <= (faculty.maxLoad ?? 0);
@@ -250,10 +310,20 @@ class ConflictService {
             ),
           );
         }
+
+        // 5. Lab/Lecture Room Rule
+        final roomTypeConflict = _buildRoomTypeConflict(
+          schedule: schedule,
+          subject: subject,
+          room: room,
+        );
+        if (roomTypeConflict != null) {
+          conflicts.add(roomTypeConflict);
+        }
       }
     }
 
-    // 5. Faculty Time Conflict
+    // 6. Faculty Time Conflict
     if (schedule.timeslotId != null) {
       var facultyConflict = await checkFacultyAvailability(
         session,
@@ -304,10 +374,16 @@ class ConflictService {
     }
 
     // 7. Faculty Max Load
+    var newUnits = schedule.units ?? 0;
+    if (newUnits == 0) {
+      var subject = await Subject.db.findById(session, schedule.subjectId);
+      newUnits = subject?.units.toDouble() ?? 0;
+    }
+
     var canTakeMore = await checkFacultyMaxLoad(
       session,
       facultyId: schedule.facultyId,
-      newUnits: schedule.units ?? 0,
+      newUnits: newUnits,
       excludeScheduleId: excludeScheduleId,
     );
 
@@ -493,6 +569,15 @@ class ConflictService {
                   'Room capacity: ${room.capacity}, Required: ${subject.studentsCount}',
             ),
           );
+        }
+
+        final roomTypeConflict = _buildRoomTypeConflict(
+          schedule: s,
+          subject: subject,
+          room: room,
+        );
+        if (roomTypeConflict != null) {
+          conflicts.add(roomTypeConflict);
         }
       }
     }

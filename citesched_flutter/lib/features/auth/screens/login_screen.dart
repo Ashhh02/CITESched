@@ -492,7 +492,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       ),
                               ),
 
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 40),
                               Text(
                                 'OR SIGN IN WITH',
                                 textAlign: TextAlign.center,

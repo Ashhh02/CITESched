@@ -68,43 +68,67 @@ class _ReportScreenState extends State<ReportScreen>
       backgroundColor: bgColor,
       body: Column(
         children: [
-          // Vibrant Header
+          // Header (Standardized Maroon Gradient Banner)
           Container(
-            padding: const EdgeInsets.all(40),
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [maroonColor, const Color(0xFFb5179e)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
+                colors: [maroonColor, const Color(0xFF8e005b)],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: maroonColor.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
+                  color: maroonColor.withValues(alpha: 0.3),
+                  blurRadius: 25,
+                  offset: const Offset(0, 12),
                 ),
               ],
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
                   children: [
-                    Text(
-                      'Analytical Reports',
-                      style: GoogleFonts.poppins(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.analytics_rounded,
                         color: Colors.white,
+                        size: 32,
                       ),
                     ),
-                    Text(
-                      'Comprehensive system metrics and utilization analysis',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        color: Colors.white.withOpacity(0.8),
-                      ),
+                    const SizedBox(width: 24),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Analytical Reports',
+                          style: GoogleFonts.poppins(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: -1,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Comprehensive system metrics and utilization analysis',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.white.withValues(alpha: 0.8),
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -114,9 +138,11 @@ class _ReportScreenState extends State<ReportScreen>
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Row(
                     children: [

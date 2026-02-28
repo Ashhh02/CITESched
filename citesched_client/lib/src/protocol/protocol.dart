@@ -402,6 +402,9 @@ class Protocol extends _i1.SerializationManager {
       return (data as List).map((e) => deserialize<_i35.Student>(e)).toList()
           as T;
     }
+    if (t == List<String>) {
+      return (data as List).map((e) => deserialize<String>(e)).toList() as T;
+    }
     if (t == List<_i36.Room>) {
       return (data as List).map((e) => deserialize<_i36.Room>(e)).toList() as T;
     }

@@ -24,8 +24,6 @@ class AdminDashboardScreen extends ConsumerWidget {
     final statsAsync = ref.watch(dashboardStatsProvider);
 
     // Colors — Professional white theme
-    const textPrimary = Color(0xFF1A1A1A);
-    const textMuted = Color(0xFF555555);
     const primaryPurple = Color(0xFF720045);
     const cardBg = Colors.white;
 
@@ -89,87 +87,139 @@ class AdminDashboardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Bar (Restored from Django design)
+                // Header (Standardized Maroon Gradient Banner)
                 Container(
                   width: double.infinity,
-                  padding: EdgeInsets.all(isMobile ? 20 : 28),
-                  margin: EdgeInsets.only(
-                    bottom: isMobile ? 24 : 40,
-                  ),
+                  padding: const EdgeInsets.all(40),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(19),
-                    border: Border.all(
-                      color: Colors.black,
-                      width: 1.5,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [primaryPurple, const Color(0xFF8e005b)],
                     ),
+                    borderRadius: BorderRadius.circular(32),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
-                        blurRadius: 20,
-                        offset: const Offset(0, 6),
+                        color: primaryPurple.withValues(alpha: 0.3),
+                        blurRadius: 30,
+                        offset: const Offset(0, 15),
                       ),
                     ],
                   ),
-                  child: Text(
-                    'CITESched — Faculty Loading',
-                    style: GoogleFonts.poppins(
-                      fontSize: isMobile ? 18 : 24,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                      height: 1.2,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-
-                // Welcome Section
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(bottom: 20),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        'Welcome back, ${userInfo?.userName ?? "Administrator"}',
-                        style: GoogleFonts.poppins(
-                          fontSize: isMobile ? 28 : 36,
-                          fontWeight: FontWeight.bold,
-                          color: textPrimary,
-                          letterSpacing: -0.5,
-                        ),
-                        textAlign: TextAlign.center,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.dashboard_rounded,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                          ),
+                          const SizedBox(width: 28),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'CITESched — Admin Dashboard',
+                                style: GoogleFonts.poppins(
+                                  fontSize: isMobile ? 24 : 36,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: -1,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Welcome back, ${userInfo?.userName ?? "Administrator"}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: isMobile ? 14 : 18,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Overview of the CITE Program\'s current semester status',
-                        style: GoogleFonts.poppins(
-                          fontSize: isMobile ? 14 : 16,
-                          color: textMuted,
-                        ),
-                        textAlign: TextAlign.center,
+                      const SizedBox(height: 32),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => const ReportModal(),
+                              );
+                            },
+                            icon: const Icon(Icons.analytics_rounded, size: 24),
+                            label: Text(
+                              'View Detailed Reports',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: primaryPurple,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 20,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                            ),
+                          ),
+                          if (!isMobile) ...[
+                            const SizedBox(width: 16),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => const UserListModal(),
+                                );
+                              },
+                              icon: const Icon(Icons.people_rounded, size: 24),
+                              label: Text(
+                                'Manage Users',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: const BorderSide(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 32,
+                                  vertical: 20,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
-                  ),
-                ),
-                Center(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (_) => const ReportModal(),
-                      );
-                    },
-                    icon: const Icon(Icons.analytics_outlined),
-                    label: const Text('View Detailed Reports'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryPurple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
                   ),
                 ),
 

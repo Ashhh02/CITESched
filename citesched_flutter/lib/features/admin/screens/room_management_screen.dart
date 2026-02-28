@@ -993,7 +993,7 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
                               ),
                             ),
                             Text(
-                              room.building,
+                              'Capacity: ${room.capacity}',
                               style: GoogleFonts.poppins(
                                 fontSize: 13,
                                 color: Colors.grey[600],
@@ -1245,7 +1245,6 @@ class _AddRoomModalState extends State<_AddRoomModal> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _capacityController = TextEditingController(text: '40');
-  final _buildingController = TextEditingController(text: 'CITE');
 
   RoomType _type = RoomType.lecture;
   Program _program = Program.it;
@@ -1379,12 +1378,6 @@ class _AddRoomModalState extends State<_AddRoomModal> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _buildTextField(
-                        'Building',
-                        _buildingController,
-                        isDark,
-                        hint: 'e.g., CITE Building',
-                      ),
 
                       const SizedBox(height: 24),
                       _buildSectionTitle(
@@ -1619,7 +1612,6 @@ class _AddRoomModalState extends State<_AddRoomModal> {
       final room = Room(
         name: _nameController.text,
         capacity: int.parse(_capacityController.text),
-        building: _buildingController.text,
         type: _type,
         program: _program,
         isActive: _isActive,
@@ -1659,7 +1651,6 @@ class _EditRoomModalState extends State<_EditRoomModal> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _capacityController;
-  late TextEditingController _buildingController;
 
   late RoomType _type;
   late Program _program;
@@ -1673,7 +1664,6 @@ class _EditRoomModalState extends State<_EditRoomModal> {
     _capacityController = TextEditingController(
       text: widget.room.capacity.toString(),
     );
-    _buildingController = TextEditingController(text: widget.room.building);
     _type = widget.room.type;
     _program = widget.room.program;
     _isActive = widget.room.isActive;
@@ -1806,12 +1796,6 @@ class _EditRoomModalState extends State<_EditRoomModal> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _buildTextField(
-                        'Building',
-                        _buildingController,
-                        isDark,
-                        hint: 'e.g., CITE Building',
-                      ),
 
                       const SizedBox(height: 24),
                       _buildSectionTitle(
@@ -2046,7 +2030,6 @@ class _EditRoomModalState extends State<_EditRoomModal> {
       final room = widget.room.copyWith(
         name: _nameController.text,
         capacity: int.parse(_capacityController.text),
-        building: _buildingController.text,
         type: _type,
         program: _program,
         isActive: _isActive,

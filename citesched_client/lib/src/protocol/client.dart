@@ -319,7 +319,7 @@ class EndpointAdmin extends _i2.EndpointRef {
       );
 
   /// Delete a faculty member by ID.
-  /// Checks for active schedules before deletion.
+  /// Checks for active schedules before deletion and cleans up related records.
   _i3.Future<bool> deleteFaculty(int id) => caller.callServerEndpoint<bool>(
     'admin',
     'deleteFaculty',
@@ -342,12 +342,20 @@ class EndpointAdmin extends _i2.EndpointRef {
         {'isActive': isActive},
       );
 
-  /// Update a student with validation.
+  /// Update a student with validation and section synchronization.
   _i3.Future<_i7.Student> updateStudent(_i7.Student student) =>
       caller.callServerEndpoint<_i7.Student>(
         'admin',
         'updateStudent',
         {'student': student},
+      );
+
+  /// Get all unique section codes currently assigned to students.
+  _i3.Future<List<String>> getDistinctStudentSections() =>
+      caller.callServerEndpoint<List<String>>(
+        'admin',
+        'getDistinctStudentSections',
+        {},
       );
 
   /// Delete a student by ID.
@@ -528,7 +536,7 @@ class EndpointAdmin extends _i2.EndpointRef {
         {'schedule': schedule},
       );
 
-  /// Delete (Archive) a schedule entry by ID.
+  /// Delete a schedule entry by ID.
   _i3.Future<bool> deleteSchedule(int id) => caller.callServerEndpoint<bool>(
     'admin',
     'deleteSchedule',

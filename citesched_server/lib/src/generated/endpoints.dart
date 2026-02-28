@@ -484,6 +484,16 @@ class Endpoints extends _i1.EndpointDispatch {
                     params['student'],
                   ),
         ),
+        'getDistinctStudentSections': _i1.MethodConnector(
+          name: 'getDistinctStudentSections',
+          params: {},
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+                  .getDistinctStudentSections(session),
+        ),
         'deleteStudent': _i1.MethodConnector(
           name: 'deleteStudent',
           params: {

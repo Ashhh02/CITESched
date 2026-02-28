@@ -21,7 +21,6 @@ abstract class Room implements _i1.TableRow<int?>, _i1.ProtocolSerialization {
     required this.capacity,
     required this.type,
     required this.program,
-    required this.building,
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
@@ -33,7 +32,6 @@ abstract class Room implements _i1.TableRow<int?>, _i1.ProtocolSerialization {
     required int capacity,
     required _i2.RoomType type,
     required _i3.Program program,
-    required String building,
     required bool isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -46,7 +44,6 @@ abstract class Room implements _i1.TableRow<int?>, _i1.ProtocolSerialization {
       capacity: jsonSerialization['capacity'] as int,
       type: _i2.RoomType.fromJson((jsonSerialization['type'] as String)),
       program: _i3.Program.fromJson((jsonSerialization['program'] as String)),
-      building: jsonSerialization['building'] as String,
       isActive: jsonSerialization['isActive'] as bool,
       createdAt: _i1.DateTimeJsonExtension.fromJson(
         jsonSerialization['createdAt'],
@@ -72,8 +69,6 @@ abstract class Room implements _i1.TableRow<int?>, _i1.ProtocolSerialization {
 
   _i3.Program program;
 
-  String building;
-
   bool isActive;
 
   DateTime createdAt;
@@ -92,7 +87,6 @@ abstract class Room implements _i1.TableRow<int?>, _i1.ProtocolSerialization {
     int? capacity,
     _i2.RoomType? type,
     _i3.Program? program,
-    String? building,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -106,7 +100,6 @@ abstract class Room implements _i1.TableRow<int?>, _i1.ProtocolSerialization {
       'capacity': capacity,
       'type': type.toJson(),
       'program': program.toJson(),
-      'building': building,
       'isActive': isActive,
       'createdAt': createdAt.toJson(),
       'updatedAt': updatedAt.toJson(),
@@ -122,7 +115,6 @@ abstract class Room implements _i1.TableRow<int?>, _i1.ProtocolSerialization {
       'capacity': capacity,
       'type': type.toJson(),
       'program': program.toJson(),
-      'building': building,
       'isActive': isActive,
       'createdAt': createdAt.toJson(),
       'updatedAt': updatedAt.toJson(),
@@ -168,7 +160,6 @@ class _RoomImpl extends Room {
     required int capacity,
     required _i2.RoomType type,
     required _i3.Program program,
-    required String building,
     required bool isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -178,7 +169,6 @@ class _RoomImpl extends Room {
          capacity: capacity,
          type: type,
          program: program,
-         building: building,
          isActive: isActive,
          createdAt: createdAt,
          updatedAt: updatedAt,
@@ -194,7 +184,6 @@ class _RoomImpl extends Room {
     int? capacity,
     _i2.RoomType? type,
     _i3.Program? program,
-    String? building,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -205,7 +194,6 @@ class _RoomImpl extends Room {
       capacity: capacity ?? this.capacity,
       type: type ?? this.type,
       program: program ?? this.program,
-      building: building ?? this.building,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -237,11 +225,6 @@ class RoomUpdateTable extends _i1.UpdateTable<RoomTable> {
         table.program,
         value,
       );
-
-  _i1.ColumnValue<String, String> building(String value) => _i1.ColumnValue(
-    table.building,
-    value,
-  );
 
   _i1.ColumnValue<bool, bool> isActive(bool value) => _i1.ColumnValue(
     table.isActive,
@@ -282,10 +265,6 @@ class RoomTable extends _i1.Table<int?> {
       this,
       _i1.EnumSerialization.byName,
     );
-    building = _i1.ColumnString(
-      'building',
-      this,
-    );
     isActive = _i1.ColumnBool(
       'isActive',
       this,
@@ -310,8 +289,6 @@ class RoomTable extends _i1.Table<int?> {
 
   late final _i1.ColumnEnum<_i3.Program> program;
 
-  late final _i1.ColumnString building;
-
   late final _i1.ColumnBool isActive;
 
   late final _i1.ColumnDateTime createdAt;
@@ -325,7 +302,6 @@ class RoomTable extends _i1.Table<int?> {
     capacity,
     type,
     program,
-    building,
     isActive,
     createdAt,
     updatedAt,

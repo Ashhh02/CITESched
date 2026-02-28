@@ -83,7 +83,6 @@ void main() {
             capacity: 40,
             type: RoomType.laboratory,
             program: Program.it,
-            building: 'Science Building',
             isActive: true,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
@@ -103,7 +102,6 @@ void main() {
               capacity: 0, // Invalid
               type: RoomType.lecture,
               program: Program.it,
-              building: 'Main',
               isActive: true,
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
@@ -252,7 +250,6 @@ void main() {
             capacity: 30,
             type: RoomType.lecture,
             program: Program.it,
-            building: 'Main',
             isActive: true,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),

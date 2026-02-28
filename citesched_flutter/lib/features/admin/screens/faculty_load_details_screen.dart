@@ -2,8 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:citesched_client/citesched_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:citesched_flutter/main.dart';
+import 'package:citesched_flutter/core/providers/admin_providers.dart';
 import 'package:citesched_flutter/core/providers/conflict_provider.dart';
+import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
+
+final facultyDetailsSchedulesProvider = FutureProvider.family<List<Schedule>, int>((
+  ref,
+  facultyId,
+) async {
+  ref.watch(scheduleSyncTriggerProvider);
+  return await client.admin.getFacultySchedule(facultyId);
+});
 
 class FacultyLoadDetailsScreen extends ConsumerWidget {
   final Faculty faculty;
@@ -22,13 +33,22 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
 
     // Watch all conflicts and filter for this faculty
     final allConflictsAsync = ref.watch(allConflictsProvider);
+    final facultySchedulesAsync = ref.watch(
+      facultyDetailsSchedulesProvider(faculty.id!),
+    );
+    final availabilityAsync = ref.watch(
+      facultyAvailabilityProvider(faculty.id!),
+    );
     final allConflicts = allConflictsAsync.value ?? <ScheduleConflict>[];
     final facultyConflicts = allConflicts
         .where((c) => c.facultyId == faculty.id)
         .toList();
 
-    // Filter schedules for this faculty
-    final facultySchedules = initialSchedules;
+    // Filter schedules for this faculty (live from schedules table)
+    final facultySchedules = facultySchedulesAsync.maybeWhen(
+      data: (all) => all,
+      orElse: () => <Schedule>[],
+    );
 
     // Calculate stats
     double totalUnits = 0;
@@ -40,101 +60,257 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
       backgroundColor: isDark
           ? const Color(0xFF0F172A)
           : const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Text(
-          'Faculty Load: ${faculty.name}',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(0xFF720045),
-        elevation: 0,
-        foregroundColor: isDark ? Colors.white : Colors.black87,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Stats Row
-            Row(
-              children: [
-                _buildStatCard(
-                  'Total Units',
-                  '$totalUnits / ${faculty.maxLoad ?? 0}',
-                  Icons.menu_book,
-                  maroonColor,
-                  isDark,
-                ),
-                const SizedBox(width: 16),
-                _buildStatCard(
-                  'Assigned Subjects',
-                  '${facultySchedules.length}',
-                  Icons.subject,
-                  Colors.blue,
-                  isDark,
-                ),
-                const SizedBox(width: 16),
-                _buildStatCard(
-                  'Remaining Load',
-                  '${(faculty.maxLoad ?? 0) - totalUnits}',
-                  Icons.assignment_ind,
-                  Colors.green,
-                  isDark,
+      body: Column(
+        children: [
+          // Header (Standardized Maroon Gradient Banner)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [const Color(0xFF720045), const Color(0xFF8e005b)],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF720045).withValues(alpha: 0.3),
+                  blurRadius: 25,
+                  offset: const Offset(0, 12),
                 ),
               ],
             ),
-            const SizedBox(height: 32),
-
-            // Mini Timetable Section
-            Text(
-              'Weekly Schedule',
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(width: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.assignment_ind_rounded,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Faculty Workspace',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white.withValues(alpha: 0.8),
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        Text(
+                          faculty.name,
+                          style: GoogleFonts.poppins(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: -1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.badge_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        faculty.facultyId,
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Container(
-              height: 500,
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Stats Row
+                  Row(
+                    children: [
+                      _buildStatCard(
+                        'Total Units',
+                        '$totalUnits / ${faculty.maxLoad ?? 0}',
+                        Icons.menu_book_rounded,
+                        maroonColor,
+                        isDark,
+                      ),
+                      const SizedBox(width: 16),
+                      _buildStatCard(
+                        'Assigned Subjects',
+                        '${facultySchedules.length}',
+                        Icons.subject_rounded,
+                        Colors.blue,
+                        isDark,
+                      ),
+                      const SizedBox(width: 16),
+                      _buildStatCard(
+                        'Remaining Load',
+                        '${(faculty.maxLoad ?? 0) - totalUnits}',
+                        Icons.trending_down_rounded,
+                        Colors.green,
+                        isDark,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Mini Timetable Section
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_view_week_rounded,
+                        color: const Color(0xFF720045),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Weekly Schedule Analysis',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 500,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white10
+                            : Colors.black.withOpacity(0.05),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: availabilityAsync.when(
+                      data: (availabilities) => WeeklyCalendarView(
+                        maroonColor: maroonColor,
+                        availabilities: availabilities,
+                        schedules: facultySchedules.map((s) {
+                          final sConflicts = facultyConflicts
+                              .where(
+                                (c) =>
+                                    c.scheduleId == s.id ||
+                                    c.conflictingScheduleId == s.id,
+                              )
+                              .toList();
+                          return ScheduleInfo(
+                            schedule: s,
+                            conflicts: sConflicts,
+                          );
+                        }).toList(),
+                      ),
+                      loading: () => const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                      error: (err, _) => WeeklyCalendarView(
+                        maroonColor: maroonColor,
+                        schedules: facultySchedules.map((s) {
+                          final sConflicts = facultyConflicts
+                              .where(
+                                (c) =>
+                                    c.scheduleId == s.id ||
+                                    c.conflictingScheduleId == s.id,
+                              )
+                              .toList();
+                          return ScheduleInfo(
+                            schedule: s,
+                            conflicts: sConflicts,
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Detailed List
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.list_alt_rounded,
+                        color: const Color(0xFF720045),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Detailed Assignments & Conflicts',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildAssignmentsTable(
+                    facultySchedules,
+                    facultyConflicts,
+                    isDark,
                   ),
                 ],
               ),
-              child: WeeklyCalendarView(
-                maroonColor: maroonColor,
-                schedules: facultySchedules.map((s) {
-                  final sConflicts = facultyConflicts
-                      .where(
-                        (c) =>
-                            c.scheduleId == s.id ||
-                            c.conflictingScheduleId == s.id,
-                      )
-                      .toList();
-                  return ScheduleInfo(schedule: s, conflicts: sConflicts);
-                }).toList(),
-              ),
             ),
-            const SizedBox(height: 32),
-
-            // Detailed List
-            Text(
-              'Assigned Subjects',
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildAssignmentsTable(facultySchedules, facultyConflicts, isDark),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -148,16 +324,30 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
   ) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(width: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 20),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -166,12 +356,13 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: isDark ? Colors.white60 : Colors.black54,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
                   value,
                   style: GoogleFonts.poppins(
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : Colors.black87,
                   ),

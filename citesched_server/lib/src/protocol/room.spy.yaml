@@ -5,7 +5,6 @@ fields:
   capacity: int
   type: RoomType
   program: Program
-  building: String
   isActive: bool
   createdAt: DateTime
   updatedAt: DateTime

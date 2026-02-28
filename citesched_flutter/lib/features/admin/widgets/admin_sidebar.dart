@@ -179,8 +179,22 @@ class AdminSidebar extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? hoverColor : Colors.transparent,
+            gradient: isSelected
+                ? LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      hoverColor,
+                      hoverColor.withValues(alpha: 0.7),
+                    ],
+                  )
+                : null,
             borderRadius: BorderRadius.circular(8),
+            border: isSelected
+                ? const Border(
+                    left: BorderSide(color: Colors.white, width: 3),
+                  )
+                : null,
           ),
           child: Row(
             children: [

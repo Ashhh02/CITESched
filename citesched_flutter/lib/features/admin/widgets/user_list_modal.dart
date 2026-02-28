@@ -1,21 +1,24 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/features/admin/widgets/admin_create_user_form.dart';
 import 'package:citesched_flutter/main.dart';
+import 'package:citesched_flutter/core/providers/admin_providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class UserListModal extends StatefulWidget {
+class UserListModal extends ConsumerStatefulWidget {
   const UserListModal({super.key});
 
   @override
-  State<UserListModal> createState() => _UserListModalState();
+  ConsumerState<UserListModal> createState() => _UserListModalState();
 }
 
-class _UserListModalState extends State<UserListModal>
+class _UserListModalState extends ConsumerState<UserListModal>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<Faculty> _faculty = [];
   List<Student> _students = [];
+  List<UserRole> _userRoles = [];
   bool _isLoading = true;
 
   void _archiveFaculty(Faculty faculty) async {
@@ -53,6 +56,10 @@ class _UserListModalState extends State<UserListModal>
         final toArchive = faculty.copyWith(isActive: false);
         await client.admin.updateFaculty(toArchive);
         _fetchData();
+        // Invalidate section providers for immediate reflection in Faculty Loading
+        ref.invalidate(sectionListProvider);
+        ref.invalidate(studentSectionsProvider);
+        ref.invalidate(facultyListProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -89,10 +96,12 @@ class _UserListModalState extends State<UserListModal>
       final students = await client.admin.getAllStudents(
         isActive: !_isShowingArchivedStudents,
       );
+      final roles = await client.admin.getAllUserRoles();
       if (mounted) {
         setState(() {
           _faculty = faculty;
           _students = students;
+          _userRoles = roles;
           _isLoading = false;
         });
       }
@@ -106,7 +115,17 @@ class _UserListModalState extends State<UserListModal>
     }
   }
 
-  List<Faculty> get _filteredFaculty => _faculty;
+  List<Faculty> get _filteredFaculty {
+    if (_facultyFilter == 'all') return _faculty;
+
+    return _faculty.where((f) {
+      final roleEntry = _userRoles.firstWhere(
+        (r) => r.userId == f.userInfoId.toString(),
+        orElse: () => UserRole(userId: '', role: 'faculty'),
+      );
+      return roleEntry.role == _facultyFilter;
+    }).toList();
+  }
 
   List<Student> get _sortedStudents {
     final sorted = List<Student>.from(_students);
@@ -129,7 +148,13 @@ class _UserListModalState extends State<UserListModal>
     showDialog(
       context: context,
       builder: (_) => AdminCreateUserForm(
-        onSuccess: _fetchData,
+        onSuccess: () {
+          _fetchData();
+          ref.invalidate(sectionListProvider);
+          ref.invalidate(studentSectionsProvider);
+          ref.invalidate(facultyListProvider);
+          ref.invalidate(studentsProvider);
+        },
         initialRole: 'student',
       ),
     );
@@ -141,7 +166,12 @@ class _UserListModalState extends State<UserListModal>
       barrierDismissible: false,
       builder: (ctx) => _EditStudentDialog(
         student: student,
-        onSuccess: _fetchData,
+        onSuccess: () {
+          _fetchData();
+          ref.invalidate(sectionListProvider);
+          ref.invalidate(studentSectionsProvider);
+          ref.invalidate(studentsProvider);
+        },
       ),
     );
   }
@@ -181,6 +211,9 @@ class _UserListModalState extends State<UserListModal>
         final toArchive = student.copyWith(isActive: false);
         await client.admin.updateStudent(toArchive);
         _fetchData();
+        ref.invalidate(sectionListProvider);
+        ref.invalidate(studentSectionsProvider);
+        ref.invalidate(studentsProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -251,10 +284,14 @@ class _UserListModalState extends State<UserListModal>
         await client.admin.deleteStudent(student.id!);
         _fetchData();
         if (mounted) {
+          // Refresh section- and student-dependent views (e.g., Faculty Loading dropdowns)
+          ref.invalidate(sectionListProvider);
+          ref.invalidate(studentSectionsProvider);
+          ref.invalidate(studentsProvider);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Student deleted permanently'),
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.green,
             ),
           );
         }
@@ -323,7 +360,7 @@ class _UserListModalState extends State<UserListModal>
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Faculty deleted permanently'),
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.green,
             ),
           );
         }
@@ -844,9 +881,18 @@ class _UserListModalState extends State<UserListModal>
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  f.email,
-                  style: GoogleFonts.poppins(fontSize: 13, color: textMuted),
+                Row(
+                  children: [
+                    Text(
+                      f.email,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: textMuted,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildRoleBadge(f),
+                  ],
                 ),
               ],
             ),
@@ -935,6 +981,37 @@ class _UserListModalState extends State<UserListModal>
     );
   }
 
+  Widget _buildRoleBadge(Faculty f) {
+    final roleEntry = _userRoles.firstWhere(
+      (r) => r.userId == f.userInfoId.toString(),
+      orElse: () => UserRole(userId: '', role: 'faculty'),
+    );
+    final isAdmin = roleEntry.role == 'admin';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: isAdmin
+            ? Colors.red.withOpacity(0.1)
+            : Colors.blue.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isAdmin
+              ? Colors.red.withOpacity(0.3)
+              : Colors.blue.withOpacity(0.3),
+        ),
+      ),
+      child: Text(
+        isAdmin ? 'ADMIN' : 'FACULTY',
+        style: GoogleFonts.poppins(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: isAdmin ? Colors.red : Colors.blue,
+        ),
+      ),
+    );
+  }
+
   Widget _buildStudentCard(
     Student s,
     Color primaryColor,
@@ -988,17 +1065,57 @@ class _UserListModalState extends State<UserListModal>
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '${s.studentNumber} • ${s.email}',
-                  style: GoogleFonts.poppins(fontSize: 13, color: textMuted),
+                Row(
+                  children: [
+                    Text(
+                      '${s.studentNumber} • ${s.email}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: textMuted,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Colors.green.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Text(
+                        'STUDENT',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 if (s.section != null && s.section!.isNotEmpty)
-                  Text(
-                    'Section: ${s.section}',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: textMuted,
-                      fontStyle: FontStyle.italic,
+                  Container(
+                    margin: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'Section: ${s.section}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: primaryColor,
+                      ),
                     ),
                   ),
               ],
