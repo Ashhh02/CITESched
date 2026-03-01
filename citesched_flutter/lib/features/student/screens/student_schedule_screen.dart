@@ -1,5 +1,6 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/core/api/api_service.dart';
+import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
 
 class StudentScheduleScreen extends ConsumerWidget {
   const StudentScheduleScreen({super.key});
@@ -51,8 +53,13 @@ class StudentScheduleScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: ResponsiveHelper.maxContentWidth(context),
+          ),
+          child: SingleChildScrollView(
+        padding: ResponsiveHelper.pagePadding(context),
         child: Column(
           children: [
             // Banner Section
@@ -63,36 +70,77 @@ class StudentScheduleScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
-            // Schedule Table Section
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+            // Weekly Calendar View (card boxes)
+            scheduleAsync.when(
+              data: (schedules) {
+                if (schedules.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(40),
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      'No schedules found for your section.',
+                      style: GoogleFonts.poppins(),
+                    ),
+                  );
+                }
+
+                final scheduleInfos = schedules
+                    .where((s) => s.timeslot != null)
+                    .map((s) => ScheduleInfo(schedule: s, conflicts: const []))
+                    .toList()
+                  ..sort((a, b) {
+                    final ta = a.schedule.timeslot!;
+                    final tb = b.schedule.timeslot!;
+                    final dayOrder = ta.day.index.compareTo(tb.day.index);
+                    if (dayOrder != 0) return dayOrder;
+                    return ta.startTime.compareTo(tb.startTime);
+                  });
+
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                    border: Border.all(color: Colors.black.withOpacity(0.05)),
                   ),
-                ],
-                border: Border.all(color: Colors.black.withOpacity(0.05)),
+                  child: SizedBox(
+                    height: ResponsiveHelper.calendarHeight(context),
+                    child: WeeklyCalendarView(
+                      schedules: scheduleInfos,
+                      maroonColor: maroonDark,
+                      isStudentView: true,
+                    ),
+                  ),
+                );
+              },
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(100),
+                  child: CircularProgressIndicator(),
+                ),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: scheduleAsync.when(
-                  data: (schedules) => _buildScheduleTable(schedules, context),
-                  loading: () => const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(100),
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
-                  error: (err, _) => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(100),
-                      child: Text('Error loading schedule: $err'),
-                    ),
-                  ),
+              error: (err, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(100),
+                  child: Text('Error loading schedule: $err'),
                 ),
               ),
             ),
@@ -106,6 +154,8 @@ class StudentScheduleScreen extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

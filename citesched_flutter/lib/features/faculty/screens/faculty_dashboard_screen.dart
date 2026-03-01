@@ -1,15 +1,14 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
+import 'package:citesched_flutter/core/utils/responsive_helper.dart';
+import 'package:citesched_flutter/core/utils/schedule_export_service.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/features/auth/widgets/logout_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 final facultyScheduleProvider = FutureProvider<List<ScheduleInfo>>((ref) async {
   ref.watch(scheduleSyncTriggerProvider);
@@ -221,166 +220,6 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
     return '$hour12:$minuteText$period';
   }
 
-  Future<void> _printSchedulePdf(
-    String facultyName,
-    List<ScheduleInfo> schedules,
-  ) async {
-    final pdf = pw.Document();
-
-    // Sort schedules by day then start time
-    final sorted = List<ScheduleInfo>.from(schedules);
-    final dayOrder = {
-      DayOfWeek.mon: 0,
-      DayOfWeek.tue: 1,
-      DayOfWeek.wed: 2,
-      DayOfWeek.thu: 3,
-      DayOfWeek.fri: 4,
-      DayOfWeek.sat: 5,
-      DayOfWeek.sun: 6,
-    };
-    sorted.sort((a, b) {
-      final da = dayOrder[a.schedule.timeslot?.day] ?? 99;
-      final db = dayOrder[b.schedule.timeslot?.day] ?? 99;
-      if (da != db) return da.compareTo(db);
-      return (a.schedule.timeslot?.startTime ?? '').compareTo(
-        b.schedule.timeslot?.startTime ?? '',
-      );
-    });
-
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
-        build: (pw.Context context) => [
-          // Header
-          pw.Container(
-            padding: const pw.EdgeInsets.all(20),
-            decoration: pw.BoxDecoration(
-              color: const PdfColor.fromInt(0xFF720045),
-              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  'TEACHING SCHEDULE',
-                  style: pw.TextStyle(
-                    color: PdfColors.white,
-                    fontSize: 20,
-                    fontWeight: pw.FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
-                ),
-                pw.SizedBox(height: 4),
-                pw.Text(
-                  facultyName,
-                  style: const pw.TextStyle(
-                    color: PdfColor(1, 1, 1, 0.7),
-                    fontSize: 14,
-                  ),
-                ),
-                pw.SizedBox(height: 4),
-                pw.Text(
-                  'Generated: ${DateTime.now().toString().substring(0, 16)}',
-                  style: const pw.TextStyle(
-                    color: PdfColor(1, 1, 1, 0.55),
-                    fontSize: 10,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          pw.SizedBox(height: 20),
-
-          // Table
-          if (sorted.isEmpty)
-            pw.Center(
-              child: pw.Text(
-                'No schedules assigned.',
-                style: const pw.TextStyle(color: PdfColors.grey600),
-              ),
-            )
-          else
-            pw.Table(
-              border: pw.TableBorder.all(
-                color: PdfColors.grey300,
-                width: 0.5,
-              ),
-              columnWidths: {
-                0: const pw.FlexColumnWidth(1.5), // Day
-                1: const pw.FlexColumnWidth(2), // Time
-                2: const pw.FlexColumnWidth(2.5), // Subject
-                3: const pw.FlexColumnWidth(1.5), // Section
-                4: const pw.FlexColumnWidth(1.5), // Room
-              },
-              children: [
-                // Header row
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(
-                    color: PdfColor.fromInt(0xFF720045),
-                  ),
-                  children: ['DAY', 'TIME', 'SUBJECT', 'SECTION', 'ROOM']
-                      .map(
-                        (h) => pw.Padding(
-                          padding: const pw.EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 6,
-                          ),
-                          child: pw.Text(
-                            h,
-                            style: pw.TextStyle(
-                              color: PdfColors.white,
-                              fontWeight: pw.FontWeight.bold,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-                // Data rows
-                ...sorted.asMap().entries.map((entry) {
-                  final idx = entry.key;
-                  final info = entry.value;
-                  final s = info.schedule;
-                  final ts = s.timeslot;
-                  final bg = idx.isEven ? PdfColors.grey50 : PdfColors.white;
-                  return pw.TableRow(
-                    decoration: pw.BoxDecoration(color: bg),
-                    children: [
-                      _pdfCell(_getDayName(ts?.day)),
-                      _pdfCell(
-                        ts != null ? '${ts.startTime} – ${ts.endTime}' : '—',
-                      ),
-                      _pdfCell(
-                        s.subject?.name ?? s.subject?.code ?? '—',
-                      ),
-                      _pdfCell(s.section),
-                      _pdfCell(s.room?.name ?? '—'),
-                    ],
-                  );
-                }),
-              ],
-            ),
-          pw.SizedBox(height: 16),
-          pw.Text(
-            'Total: ${sorted.length} subject/s assigned',
-            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
-          ),
-        ],
-      ),
-    );
-
-    await Printing.layoutPdf(onLayout: (format) => pdf.save());
-  }
-
-  pw.Widget _pdfCell(String text) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      child: pw.Text(text, style: const pw.TextStyle(fontSize: 10)),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final scheduleAsync = ref.watch(facultyScheduleProvider);
@@ -392,14 +231,21 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: ResponsiveHelper.maxContentWidth(context),
+          ),
+          child: SingleChildScrollView(
+        padding: ResponsiveHelper.pagePadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Welcome Banner ──────────────────────────────────────
             Container(
-              padding: const EdgeInsets.all(28),
+              padding: EdgeInsets.all(
+                ResponsiveHelper.isMobile(context) ? 16 : 28,
+              ),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -462,13 +308,18 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                         data: (schedules) => schedules.isEmpty
                             ? const SizedBox()
                             : ElevatedButton.icon(
-                                onPressed: () => _printSchedulePdf(
-                                  user?.userName ?? 'Faculty',
-                                  schedules,
+                                onPressed: () async {
+                                  await ScheduleExportService.exportFacultySchedulePdf(
+                                    facultyName: user?.userName ?? 'Faculty',
+                                    schedules: schedules,
+                                  );
+                                },
+                                icon: const Icon(
+                                  Icons.picture_as_pdf_rounded,
+                                  size: 18,
                                 ),
-                                icon: const Icon(Icons.print_rounded, size: 18),
                                 label: Text(
-                                  'Print Schedule',
+                                  'Export PDF',
                                   style: GoogleFonts.poppins(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
@@ -477,6 +328,55 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   foregroundColor: maroonColor,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  elevation: 0,
+                                ),
+                              ),
+                        orElse: () => const SizedBox(),
+                      ),
+                      const SizedBox(width: 12),
+                      scheduleAsync.maybeWhen(
+                        data: (schedules) => schedules.isEmpty
+                            ? const SizedBox()
+                            : ElevatedButton.icon(
+                                onPressed: () async {
+                                  final result = await ScheduleExportService
+                                      .exportFacultyScheduleDocx(
+                                        facultyName:
+                                            user?.userName ?? 'Faculty',
+                                        schedules: schedules,
+                                      );
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        result != null
+                                            ? 'DOCX exported: $result'
+                                            : 'DOCX export canceled.',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(
+                                  Icons.description_rounded,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  'Export DOCX',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: const Color(0xFF37474F),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 18,
                                     vertical: 14,
@@ -800,6 +700,8 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
               },
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 ﻿import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/core/utils/date_utils.dart';
+import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/features/admin/screens/faculty_load_details_screen.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,22 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:citesched_flutter/core/providers/conflict_provider.dart';
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
+
+String _programDisplayLabel(Program program) {
+  switch (program) {
+    case Program.it:
+      return 'BSIT';
+    case Program.emc:
+      return 'BSEMC';
+  }
+}
+
+String _sectionDisplayLabel(Section section) {
+  final code = section.sectionCode.trim();
+  final program = _programDisplayLabel(section.program);
+  if (code.toUpperCase().startsWith('$program -')) return code;
+  return '$program - $code';
+}
 
 class FacultyLoadingScreen extends ConsumerStatefulWidget {
   const FacultyLoadingScreen({super.key});
@@ -123,6 +140,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
     final subjectsAsync = ref.watch(subjectsProvider);
     final roomsAsync = ref.watch(roomsProvider);
     final timeslotsAsync = ref.watch(timeslotsProvider);
+    final allConflicts = ref.watch(allConflictsProvider);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
@@ -131,14 +149,21 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
       length: 2,
       child: Scaffold(
         backgroundColor: bgColor,
-        body: Padding(
-          padding: const EdgeInsets.all(32),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: ResponsiveHelper.maxContentWidth(context),
+            ),
+            child: Padding(
+          padding: ResponsiveHelper.pagePadding(context),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(
+                  ResponsiveHelper.isMobile(context) ? 14 : 20,
+                ),
                 decoration: BoxDecoration(
                   color: maroonColor,
                   borderRadius: BorderRadius.circular(16),
@@ -203,7 +228,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
               const SizedBox(height: 24),
 
               // Conflict Warning Banner
-              _buildConflictBanner(schedulesAsync, facultyAsync),
+              _buildConflictBanner(schedulesAsync, facultyAsync, allConflicts),
               const SizedBox(height: 20),
 
               // Search and Filter Row
@@ -407,6 +432,8 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                 ),
               ),
             ],
+          ),
+            ),
           ),
         ),
       ),
@@ -1625,25 +1652,21 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
   Widget _buildConflictBanner(
     AsyncValue<List<Schedule>> schedulesAsync,
     AsyncValue<List<Faculty>> facultyAsync,
+    AsyncValue<List<ScheduleConflict>> allConflicts,
   ) {
     return schedulesAsync.when(
       loading: () => const SizedBox(),
       error: (error, stack) => const SizedBox(),
       data: (schedules) {
-        // Simple conflict detection - check for duplicate timeslots
-        final conflicts = <String>[];
-        for (var i = 0; i < schedules.length; i++) {
-          for (var j = i + 1; j < schedules.length; j++) {
-            if (schedules[i].facultyId == schedules[j].facultyId &&
-                schedules[i].timeslotId == schedules[j].timeslotId &&
-                schedules[i].timeslotId != -1) {
-              conflicts.add(
-                'Faculty ${schedules[i].facultyId} has overlapping schedules',
-              );
-            }
-          }
-        }
-
+        // Use centralized conflict service results for professional detail.
+        final conflicts = allConflicts.maybeWhen(
+          data: (list) => list
+              .map((c) => c.details != null && c.details!.isNotEmpty
+                  ? '${c.message} — ${c.details}'
+                  : c.message)
+              .toList(),
+          orElse: () => <String>[],
+        );
         final hasConflicts = conflicts.isNotEmpty;
 
         return AnimatedContainer(
@@ -2022,26 +2045,35 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                           error: (error, stack) =>
                               const Text('Error loading sections'),
                           data: (sections) {
-                            final filtered = sections
-                                .where(
-                                  (s) => sectionCodes.contains(s.sectionCode),
-                                )
-                                .toList();
+                            final filteredById = <int, Section>{};
+                            for (final s in sections) {
+                              if (s.id != null &&
+                                  sectionCodes.contains(s.sectionCode)) {
+                                filteredById[s.id!] = s;
+                              }
+                            }
+                            final filtered = filteredById.values.toList()
+                              ..sort((a, b) => _sectionDisplayLabel(a)
+                                  .compareTo(_sectionDisplayLabel(b)));
 
                             if (filtered.isEmpty) {
                               return const Text('No sections available');
                             }
 
-                            final initialId = _selectedSectionId ??
-                                (filtered.isNotEmpty ? filtered.first.id : null);
+                            final items = filtered.map((s) => s.id!).toList();
+                            final initialId =
+                                (_selectedSectionId != null &&
+                                        items.contains(_selectedSectionId))
+                                    ? _selectedSectionId
+                                    : items.first;
 
                             return _buildDropdown<int>(
                               label: 'Section',
                               value: initialId,
-                              items: filtered.map((s) => s.id!).toList(),
-                              itemLabel: (id) => filtered
-                                  .firstWhere((s) => s.id == id)
-                                  .sectionCode,
+                              items: items,
+                              itemLabel: (id) => _sectionDisplayLabel(
+                                filtered.firstWhere((s) => s.id == id),
+                              ),
                               onChanged: (value) =>
                                   setState(() => _selectedSectionId = value),
                               validator: (value) =>
@@ -2284,8 +2316,14 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
     required void Function(T?) onChanged,
     String? Function(T?)? validator,
   }) {
+    final uniqueItems = items.toSet().toList();
+    final hasSingleMatch = value == null
+        ? true
+        : uniqueItems.where((item) => item == value).length == 1;
+    final safeValue = hasSingleMatch ? value : null;
+
     return DropdownButtonFormField<T>(
-      initialValue: value,
+      initialValue: safeValue,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: GoogleFonts.poppins(),
@@ -2297,7 +2335,7 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
           borderSide: BorderSide(color: widget.maroonColor, width: 2),
         ),
       ),
-      items: items.map((item) {
+      items: uniqueItems.map((item) {
         return DropdownMenuItem<T>(
           value: item,
           child: Text(itemLabel(item), style: GoogleFonts.poppins()),
@@ -2549,33 +2587,43 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                           error: (error, stack) =>
                               const Text('Error loading sections'),
                           data: (sections) {
-                            final filtered = sections
-                                .where(
-                                  (s) => sectionCodes.contains(s.sectionCode),
-                                )
-                                .toList();
+                            final filteredById = <int, Section>{};
+                            for (final s in sections) {
+                              if (s.id != null &&
+                                  sectionCodes.contains(s.sectionCode)) {
+                                filteredById[s.id!] = s;
+                              }
+                            }
+                            final filtered = filteredById.values.toList()
+                              ..sort((a, b) => _sectionDisplayLabel(a)
+                                  .compareTo(_sectionDisplayLabel(b)));
 
                             if (filtered.isEmpty) {
                               return const Text('No sections available');
                             }
 
-                            final initialId = _selectedSectionId ??
-                                filtered
-                                    .firstWhere(
-                                      (s) =>
-                                          s.sectionCode ==
-                                          widget.schedule.section,
-                                      orElse: () => filtered.first,
-                                    )
-                                    .id;
+                            final items = filtered.map((s) => s.id!).toList();
+                            final fallbackId = filtered
+                                .firstWhere(
+                                  (s) =>
+                                      s.id == widget.schedule.sectionId ||
+                                      s.sectionCode == widget.schedule.section,
+                                  orElse: () => filtered.first,
+                                )
+                                .id!;
+                            final initialId =
+                                (_selectedSectionId != null &&
+                                        items.contains(_selectedSectionId))
+                                    ? _selectedSectionId
+                                    : fallbackId;
 
                             return _buildDropdown<int>(
                               label: 'Section',
                               value: initialId,
-                              items: filtered.map((s) => s.id!).toList(),
-                              itemLabel: (id) => filtered
-                                  .firstWhere((s) => s.id == id)
-                                  .sectionCode,
+                              items: items,
+                              itemLabel: (id) => _sectionDisplayLabel(
+                                filtered.firstWhere((s) => s.id == id),
+                              ),
                               onChanged: (value) =>
                                   setState(() => _selectedSectionId = value),
                               validator: (value) =>
@@ -2818,8 +2866,14 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
     required void Function(T?) onChanged,
     String? Function(T?)? validator,
   }) {
+    final uniqueItems = items.toSet().toList();
+    final hasSingleMatch = value == null
+        ? true
+        : uniqueItems.where((item) => item == value).length == 1;
+    final safeValue = hasSingleMatch ? value : null;
+
     return DropdownButtonFormField<T>(
-      initialValue: value,
+      initialValue: safeValue,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: GoogleFonts.poppins(),
@@ -2831,7 +2885,7 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
           borderSide: BorderSide(color: widget.maroonColor, width: 2),
         ),
       ),
-      items: items.map((item) {
+      items: uniqueItems.map((item) {
         return DropdownMenuItem<T>(
           value: item,
           child: Text(itemLabel(item), style: GoogleFonts.poppins()),

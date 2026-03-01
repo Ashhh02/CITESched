@@ -1,6 +1,8 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
+import 'package:citesched_flutter/core/utils/responsive_helper.dart';
+import 'package:citesched_flutter/core/utils/schedule_export_service.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/features/auth/widgets/logout_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
@@ -42,14 +44,23 @@ class StudentDashboardScreen extends ConsumerWidget {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
-        child: Column(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: ResponsiveHelper.maxContentWidth(context),
+              ),
+              child: SingleChildScrollView(
+                padding: ResponsiveHelper.pagePadding(context),
+                child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Premium Welcome Card
             Container(
-              padding: const EdgeInsets.all(32),
+              padding: EdgeInsets.all(
+                ResponsiveHelper.isMobile(context) ? 16 : 32,
+              ),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [maroonColor, const Color(0xFF8e005b)],
@@ -200,21 +211,33 @@ class StudentDashboardScreen extends ConsumerWidget {
                 }
                 return Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: cardBg,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _infoRow('Student ID', profile.studentNumber),
-                      const SizedBox(height: 6),
-                      _infoRow('Program', profile.course),
-                      const SizedBox(height: 6),
-                      _infoRow('Section', profile.section ?? 'Unassigned'),
-                      const SizedBox(height: 6),
-                      _infoRow('Year Level', '${profile.yearLevel}'),
+                  child: DataTable(
+                    headingRowColor: WidgetStateProperty.all(
+                      maroonColor.withOpacity(0.08),
+                    ),
+                    columnSpacing: 16,
+                    columns: [
+                      _tableHeader('STUDENT ID'),
+                      _tableHeader('NAME'),
+                      _tableHeader('PROGRAM'),
+                      _tableHeader('SECTION'),
+                      _tableHeader('YEAR LEVEL'),
+                    ],
+                    rows: [
+                      DataRow(
+                        cells: [
+                          DataCell(Text(profile.studentNumber)),
+                          DataCell(Text(profile.name)),
+                          DataCell(Text(profile.course)),
+                          DataCell(Text(profile.section ?? 'Unassigned')),
+                          DataCell(Text('${profile.yearLevel}')),
+                        ],
+                      ),
                     ],
                   ),
                 );
@@ -264,14 +287,78 @@ class StudentDashboardScreen extends ConsumerWidget {
                   );
                 }
 
+                // Sort schedules by day then start time for consistent render
+                schedules.sort((a, b) {
+                  final ta = a.schedule.timeslot;
+                  final tb = b.schedule.timeslot;
+                  if (ta == null || tb == null) return 0;
+                  final dayOrder = ta.day.index.compareTo(tb.day.index);
+                  if (dayOrder != 0) return dayOrder;
+                  return ta.startTime.compareTo(tb.startTime);
+                });
+
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            await ScheduleExportService.exportStudentSchedulePdf(
+                              student: profileAsync.value,
+                              schedules: schedules,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: maroonColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                          ),
+                          icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                          label: const Text('Export PDF'),
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final result =
+                                await ScheduleExportService.exportStudentScheduleDocx(
+                                  student: profileAsync.value,
+                                  schedules: schedules,
+                                );
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  result != null
+                                      ? 'DOCX exported: $result'
+                                      : 'DOCX export canceled.',
+                                ),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueGrey[700],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                          ),
+                          icon: const Icon(Icons.description_rounded, size: 18),
+                          label: const Text('Export DOCX'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
                     SizedBox(
-                      height: 520,
+                      height: ResponsiveHelper.calendarHeight(context),
                       child: WeeklyCalendarView(
                         schedules: schedules,
                         maroonColor: maroonColor,
+                        isStudentView: true,
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -326,7 +413,11 @@ class StudentDashboardScreen extends ConsumerWidget {
               },
             ),
           ],
-        ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -352,5 +443,18 @@ Widget _infoRow(String label, String value) {
         ),
       ),
     ],
+  );
+}
+
+DataColumn _tableHeader(String title) {
+  return DataColumn(
+    label: Text(
+      title,
+      style: GoogleFonts.poppins(
+        fontWeight: FontWeight.w700,
+        fontSize: 12,
+        letterSpacing: 0.4,
+      ),
+    ),
   );
 }

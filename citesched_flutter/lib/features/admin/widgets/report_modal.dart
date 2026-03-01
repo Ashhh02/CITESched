@@ -82,31 +82,33 @@ class _ReportModalState extends State<ReportModal>
                 ),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Administrative Reports',
-                        style: GoogleFonts.poppins(
-                          fontSize: isMobile ? 20 : 26,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Administrative Reports',
+                          style: GoogleFonts.poppins(
+                            fontSize: isMobile ? 20 : 26,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        isMobile
-                            ? 'System analysis'
-                            : 'System-wide analysis and statistics',
-                        style: GoogleFonts.poppins(
-                          fontSize: isMobile ? 11 : 14,
-                          color: Colors.white.withOpacity(0.85),
+                        const SizedBox(height: 4),
+                        Text(
+                          isMobile
+                              ? 'System analysis'
+                              : 'System-wide analysis and statistics',
+                          style: GoogleFonts.poppins(
+                            fontSize: isMobile ? 11 : 14,
+                            color: Colors.white.withOpacity(0.85),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 12),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () => Navigator.of(context).pop(),
@@ -130,6 +132,7 @@ class _ReportModalState extends State<ReportModal>
                 ),
                 child: TabBar(
                   controller: _tabController,
+                  isScrollable: isMobile,
                   indicator: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [primaryPurple, const Color(0xFF8e005b)],
@@ -140,6 +143,7 @@ class _ReportModalState extends State<ReportModal>
                   labelColor: Colors.white,
                   unselectedLabelColor: textMuted,
                   labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  labelPadding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16),
                   tabs: [
                     Tab(text: isMobile ? 'Faculty' : 'Faculty Load'),
                     Tab(text: isMobile ? 'Rooms' : 'Room Utilization'),
@@ -189,103 +193,114 @@ class _FacultyLoadTab extends StatelessWidget {
         final data = snapshot.data ?? [];
         if (data.isEmpty) return const Center(child: Text('No data available'));
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: DataTable(
-              headingRowColor: MaterialStateProperty.all(
-                Theme.of(context).primaryColor.withOpacity(0.05),
-              ),
-              columns: const [
-                DataColumn(
-                  label: Text(
-                    'Faculty Name',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                DataColumn(
-                  label: Text(
-                    'Program',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Subjects',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Total Units',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Status',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-              rows: data.map((item) {
-                Color statusColor;
-                if (item.loadStatus == 'Overloaded')
-                  statusColor = Colors.red;
-                else if (item.loadStatus == 'Underloaded')
-                  statusColor = Colors.orange;
-                else
-                  statusColor = Colors.green;
-
-                return DataRow(
-                  cells: [
-                    DataCell(
-                      Text(item.facultyName, style: GoogleFonts.poppins()),
-                    ),
-                    DataCell(
-                      Text(item.program ?? '-', style: GoogleFonts.poppins()),
-                    ),
-                    DataCell(
-                      Text(
-                        item.totalSubjects.toString(),
-                        style: GoogleFonts.poppins(),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: DataTable(
+                      headingRowColor: MaterialStateProperty.all(
+                        Theme.of(context).primaryColor.withOpacity(0.05),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        item.totalUnits.toStringAsFixed(1),
-                        style: GoogleFonts.poppins(),
-                      ),
-                    ),
-                    DataCell(
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          item.loadStatus,
-                          style: GoogleFonts.poppins(
-                            color: statusColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                      columns: const [
+                        DataColumn(
+                          label: Text(
+                            'Faculty Name',
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
-                      ),
+                        DataColumn(
+                          label: Text(
+                            'Program',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Subjects',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Total Units',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Status',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                      rows: data.map((item) {
+                        Color statusColor;
+                        if (item.loadStatus == 'Overloaded') {
+                          statusColor = Colors.red;
+                        } else if (item.loadStatus == 'Underloaded') {
+                          statusColor = Colors.orange;
+                        } else {
+                          statusColor = Colors.green;
+                        }
+
+                        return DataRow(
+                          cells: [
+                            DataCell(
+                              Text(item.facultyName, style: GoogleFonts.poppins()),
+                            ),
+                            DataCell(
+                              Text(item.program ?? '-', style: GoogleFonts.poppins()),
+                            ),
+                            DataCell(
+                              Text(
+                                item.totalSubjects.toString(),
+                                style: GoogleFonts.poppins(),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                item.totalUnits.toStringAsFixed(1),
+                                style: GoogleFonts.poppins(),
+                              ),
+                            ),
+                            DataCell(
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  item.loadStatus,
+                                  style: GoogleFonts.poppins(
+                                    color: statusColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
                     ),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );

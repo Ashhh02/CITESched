@@ -234,6 +234,7 @@ class ConflictService {
     int? excludeScheduleId,
   }) async {
     var conflicts = <ScheduleConflict>[];
+    final subject = await Subject.db.findById(session, schedule.subjectId);
 
     // 1. Room Conflict
     var roomId = schedule.roomId;
@@ -262,8 +263,7 @@ class ConflictService {
         );
       }
 
-      // Fetch Room and Subject for property checks
-      var subject = await Subject.db.findById(session, schedule.subjectId);
+      // Fetch Room for property checks (subject already loaded)
       var room = await Room.db.findById(session, roomId);
 
       if (subject != null && room != null) {
@@ -417,9 +417,36 @@ class ConflictService {
             facultyId: schedule.facultyId,
             subjectId: schedule.subjectId,
             details:
-                'Faculty ID ${schedule.facultyId} has no availability window covering this timeslot',
+              'Faculty ID ${schedule.facultyId} has no availability window covering this timeslot',
           ),
         );
+      }
+
+      // Continuous-block validation: timeslot duration must cover subject total hours (lecture + lab combined)
+      if (subject != null) {
+        final timeslot =
+            await Timeslot.db.findById(session, schedule.timeslotId!);
+        final requiredHours =
+            subject.hours ?? subject.units.toDouble() ?? schedule.hours ?? 0;
+        if (timeslot != null && requiredHours > 0) {
+          final tsMinutes = _parseTimeToMinutes(timeslot.endTime) -
+              _parseTimeToMinutes(timeslot.startTime);
+          final tsHours = tsMinutes / 60.0;
+          if (tsHours + 1e-6 < requiredHours) {
+            conflicts.add(
+              ScheduleConflict(
+                type: 'insufficient_block',
+                message:
+                    'Timeslot ${timeslot.day.name} ${timeslot.startTime}-${timeslot.endTime} is too short for ${subject.name}',
+                scheduleId: schedule.id,
+                facultyId: schedule.facultyId,
+                subjectId: schedule.subjectId,
+                details:
+                    'Required continuous hours: ${requiredHours.toStringAsFixed(1)}, available: ${tsHours.toStringAsFixed(1)}',
+              ),
+            );
+          }
+        }
       }
     }
 
@@ -441,6 +468,7 @@ class ConflictService {
     var allSubjects = await Subject.db.find(session);
     var allRooms = await Room.db.find(session);
     var allFaculty = await Faculty.db.find(session);
+    var allTimeslots = await Timeslot.db.find(session);
 
     List<ScheduleConflict> conflicts = [];
 
@@ -456,6 +484,10 @@ class ConflictService {
     var facultyMap = <int, Faculty>{};
     for (var f in allFaculty) {
       if (f.id != null) facultyMap[f.id!] = f;
+    }
+    var timeslotMap = <int, Timeslot>{};
+    for (var t in allTimeslots) {
+      if (t.id != null) timeslotMap[t.id!] = t;
     }
 
     // Group schedules by timeslot for overlap checks
@@ -480,14 +512,23 @@ class ConflictService {
       byRoom.forEach((roomId, roomSchedules) {
         if (roomSchedules.length > 1) {
           var room = roomMap[roomId];
+          final ts = timeslotMap[timeslotId];
+          final slotLabel = ts != null
+              ? '${ts.day.name} ${ts.startTime}-${ts.endTime}'
+              : 'timeslot $timeslotId';
+          final occupants = roomSchedules.map((s) {
+            final subj = subjectMap[s.subjectId]?.code ?? 'Subject ${s.subjectId}';
+            final fac = facultyMap[s.facultyId]?.name ?? 'Faculty ${s.facultyId}';
+            return '$subj / $fac / ${s.section}';
+          }).join('; ');
           conflicts.add(
             ScheduleConflict(
               type: 'room_conflict',
               message:
-                  '${room?.name ?? 'Room $roomId'} has ${roomSchedules.length} classes at the same time',
+                  '${room?.name ?? 'Room $roomId'} already booked at $slotLabel',
               roomId: roomId,
               details:
-                  'Schedule IDs: ${roomSchedules.map((s) => s.id).join(', ')}',
+                  'Conflicts with: $occupants (Schedule IDs: ${roomSchedules.map((s) => s.id).join(', ')})',
             ),
           );
         }
@@ -501,14 +542,21 @@ class ConflictService {
       byFaculty.forEach((facultyId, facSchedules) {
         if (facSchedules.length > 1) {
           var faculty = facultyMap[facultyId];
+          final ts = timeslotMap[timeslotId];
+          final slotLabel = ts != null
+              ? '${ts.day.name} ${ts.startTime}-${ts.endTime}'
+              : 'timeslot $timeslotId';
+          final subjects = facSchedules
+              .map((s) => subjectMap[s.subjectId]?.code ?? 'Subject ${s.subjectId}')
+              .join(', ');
           conflicts.add(
             ScheduleConflict(
               type: 'faculty_conflict',
               message:
-                  '${faculty?.name ?? 'Faculty $facultyId'} has overlapping classes',
+                  '${faculty?.name ?? 'Faculty $facultyId'} has overlapping classes at $slotLabel',
               facultyId: facultyId,
               details:
-                  'Schedule IDs: ${facSchedules.map((s) => s.id).join(', ')}',
+                  'Subjects: $subjects (Schedule IDs: ${facSchedules.map((s) => s.id).join(', ')})',
             ),
           );
         }
@@ -523,12 +571,19 @@ class ConflictService {
       }
       bySection.forEach((section, secSchedules) {
         if (secSchedules.length > 1) {
+          final ts = timeslotMap[timeslotId];
+          final slotLabel = ts != null
+              ? '${ts.day.name} ${ts.startTime}-${ts.endTime}'
+              : 'timeslot $timeslotId';
+          final subjects = secSchedules
+              .map((s) => subjectMap[s.subjectId]?.code ?? 'Subject ${s.subjectId}')
+              .join(', ');
           conflicts.add(
             ScheduleConflict(
               type: 'section_conflict',
-              message: 'Section $section has overlapping classes',
+              message: 'Section $section double-booked at $slotLabel',
               details:
-                  'Schedule IDs: ${secSchedules.map((s) => s.id).join(', ')}',
+                  'Subjects: $subjects (Schedule IDs: ${secSchedules.map((s) => s.id).join(', ')})',
             ),
           );
         }
@@ -628,13 +683,7 @@ class ConflictService {
     }
 
     // ── 8. Faculty Unavailable (timeslot outside faculty preferred hours) ──
-    var allTimeslots = await Timeslot.db.find(session);
     var allAvailabilities = await FacultyAvailability.db.find(session);
-
-    var timeslotMap = <int, Timeslot>{};
-    for (var t in allTimeslots) {
-      if (t.id != null) timeslotMap[t.id!] = t;
-    }
 
     var availByFaculty = <int, List<FacultyAvailability>>{};
     for (var a in allAvailabilities) {
@@ -672,6 +721,36 @@ class ConflictService {
             subjectId: s.subjectId,
             details:
                 'Timeslot ${ts.startTime}–${ts.endTime} on ${ts.day.name} is outside faculty availability',
+          ),
+        );
+      }
+    }
+
+    // â”€â”€ 9. Continuous block check (timeslot duration vs subject hours) â”€â”€
+    for (var s in allSchedules) {
+      if (s.timeslotId == null) continue;
+      final subject = subjectMap[s.subjectId];
+      if (subject == null) continue;
+      final requiredHours = subject.hours ?? subject.units.toDouble();
+      if (requiredHours <= 0) continue;
+      final ts = timeslotMap[s.timeslotId!];
+      if (ts == null) continue;
+      final tsMinutes =
+          _parseTimeToMinutes(ts.endTime) - _parseTimeToMinutes(ts.startTime);
+      final tsHours = tsMinutes / 60.0;
+      if (tsHours + 1e-6 < requiredHours) {
+        final faculty = facultyMap[s.facultyId];
+        conflicts.add(
+          ScheduleConflict(
+            type: 'insufficient_block',
+            message:
+                '${subject.name} requires ${requiredHours.toStringAsFixed(1)}h but timeslot provides ${tsHours.toStringAsFixed(1)}h (${ts.day.name} ${ts.startTime}-${ts.endTime})',
+            scheduleId: s.id,
+            facultyId: s.facultyId,
+            subjectId: s.subjectId,
+            roomId: s.roomId,
+            details:
+                'Continuous block required. Faculty: ${faculty?.name ?? s.facultyId}, Section: ${s.section}, Room: ${roomMap[s.roomId ?? -1]?.name ?? 'N/A'}',
           ),
         );
       }

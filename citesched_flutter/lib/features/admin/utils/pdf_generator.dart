@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pdf/pdf.dart';
@@ -6,7 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:citesched_client/citesched_client.dart';
 import 'package:docx_creator/docx_creator.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
 
 class PdfGenerator {
   // ─────────────────────────── PDF EXPORT ───────────────────────────────────
@@ -223,21 +222,17 @@ class PdfGenerator {
     DocxBuiltDocument doc,
     String fileName,
   ) async {
-    if (kIsWeb) {
-      // Web: use bytes download (not yet wired — requires url_launcher or similar)
-      return null;
-    }
     try {
-      Directory dir;
-      if (Platform.isAndroid || Platform.isIOS) {
-        dir = await getApplicationDocumentsDirectory();
-      } else {
-        // Desktop / Windows / macOS / Linux
-        dir = await getApplicationDocumentsDirectory();
-      }
-      final filePath = '${dir.path}/$fileName';
-      await DocxExporter().exportToFile(doc, filePath);
-      return filePath;
+      final bytes = await DocxExporter().exportToBytes(doc);
+      final savedPath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save DOCX',
+        fileName: fileName,
+        type: FileType.custom,
+        allowedExtensions: const ['docx'],
+        bytes: bytes,
+      );
+      if (savedPath != null) return savedPath;
+      return kIsWeb ? 'Downloaded in browser' : null;
     } catch (e) {
       return null;
     }

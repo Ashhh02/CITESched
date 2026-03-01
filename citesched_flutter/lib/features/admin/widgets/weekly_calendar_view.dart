@@ -2,13 +2,14 @@ import 'package:citesched_client/citesched_client.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class WeeklyCalendarView extends StatelessWidget {
+class WeeklyCalendarView extends StatefulWidget {
   final List<ScheduleInfo> schedules;
   final List<FacultyAvailability>? availabilities;
   final Function(Schedule)? onEdit;
   final Color maroonColor;
   final bool isInstructorView;
   final Faculty? selectedFaculty;
+  final bool isStudentView;
 
   const WeeklyCalendarView({
     super.key,
@@ -18,7 +19,72 @@ class WeeklyCalendarView extends StatelessWidget {
     this.isInstructorView = false,
     this.selectedFaculty,
     this.onEdit,
+    this.isStudentView = false,
   });
+
+  @override
+  State<WeeklyCalendarView> createState() => _WeeklyCalendarViewState();
+}
+
+class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
+  final ScrollController _verticalController = ScrollController();
+  final ScrollController _horizontalController = ScrollController();
+
+  List<ScheduleInfo> get schedules => widget.schedules;
+  List<FacultyAvailability>? get availabilities => widget.availabilities;
+  Function(Schedule)? get onEdit => widget.onEdit;
+  Color get maroonColor => widget.maroonColor;
+  bool get isInstructorView => widget.isInstructorView;
+  Faculty? get selectedFaculty => widget.selectedFaculty;
+  bool get isStudentView => widget.isStudentView;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _jumpToEarliestSchedule();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant WeeklyCalendarView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.schedules != widget.schedules) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _jumpToEarliestSchedule();
+      });
+    }
+  }
+
+  void _jumpToEarliestSchedule() {
+    if (!_verticalController.hasClients) return;
+    const int startHour = 7;
+    final withTimeslot = schedules
+        .where((s) => s.schedule.timeslot != null)
+        .toList();
+    if (withTimeslot.isEmpty) return;
+    final earliest = withTimeslot
+        .map((s) => _parseTime(s.schedule.timeslot!.startTime))
+        .reduce((a, b) {
+      final aMin = a.hour * 60 + a.minute;
+      final bMin = b.hour * 60 + b.minute;
+      return aMin <= bMin ? a : b;
+    });
+    final hourHeight = isStudentView ? 64.0 : 100.0;
+    final target = ((earliest.hour - startHour - 1).clamp(0, 24) +
+            (earliest.minute / 60.0)) *
+        hourHeight;
+    _verticalController.jumpTo(
+      target.clamp(0.0, _verticalController.position.maxScrollExtent),
+    );
+  }
+
+  @override
+  void dispose() {
+    _verticalController.dispose();
+    _horizontalController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,10 +92,10 @@ class WeeklyCalendarView extends StatelessWidget {
     final gridColor = isDark ? Colors.white12 : Colors.black12;
 
     // Config
-    const double hourHeight = 100.0;
+    final double hourHeight = isStudentView ? 64.0 : 100.0;
     const double dayWidth = 150.0;
     const int startHour = 7;
-    const int endHour = 21;
+    const int endHour = 19; // 7AM–7PM per student view spec
     final List<DayOfWeek> days = [
       DayOfWeek.mon,
       DayOfWeek.tue,
@@ -40,8 +106,10 @@ class WeeklyCalendarView extends StatelessWidget {
     ];
 
     return SingleChildScrollView(
+      controller: _horizontalController,
       scrollDirection: Axis.horizontal,
       child: SingleChildScrollView(
+        controller: _verticalController,
         scrollDirection: Axis.vertical,
         child: Container(
           width: 80 + (dayWidth * days.length),
@@ -508,14 +576,18 @@ class WeeklyCalendarView extends StatelessWidget {
     final bool hasConflict =
         info.conflicts.isNotEmpty || hasAvailabilityViolation;
 
-    // Black card design per specification
-    final Color blockColor = hasConflict
-        ? const Color(0xFF2D0000) // Dark red-black for conflicts
-        : Colors.black;
+    // Styles
+    final Color blockColor = isStudentView
+        ? Colors.white
+        : hasConflict
+            ? const Color(0xFF2D0000)
+            : Colors.black;
 
     final Color borderColor = hasConflict
         ? Colors.red.shade400
-        : Colors.grey[800]!;
+        : isStudentView
+            ? Colors.black87
+            : Colors.grey[800]!;
 
     return Positioned(
       top: top + 2,
@@ -529,148 +601,254 @@ class WeeklyCalendarView extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           child: Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: blockColor,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: borderColor,
-                width: hasConflict ? 2.5 : 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 12,
-                  offset: const Offset(0, 5),
+              decoration: BoxDecoration(
+                color: blockColor,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: borderColor,
+                  width: hasConflict ? 2.5 : 1.5,
                 ),
-              ],
-            ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Faculty Name (Robust Header)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: maroonColor.withOpacity(0.25),
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.15),
+                if (isStudentView)
+                  _buildStudentCardContent(
+                    schedule: schedule,
+                    timeslot: timeslot,
+                    hasConflict: hasConflict,
+                  )
+                else ...[
+                  // Existing instructor/admin style
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 3,
                     ),
-                  ),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      (schedule.faculty?.name ?? 'UNASSIGNED').toUpperCase(),
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 9,
-                        color: Colors.white,
-                        letterSpacing: 0.8,
+                    decoration: BoxDecoration(
+                      color: maroonColor.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.15),
+                      ),
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        (schedule.faculty?.name ?? 'UNASSIGNED').toUpperCase(),
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 9,
+                          color: Colors.white,
+                          letterSpacing: 0.8,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-
-                // Subject Code (Maximum Visibility)
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Flexible(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                schedule.subject?.code ?? 'TBA',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  height: 1.0,
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  schedule.subject?.code ?? 'TBA',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    height: 1.0,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          // Subject Name
-                          Expanded(
-                            child: Text(
-                              schedule.subject?.name ?? 'No Subject Title',
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                fontWeight: FontWeight.normal,
-                                color: Colors.white.withOpacity(0.8),
-                                height: 1.1,
+                            const SizedBox(height: 2),
+                            Expanded(
+                              child: Text(
+                                schedule.subject?.name ?? 'No Subject Title',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.normal,
+                                  color: Colors.white.withOpacity(0.8),
+                                  height: 1.1,
+                                ),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          Text(
-                            'SEC ${schedule.section} | Y${schedule.subject?.yearLevel?.toString() ?? '-'}',
-                            style: GoogleFonts.poppins(
-                              fontSize: 8,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white.withOpacity(0.75),
-                              height: 1.0,
+                            Text(
+                              'SEC ${schedule.section} | Y${schedule.subject?.yearLevel?.toString() ?? '-'}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withOpacity(0.75),
+                                height: 1.0,
+                              ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                // Footer section: Time
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            '${timeslot.startTime} - ${timeslot.endTime}',
-                            style: GoogleFonts.poppins(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
+                          ],
+                        );
+                      },
                     ),
-                    if (hasConflict)
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        size: 14,
-                        color: Colors.red[300],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '${timeslot.startTime} - ${timeslot.endTime}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                  ],
-                ),
+                      if (hasConflict)
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          size: 14,
+                          color: Colors.red[300],
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildStudentCardContent({
+    required Schedule schedule,
+    required Timeslot timeslot,
+    required bool hasConflict,
+  }) {
+    final subj = schedule.subject;
+    final faculty = schedule.faculty?.name ?? 'TBA';
+    final program = subj?.program.name.toUpperCase() ?? schedule.section;
+    final year = subj?.yearLevel != null ? 'Y${subj!.yearLevel}' : '';
+    final room = schedule.room?.name ?? 'Room TBA';
+    final timeRange = '${timeslot.startTime} - ${timeslot.endTime}';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Top section: instructor / program / room
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.black54),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                faculty,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                  color: Colors.black,
+                ),
+              ),
+              Text(
+                '$program ${year.isNotEmpty ? '– $year' : ''}',
+                style: GoogleFonts.poppins(fontSize: 10, color: Colors.black87),
+              ),
+              Text(
+                room,
+                style: GoogleFonts.poppins(fontSize: 10, color: Colors.black87),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        // Bottom white content area
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.black45),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  timeRange,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subj?.code ?? 'TBA',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                    color: Colors.black,
+                  ),
+                ),
+                Text(
+                  subj?.name ?? 'No Subject Title',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+                const Spacer(),
+                if (hasConflict)
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Icon(
+                      Icons.warning_amber_rounded,
+                      size: 14,
+                      color: Colors.red[700],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

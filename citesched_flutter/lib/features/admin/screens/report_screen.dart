@@ -1,5 +1,6 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/main.dart';
+import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -61,17 +62,23 @@ class _ReportScreenState extends State<ReportScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = ResponsiveHelper.isMobile(context);
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: Column(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: ResponsiveHelper.maxContentWidth(context),
+          ),
+          child: Column(
         children: [
           // Header (Standardized Maroon Gradient Banner)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(32),
+            padding: EdgeInsets.all(isMobile ? 16 : 32),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -88,8 +95,10 @@ class _ReportScreenState extends State<ReportScreen>
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Expanded(
+                  child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -106,32 +115,36 @@ class _ReportScreenState extends State<ReportScreen>
                         size: 32,
                       ),
                     ),
-                    const SizedBox(width: 24),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Analytical Reports',
-                          style: GoogleFonts.poppins(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: -1,
+                    SizedBox(width: isMobile ? 12 : 24),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Analytical Reports',
+                            style: GoogleFonts.poppins(
+                              fontSize: isMobile ? 22 : 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: -1,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Comprehensive system metrics and utilization analysis',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            color: Colors.white.withValues(alpha: 0.8),
-                            letterSpacing: 0.2,
+                          const SizedBox(height: 4),
+                          Text(
+                            'Comprehensive system metrics and utilization analysis',
+                            style: GoogleFonts.poppins(
+                              fontSize: isMobile ? 12 : 16,
+                              color: Colors.white.withValues(alpha: 0.8),
+                              letterSpacing: 0.2,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
+                ),
+                if (!isMobile)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -171,6 +184,7 @@ class _ReportScreenState extends State<ReportScreen>
             color: cardBg,
             child: TabBar(
               controller: _tabController,
+              isScrollable: isMobile,
               labelColor: maroonColor,
               unselectedLabelColor: Colors.grey,
               indicatorColor: maroonColor,
@@ -179,6 +193,7 @@ class _ReportScreenState extends State<ReportScreen>
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
+              labelPadding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16),
               tabs: const [
                 Tab(text: 'Faculty Load'),
                 Tab(text: 'Room Usage'),
@@ -191,7 +206,7 @@ class _ReportScreenState extends State<ReportScreen>
           // Content
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(32.0),
+              padding: EdgeInsets.all(isMobile ? 16 : 32),
               child: TabBarView(
                 controller: _tabController,
                 children: const [
@@ -204,6 +219,8 @@ class _ReportScreenState extends State<ReportScreen>
             ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }
@@ -523,93 +540,102 @@ class _RoomUtilizationTab extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(child: Text('Error: $error')),
       data: (data) {
-        return GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 24,
-            mainAxisSpacing: 24,
-            childAspectRatio: 1.4,
-          ),
-          itemCount: data.length,
-          itemBuilder: (context, index) {
-            final item = data[index];
-            final color = item.utilizationPercentage > 80
-                ? Colors.red
-                : (item.utilizationPercentage > 50
-                      ? Colors.orange
-                      : Colors.green);
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final crossAxisCount = width < 650 ? 1 : (width < 1000 ? 2 : 3);
+            final childAspectRatio = width < 650 ? 1.6 : 1.4;
 
-            return Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-                border: Border.all(color: color.withOpacity(0.2), width: 2),
+            return GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 24,
+                mainAxisSpacing: 24,
+                childAspectRatio: childAspectRatio,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
+              itemCount: data.length,
+              itemBuilder: (context, index) {
+                final item = data[index];
+                final color = item.utilizationPercentage > 80
+                    ? Colors.red
+                    : (item.utilizationPercentage > 50
+                          ? Colors.orange
+                          : Colors.green);
+
+                return Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                    border: Border.all(color: color.withOpacity(0.2), width: 2),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        item.roomName,
-                        style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Icon(Icons.meeting_room_rounded, color: color),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Utilization',
-                            style: GoogleFonts.poppins(color: Colors.grey),
+                          Expanded(
+                            child: Text(
+                              item.roomName,
+                              style: GoogleFonts.poppins(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                          Text(
-                            '${item.utilizationPercentage.toStringAsFixed(1)}%',
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.bold,
+                          Icon(Icons.meeting_room_rounded, color: color),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Utilization',
+                                style: GoogleFonts.poppins(color: Colors.grey),
+                              ),
+                              Text(
+                                '${item.utilizationPercentage.toStringAsFixed(1)}%',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  color: color,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: LinearProgressIndicator(
+                              value: item.utilizationPercentage / 100,
+                              backgroundColor: color.withOpacity(0.1),
                               color: color,
+                              minHeight: 8,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: LinearProgressIndicator(
-                          value: item.utilizationPercentage / 100,
-                          backgroundColor: color.withOpacity(0.1),
-                          color: color,
-                          minHeight: 8,
+                      Text(
+                        '${item.totalBookings} timeslots assigned',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.grey,
                         ),
                       ),
                     ],
                   ),
-                  Text(
-                    '${item.totalBookings} timeslots assigned',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             );
           },
         );
@@ -719,7 +745,8 @@ class _ConflictSummaryTab extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 14),
-                    Column(
+                    Expanded(
+                      child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -742,23 +769,27 @@ class _ConflictSummaryTab extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    const Spacer(),
-                    // Count chips
-                    if (conflicts.isNotEmpty) ...[
-                      _buildCountBadge(conflicts, 'CRITICAL', [
-                        'room_conflict',
-                        'faculty_conflict',
-                        'section_conflict',
-                      ], Colors.red),
-                      const SizedBox(width: 8),
-                      _buildCountBadge(conflicts, 'WARNING', [
-                        'max_load_exceeded',
-                        'room_inactive',
-                        'faculty_unavailable',
-                        'program_mismatch',
-                        'capacity_exceeded',
-                      ], Colors.orange),
-                    ],
+                    ),
+                    if (conflicts.isNotEmpty)
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.end,
+                        children: [
+                          _buildCountBadge(conflicts, 'CRITICAL', [
+                            'room_conflict',
+                            'faculty_conflict',
+                            'section_conflict',
+                          ], Colors.red),
+                          _buildCountBadge(conflicts, 'WARNING', [
+                            'max_load_exceeded',
+                            'room_inactive',
+                            'faculty_unavailable',
+                            'program_mismatch',
+                            'capacity_exceeded',
+                          ], Colors.orange),
+                        ],
+                      ),
                   ],
                 ),
 
@@ -972,43 +1003,68 @@ class _ScheduleOverviewTab extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(child: Text('Error: $error')),
       data: (data) {
+        final isMobile = ResponsiveHelper.isMobile(context);
         return Column(
           children: [
-            Row(
-              children: [
-                _buildStatTile(
-                  context,
-                  'Total Schedules',
-                  data.totalSchedules.toString(),
-                  Icons.event_note_rounded,
-                  Colors.blue,
-                ),
-                const SizedBox(width: 24),
-                _buildStatTile(
-                  context,
-                  'Active Programs',
-                  data.schedulesByProgram.length.toString(),
-                  Icons.account_tree_rounded,
-                  Colors.purple,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _buildProgramBreakdown(
+            if (isMobile) ...[
+              _buildStatTile(
+                context,
+                'Total Schedules',
+                data.totalSchedules.toString(),
+                Icons.event_note_rounded,
+                Colors.blue,
+              ),
+              const SizedBox(height: 16),
+              _buildStatTile(
+                context,
+                'Active Programs',
+                data.schedulesByProgram.length.toString(),
+                Icons.account_tree_rounded,
+                Colors.purple,
+              ),
+            ] else ...[
+              Row(
+                children: [
+                  _buildStatTile(
                     context,
-                    data.schedulesByProgram,
+                    'Total Schedules',
+                    data.totalSchedules.toString(),
+                    Icons.event_note_rounded,
+                    Colors.blue,
                   ),
-                ),
-                const SizedBox(width: 24),
-                Expanded(
-                  child: _buildTermBreakdown(context, data.schedulesByTerm),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 24),
+                  _buildStatTile(
+                    context,
+                    'Active Programs',
+                    data.schedulesByProgram.length.toString(),
+                    Icons.account_tree_rounded,
+                    Colors.purple,
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 24),
+            if (isMobile) ...[
+              _buildProgramBreakdown(context, data.schedulesByProgram),
+              const SizedBox(height: 16),
+              _buildTermBreakdown(context, data.schedulesByTerm),
+            ] else ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _buildProgramBreakdown(
+                      context,
+                      data.schedulesByProgram,
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: _buildTermBreakdown(context, data.schedulesByTerm),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 24),
             Expanded(
               child: _buildSectionSubjectsBreakdown(context, ref),

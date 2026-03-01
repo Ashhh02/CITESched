@@ -55,6 +55,13 @@ class _AdminLayoutState extends State<AdminLayout> {
       appBar: !isDesktop
           ? AppHeader(
               title: _titles[_selectedIndex],
+              leading: Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu),
+                  tooltip: 'Open menu',
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
             )
           : null,
       drawer: !isDesktop

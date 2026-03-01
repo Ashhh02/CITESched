@@ -26,6 +26,14 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  double _adaptiveTextScale(double width) {
+    if (width < 360) return 0.88;
+    if (width < 600) return 0.94;
+    if (width < 900) return 0.98;
+    if (width < 1400) return 1.0;
+    return 1.04;
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -34,7 +42,14 @@ class MyApp extends StatelessWidget {
       home: const RootScreen(),
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
-        return child ?? const SizedBox.shrink();
+        final media = MediaQuery.of(context);
+        final scale = _adaptiveTextScale(media.size.width);
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: TextScaler.linear(scale),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
       },
     );
   }

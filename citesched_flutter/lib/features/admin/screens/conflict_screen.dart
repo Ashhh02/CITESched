@@ -1,4 +1,5 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -144,14 +145,20 @@ class _ConflictScreenState extends State<ConflictScreen> {
 
     return Container(
       color: bgBody,
-      padding: EdgeInsets.all(isMobile ? 16 : 24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: ResponsiveHelper.maxContentWidth(context),
+          ),
+          child: Padding(
+      padding: ResponsiveHelper.pagePadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header (Standardized Maroon Gradient Banner)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(32),
+            padding: EdgeInsets.all(isMobile ? 16 : 32),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -169,8 +176,10 @@ class _ConflictScreenState extends State<ConflictScreen> {
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Expanded(
+                  child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -187,7 +196,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
                         size: 32,
                       ),
                     ),
-                    const SizedBox(width: 24),
+                    SizedBox(width: isMobile ? 12 : 24),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -216,6 +225,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
                       ],
                     ),
                   ],
+                ),
                 ),
                 const SizedBox(width: 16),
                 Container(
@@ -266,6 +276,9 @@ class _ConflictScreenState extends State<ConflictScreen> {
                 : _buildConflictList(isDark, cardBg),
           ),
         ],
+      ),
+          ),
+        ),
       ),
     );
   }

@@ -27,6 +27,9 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final titleSize = width < 600 ? 18.0 : 20.0;
+
     return AppBar(
       elevation: 0,
       backgroundColor: DesignSystem.headerColor,
@@ -35,8 +38,10 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       automaticallyImplyLeading: false,
       title: Text(
         title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: GoogleFonts.roboto(
-          fontSize: 20,
+          fontSize: titleSize,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
