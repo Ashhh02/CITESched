@@ -41,14 +41,14 @@
 
 ### Step 1: Start Backend (Terminal 1)
 ```bash
-cd "c:\Users\ashya\Final CITESched Flutter\citesched\citesched_server"
+cd "citesched\citesched_server"
 dart pub get
 dart run bin/main.dart
 ```
 
 ### Step 2: Start Frontend (Terminal 2)
 ```bash
-cd "c:\Users\ashya\Final CITESched Flutter\citesched\citesched_flutter"
+cd "citesched\citesched_flutter"
 flutter pub get
 flutter run -d chrome --wasm
 ```
