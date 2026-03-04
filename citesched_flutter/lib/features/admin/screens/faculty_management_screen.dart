@@ -2813,7 +2813,8 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
     _program = widget.faculty.program;
     _isActive = widget.faculty.isActive;
     _customPreferredHours = widget.faculty.preferredHours;
-    _loadExistingAvailability();\r\n  }
+    _loadExistingAvailability();
+  }
   TimeOfDay _timeOfDayFromHHmm(String hhmm) {
     final parts = hhmm.split(':');
     final hour = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 0 : 0;

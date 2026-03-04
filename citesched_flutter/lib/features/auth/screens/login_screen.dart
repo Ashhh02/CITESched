@@ -110,7 +110,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // Update the auth provider (though the listener might handle it now)
         final authNotifier = ref.read(authProvider.notifier);
         authNotifier.updateUserInfo(result.userInfo);
-        authNotifier.setSelectedRole(_isFaculty ? 'faculty' : 'student');
+        final scopes = result.userInfo!.scopeNames;
+        if (scopes.contains('admin')) {
+          authNotifier.setSelectedRole('admin');
+        } else {
+          authNotifier.setSelectedRole(_isFaculty ? 'faculty' : 'student');
+        }
 
         if (mounted) {
           setState(() {

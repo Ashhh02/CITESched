@@ -32,12 +32,17 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
   final _confirmPasswordController = TextEditingController();
   final _sectionController = TextEditingController();
 
+  late String _selectedRole;
   bool _isLoading = false;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
+    final initial = widget.initialRole?.toLowerCase();
+    _selectedRole = (initial == 'admin' || initial == 'student')
+        ? initial!
+        : 'student';
   }
 
   @override
@@ -69,19 +74,22 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
     });
 
     try {
+      final isStudent = _selectedRole == 'student';
       final success = await client.setup.createAccount(
         userName: _nameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        role: 'student',
-        studentId: _studentNumberController.text.trim(),
-        section: _sectionController.text.trim().isNotEmpty
+        role: _selectedRole,
+        studentId: isStudent ? _studentNumberController.text.trim() : null,
+        section: isStudent && _sectionController.text.trim().isNotEmpty
             ? _sectionController.text.trim()
             : null,
       );
 
       if (success) {
-        await _syncStudentProfile();
+        if (isStudent) {
+          await _syncStudentProfile();
+        }
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -294,28 +302,64 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                           ),
                         ),
 
-                      // Student Number
+                      // Role
                       _buildLabel(
-                        'Student Number',
-                        Icons.badge_rounded,
+                        'Role',
+                        Icons.verified_user_rounded,
                         textPrimary,
                       ),
-                      TextFormField(
-                        controller: _studentNumberController,
+                      DropdownButtonFormField<String>(
+                        value: _selectedRole,
                         decoration: _buildInputDecoration(
-                          '107690',
+                          'Select role',
                           bgBody,
                           primaryPurple,
                           textMuted,
                         ),
-                        style: GoogleFonts.poppins(
-                          fontSize: 15,
-                          color: textPrimary,
-                        ),
-                        validator: (value) =>
-                            value == null || value.isEmpty ? 'Required' : null,
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'student',
+                            child: Text('Student'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'admin',
+                            child: Text('Admin'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() {
+                            _selectedRole = value;
+                          });
+                        },
                       ),
                       const SizedBox(height: 20),
+
+                      if (_selectedRole == 'student') ...[
+                        // Student Number
+                        _buildLabel(
+                          'Student Number',
+                          Icons.badge_rounded,
+                          textPrimary,
+                        ),
+                        TextFormField(
+                          controller: _studentNumberController,
+                          decoration: _buildInputDecoration(
+                            '107690',
+                            bgBody,
+                            primaryPurple,
+                            textMuted,
+                          ),
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            color: textPrimary,
+                          ),
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'Required'
+                              : null,
+                        ),
+                        const SizedBox(height: 20),
+                      ],
 
                       // Full Name
                       _buildLabel(
@@ -340,9 +384,8 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                       ),
                       const SizedBox(height: 20),
 
-                      // JMC Account (Email)
                       _buildLabel(
-                        'JMC Account (Email)',
+                        'JMC Account or Any Email',
                         Icons.email_outlined,
                         textPrimary,
                       ),
@@ -366,6 +409,8 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                         },
                       ),
                       const SizedBox(height: 20),
+
+                      if (_selectedRole == 'student') ...[
                       // Course / Program
                       _buildLabel(
                         'Course / Program',
@@ -375,7 +420,7 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                       TextFormField(
                         controller: _courseController,
                         decoration: _buildInputDecoration(
-                          'e.g. BSIT, BSCS, BSIS',
+                          'e.g. BSIT, BSEMC',
                           bgBody,
                           primaryPurple,
                           textMuted,
@@ -429,7 +474,7 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                       TextFormField(
                         controller: _sectionController,
                         decoration: _buildInputDecoration(
-                          'e.g. BSIT-3A',
+                          'e.g. A',
                           bgBody,
                           primaryPurple,
                           textMuted,
@@ -438,9 +483,10 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                           fontSize: 15,
                           color: textPrimary,
                         ),
-                        // Optional — no validator
+                        // Optional ï¿½ no validator
                       ),
                       const SizedBox(height: 20),
+                      ],
 
                       // Initial Password
                       _buildLabel(

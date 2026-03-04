@@ -1,5 +1,7 @@
 import 'package:serverpod/serverpod.dart';
 import 'package:serverpod_auth_server/serverpod_auth_server.dart';
+import 'package:serverpod_auth_server/src/business/email_auth.dart'
+    as email_auth;
 import '../generated/protocol.dart';
 
 class SetupEndpoint extends Endpoint {
@@ -38,6 +40,32 @@ class SetupEndpoint extends Endpoint {
           );
           return false;
         }
+      }
+
+      // Ensure email auth exists / password is set (needed for ID+password login)
+      final emailLower = email.toLowerCase();
+      final newHash = await email_auth.defaultGeneratePasswordHash(password);
+      EmailAuth? existingAuth = await EmailAuth.db.findFirstRow(
+        session,
+        where: (t) => t.userId.equals(userInfo!.id!),
+      );
+      existingAuth ??= await EmailAuth.db.findFirstRow(
+        session,
+        where: (t) => t.email.equals(emailLower),
+      );
+      if (existingAuth == null) {
+        await EmailAuth.db.insertRow(
+          session,
+          EmailAuth(
+            userId: userInfo.id!,
+            email: emailLower,
+            hash: newHash,
+          ),
+        );
+      } else {
+        existingAuth.email = emailLower;
+        existingAuth.hash = newHash;
+        await EmailAuth.db.updateRow(session, existingAuth);
       }
 
       // Sync the role to scopeNames for the client

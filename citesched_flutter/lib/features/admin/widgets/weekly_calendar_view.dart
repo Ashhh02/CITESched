@@ -127,6 +127,16 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 gridColor,
               ),
 
+              // 1.5 Lunch Time Cardbox (Instructor/Admin view)
+              if (!isStudentView)
+                _buildLunchCardbox(
+                  days,
+                  startHour,
+                  endHour,
+                  hourHeight,
+                  dayWidth,
+                ),
+
               // 2. Preference Cardboxes (High Visibility Black/Faded Highlight)
               if (availabilities != null)
                 ...availabilities!
@@ -363,6 +373,8 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
 
     final start = _parseTime(avail.startTime);
     final end = _parseTime(avail.endTime);
+    final isLunchSlot =
+        start.hour == 12 && start.minute == 0 && end.hour == 13 && end.minute == 0;
 
     final double top =
         40 + (start.hour - startHour + start.minute / 60.0) * hourHeight;
@@ -408,15 +420,18 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _buildAssignedSlotLabel(avail, start, end) ??
-                        'PREFERRED SLOT',
+                    isLunchSlot
+                        ? 'LUNCH TIME'
+                        : (_buildAssignedSlotLabel(avail, start, end) ??
+                            'PREFERRED SLOT'),
                     textAlign: TextAlign.center,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.poppins(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
-                      color: Colors.black.withOpacity(0.2),
+                      color:
+                          isLunchSlot ? Colors.black54 : Colors.black.withOpacity(0.2),
                       letterSpacing: 0.6,
                     ),
                   ),
@@ -579,6 +594,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
         _isOutsidePreferredAvailability(schedule);
     final bool hasConflict =
         info.conflicts.isNotEmpty || hasAvailabilityViolation;
+    final bool isLunchSlot = _isLunchSlot(schedule, timeslot);
 
     // Styles
     final Color blockColor = isStudentView
@@ -629,7 +645,22 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                     timeslot: timeslot,
                     hasConflict: hasConflict,
                   )
-                else ...[
+                else if (isLunchSlot) ...[
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        'LUNCH TIME',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ] else ...[
                   // Existing instructor/admin style
                   Container(
                     width: double.infinity,
@@ -750,6 +781,67 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
         ),
       ),
     );
+  }
+
+  Widget _buildLunchCardbox(
+    List<DayOfWeek> days,
+    int startHour,
+    int endHour,
+    double hourHeight,
+    double dayWidth,
+  ) {
+    const lunchStartHour = 12;
+    const lunchEndHour = 13;
+    if (lunchStartHour < startHour || lunchEndHour > endHour + 1) {
+      return const SizedBox.shrink();
+    }
+
+    final double top =
+        40 + (lunchStartHour - startHour) * hourHeight + 2;
+    final double height = (lunchEndHour - lunchStartHour) * hourHeight - 4;
+    final double left = 80 + 4;
+    final double width = (dayWidth * days.length) - 8;
+
+    return Positioned(
+      top: top,
+      left: left,
+      width: width,
+      height: height,
+      child: IgnorePointer(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.black.withOpacity(0.25), width: 1.5),
+          ),
+          child: Center(
+            child: Text(
+              'LUNCH TIME',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: Colors.black.withOpacity(0.55),
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _isLunchSlot(Schedule schedule, Timeslot timeslot) {
+    final code = schedule.subject?.code?.toLowerCase() ?? '';
+    final name = schedule.subject?.name?.toLowerCase() ?? '';
+    if (code.contains('lunch') || name.contains('lunch')) return true;
+
+    final start = _parseTime(timeslot.startTime);
+    final end = _parseTime(timeslot.endTime);
+    return start.hour == 12 &&
+        start.minute == 0 &&
+        end.hour == 13 &&
+        end.minute == 0;
   }
 
   Widget _buildStudentCardContent({
