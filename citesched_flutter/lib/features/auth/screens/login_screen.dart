@@ -1,5 +1,6 @@
 import 'package:citesched_flutter/main.dart'; // Import for client access
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
+import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -22,7 +23,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isFaculty = true; // Toggle state
   bool _obscurePassword = true;
   bool _isLoading = false;
-  bool _isDarkMode = false; // Add dark mode state
   String? _errorMessage;
 
   // Design Constants - Light Mode Theme Colors
@@ -417,36 +417,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final isDesktop = screenSize.width > 900;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // --- 1. DYNAMIC THEME COLORS ---
 
     // Main Backgrounds
-    final bgBody = _isDarkMode ? _bgBodyDark : _bgBodyLight;
-    final bgRight = _isDarkMode ? _bgRightDark : _bgRightLight;
-    final cardBg = _isDarkMode ? _cardBgDark : _cardBgLight;
+    final bgBody = isDark ? _bgBodyDark : _bgBodyLight;
+    final bgRight = isDark ? _bgRightDark : _bgRightLight;
+    final cardBg = isDark ? _cardBgDark : _cardBgLight;
 
     // Text Colors
-    final textPrimary = _isDarkMode ? Colors.white : const Color(0xFF1E293B);
-    final textMuted = _isDarkMode ? Colors.white60 : Colors.grey.shade600;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textMuted = isDark ? Colors.white60 : Colors.grey.shade600;
 
     // Input Fields
-    final inputFillColor = _isDarkMode
+    final inputFillColor = isDark
         ? const Color(0xFF334155)
         : Colors.grey.shade200;
-    final inputBorderColor = _isDarkMode
+    final inputBorderColor = isDark
         ? Colors.transparent
         : Colors.transparent;
-    final inputTextColor = _isDarkMode ? Colors.white : Colors.black87;
+    final inputTextColor = isDark ? Colors.white : Colors.black87;
 
     // Active Brand Color (Purple/Pink)
-    final activeThemeColor = _isDarkMode
+    final activeThemeColor = isDark
         ? (_isFaculty ? _facultyColorDark : _studentColorDark)
         : (_isFaculty ? _facultyColorLight : _studentColorLight);
 
     // Google Button Specifics
-    final googleBtnBg = _isDarkMode ? Colors.transparent : Colors.white;
-    final googleBtnBorder = _isDarkMode ? Colors.white54 : Colors.grey.shade300;
-    final googleBtnText = _isDarkMode ? Colors.white : Colors.black87;
+    final googleBtnBg = isDark ? Colors.transparent : Colors.white;
+    final googleBtnBorder = isDark ? Colors.white54 : Colors.grey.shade300;
+    final googleBtnText = isDark ? Colors.white : Colors.black87;
 
     // --- 2. INPUT FIELD BUILDER (Fixed: No active green outline) ---
     Widget buildCustomField({
@@ -550,30 +551,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Stack(
                 children: [
                   // Theme Toggle
-                  Positioned(
+                  const Positioned(
                     top: 25,
                     right: 25,
-                    child: InkWell(
-                      onTap: () => setState(() => _isDarkMode = !_isDarkMode),
-                      child: Container(
-                        width: 45,
-                        height: 45,
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.grey.withOpacity(0.3),
-                          ),
-                        ),
-                        child: Icon(
-                          _isDarkMode
-                              ? Icons.wb_sunny_rounded
-                              : Icons.nightlight_round,
-                          color: textPrimary,
-                          size: 20,
-                        ),
-                      ),
-                    ),
+                    child: ThemeModeToggle(compact: true),
                   ),
 
                   // Login Form Center
@@ -653,7 +634,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               Container(
                                 padding: const EdgeInsets.all(5),
                                 decoration: BoxDecoration(
-                                  color: _isDarkMode
+                                  color: isDark
                                       ? Colors.black26
                                       : Colors.grey.shade100,
                                   borderRadius: BorderRadius.circular(14),
@@ -778,7 +759,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               // Google Button (uses platform-safe widget)
                               GoogleSignInWidget(
                                 controller: _googleAuthController,
-                                theme: _isDarkMode
+                                theme: isDark
                                     ? GSIButtonTheme.filledBlack
                                     : GSIButtonTheme.outline,
                                 size: GSIButtonSize.large,

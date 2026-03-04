@@ -310,13 +310,6 @@
           },
           {
             "__className__": "serverpod.ColumnDefinition",
-            "name": "building",
-            "columnType": 0,
-            "isNullable": false,
-            "dartType": "String"
-          },
-          {
-            "__className__": "serverpod.ColumnDefinition",
             "name": "isActive",
             "columnType": 1,
             "isNullable": false,

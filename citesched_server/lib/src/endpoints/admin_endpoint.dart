@@ -951,7 +951,6 @@ class AdminEndpoint extends Endpoint {
   static const Set<String> _allowedRoomNames = {
     'IT LAB',
     'EMC LAB',
-    'ROOM 1',
   };
 
   String _normalizedRoomName(String value) => value.trim().toUpperCase();
@@ -961,12 +960,8 @@ class AdminEndpoint extends Endpoint {
 
     if (!_allowedRoomNames.contains(roomName)) {
       throw Exception(
-        'Invalid room name. Only IT LAB, EMC LAB, and ROOM 1 are allowed.',
+        'Invalid room name. Only IT LAB and EMC LAB are allowed.',
       );
-    }
-
-    if (roomName == 'ROOM 1' && room.type != RoomType.lecture) {
-      throw Exception('ROOM 1 must be a lecture room.');
     }
 
     if ((roomName == 'IT LAB' || roomName == 'EMC LAB') &&

@@ -12,36 +12,36 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/serverpod.dart' as _i1;
 import '../auth/email_idp_endpoint.dart' as _i2;
-import '../auth/jwt_refresh_endpoint.dart' as _i3;
-import '../endpoints/admin_endpoint.dart' as _i4;
-import '../endpoints/custom_auth_endpoint.dart' as _i5;
-import '../endpoints/debug_endpoint.dart' as _i6;
-import '../endpoints/faculty_endpoint.dart' as _i7;
-import '../endpoints/nlp_endpoint.dart' as _i8;
-import '../endpoints/setup_endpoint.dart' as _i9;
-import '../endpoints/student_endpoint.dart' as _i10;
-import '../endpoints/student_schedule_endpoint.dart' as _i11;
-import '../endpoints/timetable_endpoint.dart' as _i12;
-import '../greetings/greeting_endpoint.dart' as _i13;
-import '../auth/google_idp_endpoint.dart' as _i27;
-import 'package:citesched_server/src/generated/faculty.dart' as _i14;
-import 'package:citesched_server/src/generated/student.dart' as _i15;
-import 'package:citesched_server/src/generated/room.dart' as _i16;
-import 'package:citesched_server/src/generated/subject.dart' as _i17;
-import 'package:citesched_server/src/generated/timeslot.dart' as _i18;
-import 'package:citesched_server/src/generated/schedule.dart' as _i19;
+import '../auth/google_idp_endpoint.dart' as _i3;
+import '../auth/jwt_refresh_endpoint.dart' as _i4;
+import '../endpoints/admin_endpoint.dart' as _i5;
+import '../endpoints/custom_auth_endpoint.dart' as _i6;
+import '../endpoints/debug_endpoint.dart' as _i7;
+import '../endpoints/faculty_endpoint.dart' as _i8;
+import '../endpoints/nlp_endpoint.dart' as _i9;
+import '../endpoints/setup_endpoint.dart' as _i10;
+import '../endpoints/student_endpoint.dart' as _i11;
+import '../endpoints/student_schedule_endpoint.dart' as _i12;
+import '../endpoints/timetable_endpoint.dart' as _i13;
+import '../greetings/greeting_endpoint.dart' as _i14;
+import 'package:citesched_server/src/generated/faculty.dart' as _i15;
+import 'package:citesched_server/src/generated/student.dart' as _i16;
+import 'package:citesched_server/src/generated/room.dart' as _i17;
+import 'package:citesched_server/src/generated/subject.dart' as _i18;
+import 'package:citesched_server/src/generated/timeslot.dart' as _i19;
+import 'package:citesched_server/src/generated/schedule.dart' as _i20;
 import 'package:citesched_server/src/generated/generate_schedule_request.dart'
-    as _i20;
-import 'package:citesched_server/src/generated/section.dart' as _i21;
+    as _i21;
+import 'package:citesched_server/src/generated/section.dart' as _i22;
 import 'package:citesched_server/src/generated/faculty_availability.dart'
-    as _i22;
-import 'package:citesched_server/src/generated/timetable_filter_request.dart'
     as _i23;
-import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
+import 'package:citesched_server/src/generated/timetable_filter_request.dart'
     as _i24;
-import 'package:serverpod_auth_server/serverpod_auth_server.dart' as _i25;
+import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
+    as _i25;
+import 'package:serverpod_auth_server/serverpod_auth_server.dart' as _i26;
 import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
-    as _i26;
+    as _i27;
 
 class Endpoints extends _i1.EndpointDispatch {
   @override
@@ -53,73 +53,73 @@ class Endpoints extends _i1.EndpointDispatch {
           'emailIdp',
           null,
         ),
-      'googleIdp': _i27.GoogleIdpEndpoint()
+      'googleIdp': _i3.GoogleIdpEndpoint()
         ..initialize(
           server,
           'googleIdp',
           null,
         ),
-      'jwtRefresh': _i3.JwtRefreshEndpoint()
+      'jwtRefresh': _i4.JwtRefreshEndpoint()
         ..initialize(
           server,
           'jwtRefresh',
           null,
         ),
-      'admin': _i4.AdminEndpoint()
+      'admin': _i5.AdminEndpoint()
         ..initialize(
           server,
           'admin',
           null,
         ),
-      'customAuth': _i5.CustomAuthEndpoint()
+      'customAuth': _i6.CustomAuthEndpoint()
         ..initialize(
           server,
           'customAuth',
           null,
         ),
-      'debug': _i6.DebugEndpoint()
+      'debug': _i7.DebugEndpoint()
         ..initialize(
           server,
           'debug',
           null,
         ),
-      'faculty': _i7.FacultyEndpoint()
+      'faculty': _i8.FacultyEndpoint()
         ..initialize(
           server,
           'faculty',
           null,
         ),
-      'nLP': _i8.NLPEndpoint()
+      'nLP': _i9.NLPEndpoint()
         ..initialize(
           server,
           'nLP',
           null,
         ),
-      'setup': _i9.SetupEndpoint()
+      'setup': _i10.SetupEndpoint()
         ..initialize(
           server,
           'setup',
           null,
         ),
-      'student': _i10.StudentEndpoint()
+      'student': _i11.StudentEndpoint()
         ..initialize(
           server,
           'student',
           null,
         ),
-      'studentSchedule': _i11.StudentScheduleEndpoint()
+      'studentSchedule': _i12.StudentScheduleEndpoint()
         ..initialize(
           server,
           'studentSchedule',
           null,
         ),
-      'timetable': _i12.TimetableEndpoint()
+      'timetable': _i13.TimetableEndpoint()
         ..initialize(
           server,
           'timetable',
           null,
         ),
-      'greeting': _i13.GreetingEndpoint()
+      'greeting': _i14.GreetingEndpoint()
         ..initialize(
           server,
           'greeting',
@@ -317,11 +317,12 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['googleIdp'] as _i27.GoogleIdpEndpoint).login(
-                session,
-                idToken: params['idToken'],
-                accessToken: params['accessToken'],
-              ),
+              ) async =>
+                  (endpoints['googleIdp'] as _i3.GoogleIdpEndpoint).login(
+                    session,
+                    idToken: params['idToken'],
+                    accessToken: params['accessToken'],
+                  ),
         ),
       },
     );
@@ -342,7 +343,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['jwtRefresh'] as _i3.JwtRefreshEndpoint)
+              ) async => (endpoints['jwtRefresh'] as _i4.JwtRefreshEndpoint)
                   .refreshAccessToken(
                     session,
                     refreshToken: params['refreshToken'],
@@ -372,7 +373,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint).assignRole(
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint).assignRole(
                 session,
                 userId: params['userId'],
                 role: params['role'],
@@ -385,7 +386,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .getAllUserRoles(session),
         ),
         'createFaculty': _i1.MethodConnector(
@@ -393,7 +394,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'faculty': _i1.ParameterDescription(
               name: 'faculty',
-              type: _i1.getType<_i14.Faculty>(),
+              type: _i1.getType<_i15.Faculty>(),
               nullable: false,
             ),
           },
@@ -402,7 +403,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).createFaculty(
+                  (endpoints['admin'] as _i5.AdminEndpoint).createFaculty(
                     session,
                     params['faculty'],
                   ),
@@ -421,7 +422,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).getAllFaculty(
+                  (endpoints['admin'] as _i5.AdminEndpoint).getAllFaculty(
                     session,
                     isActive: params['isActive'],
                   ),
@@ -431,7 +432,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'faculty': _i1.ParameterDescription(
               name: 'faculty',
-              type: _i1.getType<_i14.Faculty>(),
+              type: _i1.getType<_i15.Faculty>(),
               nullable: false,
             ),
           },
@@ -440,7 +441,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).updateFaculty(
+                  (endpoints['admin'] as _i5.AdminEndpoint).updateFaculty(
                     session,
                     params['faculty'],
                   ),
@@ -459,7 +460,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).deleteFaculty(
+                  (endpoints['admin'] as _i5.AdminEndpoint).deleteFaculty(
                     session,
                     params['id'],
                   ),
@@ -469,7 +470,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'student': _i1.ParameterDescription(
               name: 'student',
-              type: _i1.getType<_i15.Student>(),
+              type: _i1.getType<_i16.Student>(),
               nullable: false,
             ),
           },
@@ -478,7 +479,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).createStudent(
+                  (endpoints['admin'] as _i5.AdminEndpoint).createStudent(
                     session,
                     params['student'],
                   ),
@@ -497,7 +498,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).getAllStudents(
+                  (endpoints['admin'] as _i5.AdminEndpoint).getAllStudents(
                     session,
                     isActive: params['isActive'],
                   ),
@@ -507,7 +508,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'student': _i1.ParameterDescription(
               name: 'student',
-              type: _i1.getType<_i15.Student>(),
+              type: _i1.getType<_i16.Student>(),
               nullable: false,
             ),
           },
@@ -516,7 +517,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).updateStudent(
+                  (endpoints['admin'] as _i5.AdminEndpoint).updateStudent(
                     session,
                     params['student'],
                   ),
@@ -528,7 +529,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .getDistinctStudentSections(session),
         ),
         'deleteStudent': _i1.MethodConnector(
@@ -545,7 +546,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).deleteStudent(
+                  (endpoints['admin'] as _i5.AdminEndpoint).deleteStudent(
                     session,
                     params['id'],
                   ),
@@ -555,7 +556,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'room': _i1.ParameterDescription(
               name: 'room',
-              type: _i1.getType<_i16.Room>(),
+              type: _i1.getType<_i17.Room>(),
               nullable: false,
             ),
           },
@@ -563,7 +564,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint).createRoom(
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint).createRoom(
                 session,
                 params['room'],
               ),
@@ -581,7 +582,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint).getAllRooms(
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint).getAllRooms(
                 session,
                 isActive: params['isActive'],
               ),
@@ -591,7 +592,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'room': _i1.ParameterDescription(
               name: 'room',
-              type: _i1.getType<_i16.Room>(),
+              type: _i1.getType<_i17.Room>(),
               nullable: false,
             ),
           },
@@ -599,7 +600,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint).updateRoom(
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint).updateRoom(
                 session,
                 params['room'],
               ),
@@ -617,7 +618,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint).deleteRoom(
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint).deleteRoom(
                 session,
                 params['id'],
               ),
@@ -627,7 +628,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'subject': _i1.ParameterDescription(
               name: 'subject',
-              type: _i1.getType<_i17.Subject>(),
+              type: _i1.getType<_i18.Subject>(),
               nullable: false,
             ),
           },
@@ -636,7 +637,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).createSubject(
+                  (endpoints['admin'] as _i5.AdminEndpoint).createSubject(
                     session,
                     params['subject'],
                   ),
@@ -655,7 +656,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).getAllSubjects(
+                  (endpoints['admin'] as _i5.AdminEndpoint).getAllSubjects(
                     session,
                     isActive: params['isActive'],
                   ),
@@ -665,7 +666,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'subject': _i1.ParameterDescription(
               name: 'subject',
-              type: _i1.getType<_i17.Subject>(),
+              type: _i1.getType<_i18.Subject>(),
               nullable: false,
             ),
           },
@@ -674,7 +675,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).updateSubject(
+                  (endpoints['admin'] as _i5.AdminEndpoint).updateSubject(
                     session,
                     params['subject'],
                   ),
@@ -693,7 +694,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).deleteSubject(
+                  (endpoints['admin'] as _i5.AdminEndpoint).deleteSubject(
                     session,
                     params['id'],
                   ),
@@ -703,7 +704,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'timeslot': _i1.ParameterDescription(
               name: 'timeslot',
-              type: _i1.getType<_i18.Timeslot>(),
+              type: _i1.getType<_i19.Timeslot>(),
               nullable: false,
             ),
           },
@@ -712,7 +713,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).createTimeslot(
+                  (endpoints['admin'] as _i5.AdminEndpoint).createTimeslot(
                     session,
                     params['timeslot'],
                   ),
@@ -724,7 +725,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .getAllTimeslots(session),
         ),
         'updateTimeslot': _i1.MethodConnector(
@@ -732,7 +733,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'timeslot': _i1.ParameterDescription(
               name: 'timeslot',
-              type: _i1.getType<_i18.Timeslot>(),
+              type: _i1.getType<_i19.Timeslot>(),
               nullable: false,
             ),
           },
@@ -741,7 +742,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).updateTimeslot(
+                  (endpoints['admin'] as _i5.AdminEndpoint).updateTimeslot(
                     session,
                     params['timeslot'],
                   ),
@@ -760,7 +761,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).deleteTimeslot(
+                  (endpoints['admin'] as _i5.AdminEndpoint).deleteTimeslot(
                     session,
                     params['id'],
                   ),
@@ -770,7 +771,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'schedule': _i1.ParameterDescription(
               name: 'schedule',
-              type: _i1.getType<_i19.Schedule>(),
+              type: _i1.getType<_i20.Schedule>(),
               nullable: false,
             ),
           },
@@ -779,7 +780,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).createSchedule(
+                  (endpoints['admin'] as _i5.AdminEndpoint).createSchedule(
                     session,
                     params['schedule'],
                   ),
@@ -802,7 +803,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .testMaxLoadValidation(
                     session,
                     params['facultyId'],
@@ -823,7 +824,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).getAllSchedules(
+                  (endpoints['admin'] as _i5.AdminEndpoint).getAllSchedules(
                     session,
                     isActive: params['isActive'],
                   ),
@@ -847,7 +848,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).getFacultySchedule(
+                  (endpoints['admin'] as _i5.AdminEndpoint).getFacultySchedule(
                     session,
                     params['facultyId'],
                     isActive: params['isActive'],
@@ -872,7 +873,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).getSubjectSchedule(
+                  (endpoints['admin'] as _i5.AdminEndpoint).getSubjectSchedule(
                     session,
                     params['subjectId'],
                     isActive: params['isActive'],
@@ -897,7 +898,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).getRoomSchedule(
+                  (endpoints['admin'] as _i5.AdminEndpoint).getRoomSchedule(
                     session,
                     params['roomId'],
                     isActive: params['isActive'],
@@ -908,7 +909,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'schedule': _i1.ParameterDescription(
               name: 'schedule',
-              type: _i1.getType<_i19.Schedule>(),
+              type: _i1.getType<_i20.Schedule>(),
               nullable: false,
             ),
           },
@@ -917,7 +918,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).updateSchedule(
+                  (endpoints['admin'] as _i5.AdminEndpoint).updateSchedule(
                     session,
                     params['schedule'],
                   ),
@@ -936,7 +937,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).deleteSchedule(
+                  (endpoints['admin'] as _i5.AdminEndpoint).deleteSchedule(
                     session,
                     params['id'],
                   ),
@@ -946,7 +947,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'request': _i1.ParameterDescription(
               name: 'request',
-              type: _i1.getType<_i20.GenerateScheduleRequest>(),
+              type: _i1.getType<_i21.GenerateScheduleRequest>(),
               nullable: false,
             ),
           },
@@ -955,7 +956,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).generateSchedule(
+                  (endpoints['admin'] as _i5.AdminEndpoint).generateSchedule(
                     session,
                     params['request'],
                   ),
@@ -967,7 +968,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .getDashboardStats(session),
         ),
         'validateSchedule': _i1.MethodConnector(
@@ -975,7 +976,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'schedule': _i1.ParameterDescription(
               name: 'schedule',
-              type: _i1.getType<_i19.Schedule>(),
+              type: _i1.getType<_i20.Schedule>(),
               nullable: false,
             ),
           },
@@ -984,7 +985,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).validateSchedule(
+                  (endpoints['admin'] as _i5.AdminEndpoint).validateSchedule(
                     session,
                     params['schedule'],
                   ),
@@ -996,7 +997,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .getAllConflicts(session),
         ),
         'getFacultyLoadReport': _i1.MethodConnector(
@@ -1006,7 +1007,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .getFacultyLoadReport(session),
         ),
         'getRoomUtilizationReport': _i1.MethodConnector(
@@ -1016,7 +1017,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .getRoomUtilizationReport(session),
         ),
         'getConflictSummaryReport': _i1.MethodConnector(
@@ -1026,7 +1027,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .getConflictSummaryReport(session),
         ),
         'getScheduleOverviewReport': _i1.MethodConnector(
@@ -1036,7 +1037,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .getScheduleOverviewReport(session),
         ),
         'createSection': _i1.MethodConnector(
@@ -1044,7 +1045,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'section': _i1.ParameterDescription(
               name: 'section',
-              type: _i1.getType<_i21.Section>(),
+              type: _i1.getType<_i22.Section>(),
               nullable: false,
             ),
           },
@@ -1053,7 +1054,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).createSection(
+                  (endpoints['admin'] as _i5.AdminEndpoint).createSection(
                     session,
                     params['section'],
                   ),
@@ -1065,7 +1066,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .getAllSections(session),
         ),
         'updateSection': _i1.MethodConnector(
@@ -1073,7 +1074,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'section': _i1.ParameterDescription(
               name: 'section',
-              type: _i1.getType<_i21.Section>(),
+              type: _i1.getType<_i22.Section>(),
               nullable: false,
             ),
           },
@@ -1082,7 +1083,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).updateSection(
+                  (endpoints['admin'] as _i5.AdminEndpoint).updateSection(
                     session,
                     params['section'],
                   ),
@@ -1101,7 +1102,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['admin'] as _i4.AdminEndpoint).deleteSection(
+                  (endpoints['admin'] as _i5.AdminEndpoint).deleteSection(
                     session,
                     params['id'],
                   ),
@@ -1116,7 +1117,7 @@ class Endpoints extends _i1.EndpointDispatch {
             ),
             'availabilities': _i1.ParameterDescription(
               name: 'availabilities',
-              type: _i1.getType<List<_i22.FacultyAvailability>>(),
+              type: _i1.getType<List<_i23.FacultyAvailability>>(),
               nullable: false,
             ),
           },
@@ -1124,7 +1125,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .setFacultyAvailability(
                     session,
                     params['facultyId'],
@@ -1144,7 +1145,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .getFacultyAvailability(
                     session,
                     params['facultyId'],
@@ -1157,7 +1158,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .getAllFacultyAvailabilities(session),
         ),
         'deleteFacultyAvailability': _i1.MethodConnector(
@@ -1173,7 +1174,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .deleteFacultyAvailability(
                     session,
                     params['id'],
@@ -1186,7 +1187,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .precheckSchedule(session),
         ),
         'regenerateSchedule': _i1.MethodConnector(
@@ -1196,7 +1197,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['admin'] as _i4.AdminEndpoint)
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
                   .regenerateSchedule(session),
         ),
       },
@@ -1228,7 +1229,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['customAuth'] as _i5.CustomAuthEndpoint)
+              ) async => (endpoints['customAuth'] as _i6.CustomAuthEndpoint)
                   .loginWithId(
                     session,
                     id: params['id'],
@@ -1249,7 +1250,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['debug'] as _i6.DebugEndpoint)
+              ) async => (endpoints['debug'] as _i7.DebugEndpoint)
                   .getSessionInfo(session),
         ),
       },
@@ -1265,7 +1266,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['faculty'] as _i7.FacultyEndpoint)
+              ) async => (endpoints['faculty'] as _i8.FacultyEndpoint)
                   .getMySchedule(session),
         ),
         'getMyProfile': _i1.MethodConnector(
@@ -1275,7 +1276,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['faculty'] as _i7.FacultyEndpoint)
+              ) async => (endpoints['faculty'] as _i8.FacultyEndpoint)
                   .getMyProfile(session),
         ),
       },
@@ -1297,7 +1298,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['nLP'] as _i8.NLPEndpoint).query(
+              ) async => (endpoints['nLP'] as _i9.NLPEndpoint).query(
                 session,
                 params['text'],
               ),
@@ -1352,7 +1353,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['setup'] as _i9.SetupEndpoint).createAccount(
+                  (endpoints['setup'] as _i10.SetupEndpoint).createAccount(
                     session,
                     userName: params['userName'],
                     email: params['email'],
@@ -1377,7 +1378,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['setup'] as _i9.SetupEndpoint).getUserInfoByEmail(
+                  (endpoints['setup'] as _i10.SetupEndpoint).getUserInfoByEmail(
                     session,
                     email: params['email'],
                   ),
@@ -1395,7 +1396,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['student'] as _i10.StudentEndpoint)
+              ) async => (endpoints['student'] as _i11.StudentEndpoint)
                   .getSchedules(session),
         ),
         'getScheduleById': _i1.MethodConnector(
@@ -1411,7 +1412,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['student'] as _i10.StudentEndpoint)
+              ) async => (endpoints['student'] as _i11.StudentEndpoint)
                   .getScheduleById(
                     session,
                     params['id'],
@@ -1424,7 +1425,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['student'] as _i10.StudentEndpoint)
+              ) async => (endpoints['student'] as _i11.StudentEndpoint)
                   .getMyProfile(session),
         ),
         'updateMyProfile': _i1.MethodConnector(
@@ -1432,7 +1433,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'updatedProfile': _i1.ParameterDescription(
               name: 'updatedProfile',
-              type: _i1.getType<_i15.Student>(),
+              type: _i1.getType<_i16.Student>(),
               nullable: false,
             ),
           },
@@ -1440,7 +1441,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['student'] as _i10.StudentEndpoint)
+              ) async => (endpoints['student'] as _i11.StudentEndpoint)
                   .updateMyProfile(
                     session,
                     params['updatedProfile'],
@@ -1453,7 +1454,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['student'] as _i10.StudentEndpoint)
+              ) async => (endpoints['student'] as _i11.StudentEndpoint)
                   .getFaculty(session),
         ),
         'getRooms': _i1.MethodConnector(
@@ -1463,7 +1464,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['student'] as _i10.StudentEndpoint)
+              ) async => (endpoints['student'] as _i11.StudentEndpoint)
                   .getRooms(session),
         ),
         'getSubjects': _i1.MethodConnector(
@@ -1473,7 +1474,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['student'] as _i10.StudentEndpoint)
+              ) async => (endpoints['student'] as _i11.StudentEndpoint)
                   .getSubjects(session),
         ),
         'getTimeslots': _i1.MethodConnector(
@@ -1483,7 +1484,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['student'] as _i10.StudentEndpoint)
+              ) async => (endpoints['student'] as _i11.StudentEndpoint)
                   .getTimeslots(session),
         ),
       },
@@ -1500,7 +1501,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['studentSchedule'] as _i11.StudentScheduleEndpoint)
+                  (endpoints['studentSchedule'] as _i12.StudentScheduleEndpoint)
                       .fetchMySchedule(session),
         ),
       },
@@ -1514,7 +1515,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'filter': _i1.ParameterDescription(
               name: 'filter',
-              type: _i1.getType<_i23.TimetableFilterRequest>(),
+              type: _i1.getType<_i24.TimetableFilterRequest>(),
               nullable: false,
             ),
           },
@@ -1522,7 +1523,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['timetable'] as _i12.TimetableEndpoint)
+              ) async => (endpoints['timetable'] as _i13.TimetableEndpoint)
                   .getSchedules(
                     session,
                     params['filter'],
@@ -1533,7 +1534,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'filter': _i1.ParameterDescription(
               name: 'filter',
-              type: _i1.getType<_i23.TimetableFilterRequest>(),
+              type: _i1.getType<_i24.TimetableFilterRequest>(),
               nullable: false,
             ),
           },
@@ -1542,7 +1543,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['timetable'] as _i12.TimetableEndpoint).getSummary(
+                  (endpoints['timetable'] as _i13.TimetableEndpoint).getSummary(
                     session,
                     params['filter'],
                   ),
@@ -1554,7 +1555,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['timetable'] as _i12.TimetableEndpoint)
+              ) async => (endpoints['timetable'] as _i13.TimetableEndpoint)
                   .getPersonalSchedule(session),
         ),
       },
@@ -1576,17 +1577,17 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['greeting'] as _i13.GreetingEndpoint).hello(
+              ) async => (endpoints['greeting'] as _i14.GreetingEndpoint).hello(
                 session,
                 params['name'],
               ),
         ),
       },
     );
-    modules['serverpod_auth_idp'] = _i24.Endpoints()
+    modules['serverpod_auth_idp'] = _i25.Endpoints()
       ..initializeEndpoints(server);
-    modules['serverpod_auth'] = _i25.Endpoints()..initializeEndpoints(server);
-    modules['serverpod_auth_core'] = _i26.Endpoints()
+    modules['serverpod_auth'] = _i26.Endpoints()..initializeEndpoints(server);
+    modules['serverpod_auth_core'] = _i27.Endpoints()
       ..initializeEndpoints(server);
   }
 }

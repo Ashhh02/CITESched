@@ -300,13 +300,6 @@
         },
         {
           "__className__": "serverpod.ColumnDefinition",
-          "name": "building",
-          "columnType": 0,
-          "isNullable": false,
-          "dartType": "String"
-        },
-        {
-          "__className__": "serverpod.ColumnDefinition",
           "name": "isActive",
           "columnType": 1,
           "isNullable": false,
@@ -4499,7 +4492,7 @@
     {
       "__className__": "serverpod.DatabaseMigrationVersion",
       "module": "citesched",
-      "version": "20260226075755194"
+      "version": "20260304100409702"
     },
     {
       "__className__": "serverpod.DatabaseMigrationVersion",

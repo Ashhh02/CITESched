@@ -415,24 +415,24 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 children: [
                   Icon(
                     Icons.stars_rounded,
-                    size: 24,
-                    color: Colors.black.withOpacity(0.15),
+                    size: 22,
+                    color: Colors.black.withOpacity(0.12),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     isLunchSlot
                         ? 'LUNCH TIME'
-                        : (_buildAssignedSlotLabel(avail, start, end) ??
-                            'PREFERRED SLOT'),
+                        : _buildAssignedSlotLabel(avail, start, end),
                     textAlign: TextAlign.center,
-                    maxLines: 3,
+                    maxLines: 5,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
                       color:
-                          isLunchSlot ? Colors.black54 : Colors.black.withOpacity(0.2),
-                      letterSpacing: 0.6,
+                          isLunchSlot ? Colors.black54 : Colors.black.withOpacity(0.65),
+                      letterSpacing: 0.2,
+                      height: 1.2,
                     ),
                   ),
                 ],
@@ -1108,7 +1108,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
     return '$hour:$minute$suffix';
   }
 
-  String? _buildAssignedSlotLabel(
+  String _buildAssignedSlotLabel(
     FacultyAvailability avail,
     TimeOfDay prefStart,
     TimeOfDay prefEnd,
@@ -1126,27 +1126,40 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
       final tsStartMinutes = tsStart.hour * 60 + tsStart.minute;
       final tsEndMinutes = tsEnd.hour * 60 + tsEnd.minute;
 
-      if (tsStartMinutes < prefStartMinutes ||
-          tsEndMinutes > prefEndMinutes) {
+      final overlaps =
+          tsStartMinutes < prefEndMinutes && tsEndMinutes > prefStartMinutes;
+      if (!overlaps) {
         continue;
       }
 
       final timeLabel =
           '${_formatTimeOfDay(tsStart)} - ${_formatTimeOfDay(tsEnd)}';
+      final dayLabel = _getDayName(avail.dayOfWeek);
       final facultyName =
           info.schedule.faculty?.name ?? selectedFaculty?.name ?? '';
       final subjectCode = info.schedule.subject?.code ?? '';
       final subjectName = info.schedule.subject?.name ?? '';
-
-      return [
-        timeLabel,
-        facultyName,
+      final subjectLine = [
         subjectCode,
         subjectName,
-      ].where((s) => s.trim().isNotEmpty).join(' ');
+      ].where((s) => s.trim().isNotEmpty).join(' – ');
+
+      return [
+        '$dayLabel $timeLabel',
+        facultyName,
+        subjectLine,
+      ].where((s) => s.trim().isNotEmpty).join('\n');
     }
 
-    return null;
+    final dayLabel = _getDayName(avail.dayOfWeek);
+    final timeLabel =
+        '${_formatTimeOfDay(prefStart)} - ${_formatTimeOfDay(prefEnd)}';
+    final facultyName = selectedFaculty?.name ?? 'Instructor';
+    return [
+      '$dayLabel $timeLabel',
+      facultyName,
+      'No subject assigned',
+    ].join('\n');
   }
 
   String _formatHour(int hour) {

@@ -1,4 +1,4 @@
-﻿import 'package:citesched_client/citesched_client.dart';
+import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/core/utils/date_utils.dart';
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/main.dart';
@@ -24,6 +24,263 @@ String _sectionDisplayLabel(Section section) {
   final program = _programDisplayLabel(section.program);
   if (code.toUpperCase().startsWith('$program -')) return code;
   return '$program - $code';
+}
+
+String _getDayAbbr(DayOfWeek day) {
+  switch (day) {
+    case DayOfWeek.mon:
+      return 'Mon';
+    case DayOfWeek.tue:
+      return 'Tue';
+    case DayOfWeek.wed:
+      return 'Wed';
+    case DayOfWeek.thu:
+      return 'Thu';
+    case DayOfWeek.fri:
+      return 'Fri';
+    case DayOfWeek.sat:
+      return 'Sat';
+    case DayOfWeek.sun:
+      return 'Sun';
+  }
+}
+
+String _facultyNameById(List<Faculty> list, int? id) {
+  if (id == null) return 'Unknown faculty';
+  for (final f in list) {
+    if (f.id == id) return f.name;
+  }
+  return 'Faculty #$id';
+}
+
+String _subjectNameById(List<Subject> list, int? id) {
+  if (id == null) return 'Unknown subject';
+  for (final s in list) {
+    if (s.id == id) return s.name;
+  }
+  return 'Subject #$id';
+}
+
+String _roomNameById(List<Room> list, int? id) {
+  if (id == null) return 'Unknown room';
+  for (final r in list) {
+    if (r.id == id) return r.name;
+  }
+  return 'Room #$id';
+}
+
+String _sectionLabelById(
+  List<Section> list,
+  int? id,
+  String? fallbackCode,
+) {
+  if (id != null) {
+    for (final s in list) {
+      if (s.id == id) return _sectionDisplayLabel(s);
+    }
+  }
+  if (fallbackCode != null && fallbackCode.trim().isNotEmpty) {
+    return fallbackCode.trim();
+  }
+  return 'Unknown section';
+}
+
+String _timeslotLabelById(List<Timeslot> list, int? id) {
+  if (id == null) return 'TBA';
+  for (final t in list) {
+    if (t.id == id) {
+      return CITESchedDateUtils.formatTimeslot(
+        t.day,
+        t.startTime,
+        t.endTime,
+      );
+    }
+  }
+  return 'Timeslot #$id';
+}
+
+int _timeToMinutes(String time) {
+  var value = time.trim();
+  if (value.isEmpty) return 0;
+
+  final upper = value.toUpperCase();
+  final hasAm = upper.contains('AM');
+  final hasPm = upper.contains('PM');
+
+  if (hasAm || hasPm) {
+    final pieces = upper.split(' ');
+    final clock = pieces.first;
+    final clockParts = clock.split(':');
+    if (clockParts.length < 2) return 0;
+    var hour = int.tryParse(clockParts[0]) ?? 0;
+    final minute = int.tryParse(clockParts[1].replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+
+    if (hasPm && hour < 12) hour += 12;
+    if (hasAm && hour == 12) hour = 0;
+    return hour * 60 + minute;
+  }
+
+  final parts = value.split(':');
+  if (parts.length < 2) return 0;
+  final hour = int.tryParse(parts[0]) ?? 0;
+  final minute = int.tryParse(parts[1].replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+  return hour * 60 + minute;
+}
+
+bool _timeslotWithinAvailability(Timeslot slot, FacultyAvailability avail) {
+  if (slot.day != avail.dayOfWeek) return false;
+  final slotStart = _timeToMinutes(slot.startTime);
+  final slotEnd = _timeToMinutes(slot.endTime);
+  final availStart = _timeToMinutes(avail.startTime);
+  final availEnd = _timeToMinutes(avail.endTime);
+  if (slotEnd <= slotStart || availEnd <= availStart) return false;
+  return slotStart < availEnd && slotEnd > availStart;
+}
+
+Future<void> _createTimeslotsFromAvailability({
+  required WidgetRef ref,
+  required BuildContext context,
+  required List<FacultyAvailability> availabilityList,
+}) async {
+  if (availabilityList.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No availability to generate timeslots from.'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  try {
+    final existing = await client.admin.getAllTimeslots();
+    final existingKeys = existing
+        .map((t) => '${t.day.name}|${t.startTime}|${t.endTime}')
+        .toSet();
+
+    var createdCount = 0;
+    for (final avail in availabilityList) {
+      final key =
+          '${avail.dayOfWeek.name}|${avail.startTime}|${avail.endTime}';
+      if (existingKeys.contains(key)) continue;
+      final label =
+          '${_getDayAbbr(avail.dayOfWeek)} ${avail.startTime}-${avail.endTime}';
+      await client.admin.createTimeslot(
+        Timeslot(
+          day: avail.dayOfWeek,
+          startTime: avail.startTime,
+          endTime: avail.endTime,
+          label: label,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+      createdCount += 1;
+    }
+
+    ref.invalidate(timeslotsProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            createdCount > 0
+                ? 'Created $createdCount timeslot(s).'
+                : 'All matching timeslots already exist.',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to create timeslots: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+
+bool _matchesSection(
+  Schedule schedule,
+  int? sectionId,
+  String? sectionCodeFallback,
+) {
+  if (sectionId != null && schedule.sectionId != null) {
+    return schedule.sectionId == sectionId;
+  }
+  if (sectionCodeFallback != null && sectionCodeFallback.trim().isNotEmpty) {
+    return schedule.section.trim() == sectionCodeFallback.trim();
+  }
+  return false;
+}
+
+String? _detectAssignmentConflict({
+  required List<Schedule> schedules,
+  required int? currentScheduleId,
+  required int facultyId,
+  required int subjectId,
+  required int? sectionId,
+  required String? sectionCodeFallback,
+  required int? roomId,
+  required int? timeslotId,
+  required bool isAutoAssign,
+  required List<Faculty> facultyList,
+  required List<Subject> subjectList,
+  required List<Room> roomList,
+  required List<Timeslot> timeslotList,
+  required List<Section> sectionList,
+}) {
+  final facultyName = _facultyNameById(facultyList, facultyId);
+  final subjectName = _subjectNameById(subjectList, subjectId);
+  final sectionLabel =
+      _sectionLabelById(sectionList, sectionId, sectionCodeFallback);
+  final timeslotLabel = _timeslotLabelById(timeslotList, timeslotId);
+  final roomLabel = _roomNameById(roomList, roomId);
+
+  for (final schedule in schedules) {
+    if (currentScheduleId != null && schedule.id == currentScheduleId) {
+      continue;
+    }
+
+    final sameSection = _matchesSection(
+      schedule,
+      sectionId,
+      sectionCodeFallback,
+    );
+
+    if (sameSection &&
+        schedule.subjectId == subjectId &&
+        schedule.facultyId != facultyId) {
+      final otherFaculty = _facultyNameById(facultyList, schedule.facultyId);
+      return 'Subject $subjectName is already assigned to $otherFaculty for $sectionLabel.';
+    }
+
+    if (sameSection &&
+        schedule.subjectId == subjectId &&
+        schedule.facultyId == facultyId) {
+      return 'This assignment already exists for $facultyName in $sectionLabel.';
+    }
+
+    if (!isAutoAssign &&
+        timeslotId != null &&
+        schedule.facultyId == facultyId &&
+        schedule.timeslotId == timeslotId) {
+      return '$facultyName already has a class at $timeslotLabel.';
+    }
+
+    if (!isAutoAssign &&
+        roomId != null &&
+        timeslotId != null &&
+        schedule.roomId == roomId &&
+        schedule.timeslotId == timeslotId) {
+      return 'Room $roomLabel is already booked at $timeslotLabel.';
+    }
+  }
+
+  return null;
 }
 
 class FacultyLoadingScreen extends ConsumerStatefulWidget {
@@ -1662,7 +1919,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
         final conflicts = allConflicts.maybeWhen(
           data: (list) => list
               .map((c) => c.details != null && c.details!.isNotEmpty
-                  ? '${c.message} — ${c.details}'
+                  ? '${c.message} â€” ${c.details}'
                   : c.message)
               .toList(),
           orElse: () => <String>[],
@@ -1893,6 +2150,56 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                 updatedAt: DateTime.now(),
               ),
       );
+
+      final schedules = ref.read(schedulesProvider).maybeWhen(
+            data: (s) => s,
+            orElse: () => <Schedule>[],
+          );
+      final facultyList = ref.read(facultyListProvider).maybeWhen(
+            data: (s) => s,
+            orElse: () => <Faculty>[],
+          );
+      final subjectList = ref.read(subjectsProvider).maybeWhen(
+            data: (s) => s,
+            orElse: () => <Subject>[],
+          );
+      final roomList = ref.read(roomsProvider).maybeWhen(
+            data: (s) => s,
+            orElse: () => <Room>[],
+          );
+      final timeslotList = ref.read(timeslotsProvider).maybeWhen(
+            data: (s) => s,
+            orElse: () => <Timeslot>[],
+          );
+
+      final conflictMessage = _detectAssignmentConflict(
+        schedules: schedules,
+        currentScheduleId: null,
+        facultyId: _selectedFacultyId!,
+        subjectId: _selectedSubjectId!,
+        sectionId: _selectedSectionId,
+        sectionCodeFallback: section.sectionCode,
+        roomId: _selectedRoomId,
+        timeslotId: _selectedTimeslotId,
+        isAutoAssign: _isAutoAssign,
+        facultyList: facultyList,
+        subjectList: subjectList,
+        roomList: roomList,
+        timeslotList: timeslotList,
+        sectionList: sections,
+      );
+
+      if (conflictMessage != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(conflictMessage),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
 
       final schedule = Schedule(
         facultyId: _selectedFacultyId!,
@@ -2199,23 +2506,93 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                           loading: () => const CircularProgressIndicator(),
                           error: (error, stack) =>
                               const Text('Error loading timeslots'),
-                          data: (timeslotList) => _buildDropdown<int>(
-                            label: 'Timeslot',
-                            value: _selectedTimeslotId,
-                            items: timeslotList.map((t) => t.id!).toList(),
-                            itemLabel: (id) {
-                              final t = timeslotList.firstWhere(
-                                (t) => t.id == id,
+                          data: (timeslotList) {
+                            if (_selectedFacultyId == null) {
+                              return Text(
+                                'Select a faculty member to load available timeslots',
+                                style: GoogleFonts.poppins(fontSize: 12),
                               );
-                              return CITESchedDateUtils.formatTimeslot(
-                                t.day,
-                                t.startTime,
-                                t.endTime,
-                              );
-                            },
-                            onChanged: (value) =>
-                                setState(() => _selectedTimeslotId = value),
-                          ),
+                            }
+
+                            final availabilityAsync = ref.watch(
+                              facultyAvailabilityProvider(_selectedFacultyId!),
+                            );
+
+                            return availabilityAsync.when(
+                              loading: () => const CircularProgressIndicator(),
+                              error: (error, stack) => Text(
+                                'Error loading availability',
+                                style: GoogleFonts.poppins(fontSize: 12),
+                              ),
+                              data: (availabilityList) {
+                                if (timeslotList.isEmpty) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'No timeslots found. Generate from faculty availability.',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      OutlinedButton.icon(
+                                        onPressed: () =>
+                                            _createTimeslotsFromAvailability(
+                                          ref: ref,
+                                          context: context,
+                                          availabilityList: availabilityList,
+                                        ),
+                                        icon: const Icon(Icons.auto_fix_high),
+                                        label: Text(
+                                          'Generate Timeslots',
+                                          style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }
+                                final filtered = timeslotList
+                                    .where(
+                                      (t) => availabilityList.any(
+                                        (a) =>
+                                            _timeslotWithinAvailability(t, a),
+                                      ),
+                                    )
+                                    .toList();
+
+                                if (availabilityList.isEmpty ||
+                                    filtered.isEmpty) {
+                                  return Text(
+                                    'No preferred timeslots for this faculty',
+                                    style: GoogleFonts.poppins(fontSize: 12),
+                                  );
+                                }
+
+                                return _buildDropdown<int>(
+                                  label: 'Timeslot',
+                                  value: _selectedTimeslotId,
+                                  items: filtered.map((t) => t.id!).toList(),
+                                  itemLabel: (id) {
+                                    final t = filtered.firstWhere(
+                                      (t) => t.id == id,
+                                    );
+                                    return CITESchedDateUtils.formatTimeslot(
+                                      t.day,
+                                      t.startTime,
+                                      t.endTime,
+                                    );
+                                  },
+                                  onChanged: (value) => setState(
+                                    () => _selectedTimeslotId = value,
+                                  ),
+                                );
+                              },
+                            );
+                          },
                         ),
                       ],
                     ],
@@ -2438,6 +2815,56 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                 ),
         ),
       );
+
+      final schedules = ref.read(schedulesProvider).maybeWhen(
+            data: (s) => s,
+            orElse: () => <Schedule>[],
+          );
+      final facultyList = ref.read(facultyListProvider).maybeWhen(
+            data: (s) => s,
+            orElse: () => <Faculty>[],
+          );
+      final subjectList = ref.read(subjectsProvider).maybeWhen(
+            data: (s) => s,
+            orElse: () => <Subject>[],
+          );
+      final roomList = ref.read(roomsProvider).maybeWhen(
+            data: (s) => s,
+            orElse: () => <Room>[],
+          );
+      final timeslotList = ref.read(timeslotsProvider).maybeWhen(
+            data: (s) => s,
+            orElse: () => <Timeslot>[],
+          );
+
+      final conflictMessage = _detectAssignmentConflict(
+        schedules: schedules,
+        currentScheduleId: widget.schedule.id,
+        facultyId: _selectedFacultyId,
+        subjectId: _selectedSubjectId,
+        sectionId: _selectedSectionId ?? widget.schedule.sectionId,
+        sectionCodeFallback: section.sectionCode,
+        roomId: _selectedRoomId,
+        timeslotId: _selectedTimeslotId,
+        isAutoAssign: _isAutoAssign,
+        facultyList: facultyList,
+        subjectList: subjectList,
+        roomList: roomList,
+        timeslotList: timeslotList,
+        sectionList: sections,
+      );
+
+      if (conflictMessage != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(conflictMessage),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
 
       final updatedSchedule = Schedule(
         id: widget.schedule.id,
@@ -2749,23 +3176,93 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                           loading: () => const CircularProgressIndicator(),
                           error: (error, stack) =>
                               const Text('Error loading timeslots'),
-                          data: (timeslotList) => _buildDropdown<int>(
-                            label: 'Timeslot',
-                            value: _selectedTimeslotId,
-                            items: timeslotList.map((t) => t.id!).toList(),
-                            itemLabel: (id) {
-                              final t = timeslotList.firstWhere(
-                                (t) => t.id == id,
+                          data: (timeslotList) {
+                            if (_selectedFacultyId == null) {
+                              return Text(
+                                'Select a faculty member to load available timeslots',
+                                style: GoogleFonts.poppins(fontSize: 12),
                               );
-                              return CITESchedDateUtils.formatTimeslot(
-                                t.day,
-                                t.startTime,
-                                t.endTime,
-                              );
-                            },
-                            onChanged: (value) =>
-                                setState(() => _selectedTimeslotId = value),
-                          ),
+                            }
+
+                            final availabilityAsync = ref.watch(
+                              facultyAvailabilityProvider(_selectedFacultyId!),
+                            );
+
+                            return availabilityAsync.when(
+                              loading: () => const CircularProgressIndicator(),
+                              error: (error, stack) => Text(
+                                'Error loading availability',
+                                style: GoogleFonts.poppins(fontSize: 12),
+                              ),
+                              data: (availabilityList) {
+                                if (timeslotList.isEmpty) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'No timeslots found. Generate from faculty availability.',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      OutlinedButton.icon(
+                                        onPressed: () =>
+                                            _createTimeslotsFromAvailability(
+                                          ref: ref,
+                                          context: context,
+                                          availabilityList: availabilityList,
+                                        ),
+                                        icon: const Icon(Icons.auto_fix_high),
+                                        label: Text(
+                                          'Generate Timeslots',
+                                          style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }
+                                final filtered = timeslotList
+                                    .where(
+                                      (t) => availabilityList.any(
+                                        (a) =>
+                                            _timeslotWithinAvailability(t, a),
+                                      ),
+                                    )
+                                    .toList();
+
+                                if (availabilityList.isEmpty ||
+                                    filtered.isEmpty) {
+                                  return Text(
+                                    'No preferred timeslots for this faculty',
+                                    style: GoogleFonts.poppins(fontSize: 12),
+                                  );
+                                }
+
+                                return _buildDropdown<int>(
+                                  label: 'Timeslot',
+                                  value: _selectedTimeslotId,
+                                  items: filtered.map((t) => t.id!).toList(),
+                                  itemLabel: (id) {
+                                    final t = filtered.firstWhere(
+                                      (t) => t.id == id,
+                                    );
+                                    return CITESchedDateUtils.formatTimeslot(
+                                      t.day,
+                                      t.startTime,
+                                      t.endTime,
+                                    );
+                                  },
+                                  onChanged: (value) => setState(
+                                    () => _selectedTimeslotId = value,
+                                  ),
+                                );
+                              },
+                            );
+                          },
                         ),
                       ],
                     ],

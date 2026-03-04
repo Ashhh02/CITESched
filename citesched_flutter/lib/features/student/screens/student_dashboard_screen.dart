@@ -5,6 +5,7 @@ import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/core/utils/schedule_export_service.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/features/auth/widgets/logout_confirmation_dialog.dart';
+import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -43,6 +44,12 @@ class StudentDashboardScreen extends ConsumerWidget {
         backgroundColor: maroonColor,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: ThemeModeToggle(compact: true),
+          ),
+        ],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {

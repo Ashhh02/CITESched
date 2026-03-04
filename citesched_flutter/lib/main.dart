@@ -3,6 +3,7 @@ import 'package:citesched_flutter/core/theme/app_theme.dart';
 import 'package:citesched_flutter/features/auth/screens/root_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:serverpod_flutter/serverpod_flutter.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
 
@@ -36,19 +37,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'CITESched',
-      theme: AppTheme.darkTheme,
-      home: const RootScreen(),
-      debugShowCheckedModeBanner: false,
-      builder: (context, child) {
-        final media = MediaQuery.of(context);
-        final scale = _adaptiveTextScale(media.size.width);
-        return MediaQuery(
-          data: media.copyWith(
-            textScaler: TextScaler.linear(scale),
-          ),
-          child: child ?? const SizedBox.shrink(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeModeNotifier,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'CITESched',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: mode,
+          home: const RootScreen(),
+          debugShowCheckedModeBanner: false,
+          builder: (context, child) {
+            final media = MediaQuery.of(context);
+            final scale = _adaptiveTextScale(media.size.width);
+            return MediaQuery(
+              data: media.copyWith(
+                textScaler: TextScaler.linear(scale),
+              ),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
         );
       },
     );

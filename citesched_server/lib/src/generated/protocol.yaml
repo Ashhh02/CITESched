@@ -6,6 +6,8 @@ emailIdp:
   - startPasswordReset:
   - verifyPasswordResetCode:
   - finishPasswordReset:
+googleIdp:
+  - login:
 jwtRefresh:
   - refreshAccessToken:
 admin:
@@ -69,6 +71,7 @@ nLP:
   - query:
 setup:
   - createAccount:
+  - getUserInfoByEmail:
 student:
   - getSchedules:
   - getScheduleById:

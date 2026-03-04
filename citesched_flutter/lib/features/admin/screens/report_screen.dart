@@ -61,30 +61,27 @@ class _ReportScreenState extends State<ReportScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveHelper.isMobile(context);
-    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
 
     return Scaffold(
-      backgroundColor: bgColor,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: ResponsiveHelper.maxContentWidth(context),
-          ),
+      backgroundColor: Colors.white,
+      body: Padding(
+          padding: EdgeInsets.all(isMobile ? 16 : 32),
           child: Column(
         children: [
           // Header (Standardized Maroon Gradient Banner)
           Container(
             width: double.infinity,
-            padding: EdgeInsets.all(isMobile ? 16 : 32),
+            padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [maroonColor, const Color(0xFF8e005b)],
               ),
+              borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
                   color: maroonColor.withValues(alpha: 0.3),
@@ -178,20 +175,42 @@ class _ReportScreenState extends State<ReportScreen>
               ],
             ),
           ),
+          const SizedBox(height: 32),
 
           // Tab Selector
           Container(
-            color: cardBg,
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: TabBar(
               controller: _tabController,
               isScrollable: isMobile,
               labelColor: maroonColor,
               unselectedLabelColor: Colors.grey,
+              indicator: BoxDecoration(
+                color: maroonColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: maroonColor.withValues(alpha: 0.2),
+                ),
+              ),
               indicatorColor: maroonColor,
-              indicatorWeight: 4,
+              indicatorSize: TabBarIndicatorSize.tab,
               labelStyle: GoogleFonts.poppins(
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
+                fontSize: 13,
+              ),
+              unselectedLabelStyle: GoogleFonts.poppins(
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
               ),
               labelPadding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16),
               tabs: const [
@@ -202,6 +221,7 @@ class _ReportScreenState extends State<ReportScreen>
               ],
             ),
           ),
+          const SizedBox(height: 24),
 
           // Content
           Expanded(
@@ -220,7 +240,6 @@ class _ReportScreenState extends State<ReportScreen>
           ),
         ],
       ),
-        ),
       ),
     );
   }
@@ -240,6 +259,16 @@ class _FacultyLoadTab extends ConsumerWidget {
       data: (data) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+        const maroonColor = Color(0xFF720045);
+        final headerBg = isDark
+            ? maroonColor.withOpacity(0.22)
+            : maroonColor.withOpacity(0.08);
+        final rowBgA = isDark ? const Color(0xFF0F172A) : Colors.white;
+        final rowBgB =
+            isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB);
+        final dividerColor = isDark
+            ? Colors.white.withOpacity(0.08)
+            : Colors.black.withOpacity(0.06);
 
         return Card(
           color: cardBg,
@@ -352,15 +381,44 @@ class _FacultyLoadTab extends ConsumerWidget {
                           constraints: BoxConstraints(
                             minWidth: constraints.maxWidth,
                           ),
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.vertical,
-                            child: DataTable(
-                              columnSpacing: 32,
-                              headingTextStyle: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey[600],
-                              ),
-                              rows: data.map((item) {
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.vertical,
+                              child: DataTable(
+                                columnSpacing: 28,
+                                horizontalMargin: 16,
+                                headingRowHeight: 44,
+                                dataRowMinHeight: 52,
+                                dataRowMaxHeight: 60,
+                                showBottomBorder: true,
+                                dividerThickness: 0.6,
+                                headingRowColor:
+                                    MaterialStateProperty.all(headerBg),
+                                headingTextStyle: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? Colors.white.withOpacity(0.85)
+                                      : Colors.grey[700],
+                                  letterSpacing: 0.8,
+                                ),
+                                dataTextStyle: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark
+                                      ? Colors.white.withOpacity(0.9)
+                                      : Colors.black87,
+                                ),
+                                border: TableBorder(
+                                  horizontalInside:
+                                      BorderSide(color: dividerColor),
+                                  bottom: BorderSide(color: dividerColor),
+                                  top: BorderSide(color: dividerColor),
+                                ),
+                                rows: data.asMap().entries.map((entry) {
+                                  final index = entry.key;
+                                  final item = entry.value;
                                 Color statusColor;
                                 if (item.loadStatus == 'Overloaded')
                                   statusColor = Colors.red;
@@ -370,6 +428,9 @@ class _FacultyLoadTab extends ConsumerWidget {
                                   statusColor = Colors.green;
 
                                 return DataRow(
+                                  color: MaterialStateProperty.all(
+                                    index.isEven ? rowBgA : rowBgB,
+                                  ),
                                   cells: [
                                     DataCell(
                                       Text(
@@ -393,7 +454,7 @@ class _FacultyLoadTab extends ConsumerWidget {
                                         style: GoogleFonts.poppins(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 13,
-                                          color: const Color(0xFF720045),
+                                          color: maroonColor,
                                         ),
                                       ),
                                     ),
@@ -462,6 +523,7 @@ class _FacultyLoadTab extends ConsumerWidget {
                                               },
                                             ),
                                           ),
+                                          const SizedBox(width: 4),
                                           Tooltip(
                                             message: 'Export as Word (.docx)',
                                             child: IconButton(
@@ -502,15 +564,25 @@ class _FacultyLoadTab extends ConsumerWidget {
                                   ],
                                 );
                               }).toList(),
-                              columns: const [
-                                DataColumn(label: Text('FACULTY')),
-                                DataColumn(label: Text('PROGRAM')),
-                                DataColumn(label: Text('TOTAL UNITS')),
-                                DataColumn(label: Text('TOTAL HOURS')),
-                                DataColumn(label: Text('SUBJECTS')),
-                                DataColumn(label: Text('STATUS')),
-                                DataColumn(label: Text('EXPORT')),
-                              ],
+                                columns: const [
+                                  DataColumn(label: Text('FACULTY')),
+                                  DataColumn(label: Text('PROGRAM')),
+                                  DataColumn(
+                                    label: Text('TOTAL UNITS'),
+                                    numeric: true,
+                                  ),
+                                  DataColumn(
+                                    label: Text('TOTAL HOURS'),
+                                    numeric: true,
+                                  ),
+                                  DataColumn(
+                                    label: Text('SUBJECTS'),
+                                    numeric: true,
+                                  ),
+                                  DataColumn(label: Text('STATUS')),
+                                  DataColumn(label: Text('EXPORT')),
+                                ],
+                              ),
                             ),
                           ),
                         ),

@@ -136,148 +136,143 @@ class _ConflictScreenState extends State<ConflictScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final maroonColor = isDark
-        ? const Color(0xFFa21caf)
-        : const Color(0xFF720045);
-    final bgBody = isDark ? const Color(0xFF0F172A) : const Color(0xFFEEF1F6);
+    final maroonColor = const Color(0xFF720045);
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final isMobile = MediaQuery.of(context).size.width < 600;
+    final isMobile = ResponsiveHelper.isMobile(context);
 
-    return Container(
-      color: bgBody,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: ResponsiveHelper.maxContentWidth(context),
-          ),
-          child: Padding(
-      padding: ResponsiveHelper.pagePadding(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header (Standardized Maroon Gradient Banner)
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(isMobile ? 16 : 32),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [maroonColor, const Color(0xFF8e005b)],
-              ),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: maroonColor.withValues(alpha: 0.3),
-                  blurRadius: 25,
-                  offset: const Offset(0, 12),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Padding(
+        padding: EdgeInsets.all(isMobile ? 16 : 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header (Standardized Maroon Gradient Banner)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [maroonColor, const Color(0xFF8e005b)],
                 ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.warning_amber_rounded,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    ),
-                    SizedBox(width: isMobile ? 12 : 24),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'System Conflicts',
-                          style: GoogleFonts.poppins(
-                            fontSize: isMobile ? 24 : 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: -1,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _isLoading
-                              ? 'Scanning all modules for conflicts...'
-                              : _conflicts.isEmpty
-                              ? 'No scheduling conflicts detected ✓'
-                              : '${_conflicts.length} conflict${_conflicts.length == 1 ? '' : 's'} detected across modules',
-                          style: GoogleFonts.poppins(
-                            fontSize: isMobile ? 12 : 16,
-                            color: Colors.white.withValues(alpha: 0.8),
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                ),
-                const SizedBox(width: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: maroonColor.withValues(alpha: 0.3),
+                    blurRadius: 25,
+                    offset: const Offset(0, 12),
                   ),
-                  child: IconButton(
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'System Conflicts',
+                            style: GoogleFonts.poppins(
+                              fontSize: isMobile ? 24 : 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: -1,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _isLoading
+                                ? 'Scanning all modules for conflicts...'
+                                : _conflicts.isEmpty
+                                    ? 'No scheduling conflicts detected'
+                                    : '${_conflicts.length} conflict${_conflicts.length == 1 ? '' : 's'} detected across modules',
+                            style: GoogleFonts.poppins(
+                              fontSize: isMobile ? 12 : 16,
+                              color: Colors.white.withValues(alpha: 0.8),
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
                     onPressed: _isLoading ? null : _fetchConflicts,
                     icon: _isLoading
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 18,
+                            height: 18,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
                               strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF720045),
+                              ),
                             ),
                           )
-                        : const Icon(
-                            Icons.refresh_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                    tooltip: 'Refresh',
+                        : const Icon(Icons.refresh_rounded, size: 22),
+                    label: Text(
+                      isMobile ? 'Refresh' : 'Refresh Conflicts',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: maroonColor,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 16 : 28,
+                        vertical: isMobile ? 12 : 18,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
-          const SizedBox(height: 20),
+            const SizedBox(height: 32),
 
-          // ── Summary Stat Chips ──
-          if (!_isLoading && _conflicts.isNotEmpty) ...[
-            _buildSummaryChips(maroonColor, cardBg, isDark),
-            const SizedBox(height: 20),
+            // Summary Stat Chips
+            if (!_isLoading && _conflicts.isNotEmpty) ...[
+              _buildSummaryChips(maroonColor, cardBg, isDark),
+              const SizedBox(height: 24),
+            ],
+
+            // Content
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _conflicts.isEmpty
+                      ? _buildEmptyState()
+                      : _buildConflictList(isDark, cardBg, maroonColor),
+            ),
           ],
-
-          // ── Content ──
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _conflicts.isEmpty
-                ? _buildEmptyState()
-                : _buildConflictList(isDark, cardBg),
-          ),
-        ],
-      ),
-          ),
         ),
       ),
     );
@@ -363,157 +358,225 @@ class _ConflictScreenState extends State<ConflictScreen> {
     );
   }
 
-  Widget _buildConflictList(bool isDark, Color cardBg) {
-    return ListView.separated(
-      itemCount: _conflicts.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final conflict = _conflicts[index];
-        final config = _getConfig(conflict.type);
-
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: config.color.withOpacity(0.2)),
-            boxShadow: [
-              BoxShadow(
-                color: config.color.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+  Widget _buildConflictList(bool isDark, Color cardBg, Color maroonColor) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border(left: BorderSide(color: maroonColor, width: 4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Type Icon
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: config.color.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(config.icon, color: config.color, size: 22),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: BoxDecoration(
+              color: maroonColor.withOpacity(0.05),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
               ),
-              const SizedBox(width: 16),
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Type badge + source badge
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: config.color.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            config.label,
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: config.color,
-                              letterSpacing: 1.0,
-                            ),
-                          ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: maroonColor,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Conflict Records',
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: maroonColor,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: maroonColor,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '${_conflicts.length} items',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: _conflicts.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final conflict = _conflicts[index];
+                final config = _getConfig(conflict.type);
+
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: config.color.withOpacity(0.2)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: config.color.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Type Icon
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: config.color.withOpacity(0.1),
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            config.source,
-                            style: GoogleFonts.poppins(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[600],
-                              letterSpacing: 0.5,
+                        child: Icon(config.icon, color: config.color, size: 22),
+                      ),
+                      const SizedBox(width: 16),
+                      // Content
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Type badge + source badge
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: config.color.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    config.label,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: config.color,
+                                      letterSpacing: 1.0,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    config.source,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[600],
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                                const Spacer(),
+                                // Severity badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (config.severity == 'CRITICAL'
+                                                ? Colors.red
+                                                : Colors.orange)
+                                            .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.warning_amber_rounded,
+                                        size: 11,
+                                        color: config.severity == 'CRITICAL'
+                                            ? Colors.red
+                                            : Colors.orange,
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        config.severity,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: config.severity == 'CRITICAL'
+                                              ? Colors.red
+                                              : Colors.orange,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
-                        const Spacer(),
-                        // Severity badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                (config.severity == 'CRITICAL'
-                                        ? Colors.red
-                                        : Colors.orange)
-                                    .withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.warning_amber_rounded,
-                                size: 11,
-                                color: config.severity == 'CRITICAL'
-                                    ? Colors.red
-                                    : Colors.orange,
+                            const SizedBox(height: 6),
+                            // Message
+                            Text(
+                              conflict.message,
+                              style: GoogleFonts.poppins(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white : Colors.black87,
                               ),
-                              const SizedBox(width: 3),
+                            ),
+                            // Details
+                            if (conflict.details != null) ...[
+                              const SizedBox(height: 6),
                               Text(
-                                config.severity,
+                                conflict.details!,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: config.severity == 'CRITICAL'
-                                      ? Colors.red
-                                      : Colors.orange,
+                                  fontSize: 13,
+                                  color: isDark
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600],
                                 ),
                               ),
                             ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    // Message
-                    Text(
-                      conflict.message,
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    // Details
-                    if (conflict.details != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        conflict.details!,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ],
                         ),
                       ),
                     ],
-                  ],
-                ),
-              ),
-            ],
+                  ),
+                );
+              },
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

@@ -237,6 +237,8 @@ class EndpointGoogleIdp extends _i1.EndpointGoogleIdpBase {
 
   /// Validates a Google ID token and either logs in the associated user or
   /// creates a new user account if the Google account ID is not yet known.
+  ///
+  /// If a new user is created an associated [UserProfile] is also created.
   @override
   _i3.Future<_i4.AuthSuccess> login({
     required String idToken,
@@ -838,6 +840,7 @@ class EndpointSetup extends _i2.EndpointRef {
     },
   );
 
+  /// Fetches a UserInfo by email (case-insensitive).
   _i3.Future<_i22.UserInfo?> getUserInfoByEmail({required String email}) =>
       caller.callServerEndpoint<_i22.UserInfo?>(
         'setup',

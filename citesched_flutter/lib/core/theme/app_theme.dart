@@ -33,7 +33,7 @@ class AppTheme {
   static const Color serverpodDarkGrey = surfaceColor;
 
   // Theme Data - FORMAL ACADEMIC APPEARANCE
-  static ThemeData get darkTheme {
+  static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
@@ -227,6 +227,37 @@ class AppTheme {
           fontSize: 13,
           fontWeight: FontWeight.bold,
           color: textPrimary,
+        ),
+      ),
+    );
+  }
+
+  static ThemeData get darkTheme {
+    final base = ThemeData.dark(useMaterial3: true);
+    return base.copyWith(
+      colorScheme: base.colorScheme.copyWith(
+        primary: primaryColor,
+      ),
+      scaffoldBackgroundColor: const Color(0xFF0F172A),
+      cardColor: const Color(0xFF1E293B),
+      textTheme: GoogleFonts.robotoTextTheme(base.textTheme).apply(
+        bodyColor: const Color(0xFFE2E8F0),
+        displayColor: const Color(0xFFE2E8F0),
+      ),
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        filled: true,
+        fillColor: const Color(0xFF1E293B),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(4),
+          borderSide: const BorderSide(color: Color(0xFF475569), width: 1),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(4),
+          borderSide: const BorderSide(color: Color(0xFF475569), width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(4),
+          borderSide: const BorderSide(color: primaryColor, width: 2),
         ),
       ),
     );

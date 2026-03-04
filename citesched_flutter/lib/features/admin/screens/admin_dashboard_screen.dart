@@ -6,6 +6,7 @@ import 'package:citesched_flutter/features/admin/widgets/report_modal.dart';
 import 'package:citesched_flutter/features/admin/widgets/stat_card.dart';
 import 'package:citesched_flutter/features/admin/widgets/user_list_modal.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
+import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -108,6 +109,13 @@ class AdminDashboardScreen extends ConsumerWidget {
                   ),
                   child: Column(
                     children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: const [
+                          ThemeModeToggle(compact: true),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
