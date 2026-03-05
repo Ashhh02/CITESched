@@ -7,6 +7,22 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
 
+String _programDisplayLabel(Program program) {
+  switch (program) {
+    case Program.it:
+      return 'BSIT';
+    case Program.emc:
+      return 'BSEMC';
+  }
+}
+
+String _sectionDisplayLabel(Section section) {
+  final code = section.sectionCode.trim();
+  final program = _programDisplayLabel(section.program);
+  if (code.toUpperCase().startsWith('$program -')) return code;
+  return '$program - $code';
+}
+
 // ─── Screen ─────────────────────────────────────────────────────────────────
 class UserManagementScreen extends ConsumerStatefulWidget {
   const UserManagementScreen({super.key});
@@ -586,7 +602,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
 }
 
 // ─── Add/Edit Student Modal ─────────────────────────────────────────────────
-class _StudentModal extends StatefulWidget {
+class _StudentModal extends ConsumerStatefulWidget {
   final Color maroonColor;
   final Student? student;
   final VoidCallback onSuccess;
@@ -600,10 +616,10 @@ class _StudentModal extends StatefulWidget {
   bool get isEdit => student != null;
 
   @override
-  State<_StudentModal> createState() => _StudentModalState();
+  ConsumerState<_StudentModal> createState() => _StudentModalState();
 }
 
-class _StudentModalState extends State<_StudentModal> {
+class _StudentModalState extends ConsumerState<_StudentModal> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _emailController;
@@ -611,6 +627,7 @@ class _StudentModalState extends State<_StudentModal> {
   late TextEditingController _courseController;
   late TextEditingController _yearLevelController;
   late TextEditingController _sectionController;
+  int? _selectedSectionId;
 
   bool _isLoading = false;
 
@@ -631,6 +648,7 @@ class _StudentModalState extends State<_StudentModal> {
     _sectionController = TextEditingController(
       text: widget.student?.section ?? '',
     );
+    _selectedSectionId = widget.student?.sectionId;
   }
 
   @override
@@ -659,6 +677,7 @@ class _StudentModalState extends State<_StudentModal> {
         section: _sectionController.text.trim().isEmpty
             ? null
             : _sectionController.text.trim(),
+        sectionId: _selectedSectionId,
         userInfoId: widget.student?.userInfoId ?? 0,
         isActive: widget.student?.isActive ?? true,
         createdAt: widget.student?.createdAt ?? DateTime.now(),
@@ -702,6 +721,7 @@ class _StudentModalState extends State<_StudentModal> {
     final bgBody = isDark ? const Color(0xFF1E293B) : const Color(0xFFF0F0F5);
     final textPrimary = isDark ? Colors.white : Colors.black87;
     final textMuted = isDark ? Colors.grey[400]! : Colors.grey[500]!;
+    final sectionsAsync = ref.watch(sectionListProvider);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -827,14 +847,33 @@ class _StudentModalState extends State<_StudentModal> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      _buildField(
-                        label: 'Section',
-                        icon: Icons.group_outlined,
-                        controller: _sectionController,
-                        hint: 'e.g. BSIT-3A, BSCS-2B',
-                        bgBody: bgBody,
-                        textPrimary: textPrimary,
-                        textMuted: textMuted,
+                      sectionsAsync.when(
+                        loading: () => _buildSectionDropdown(
+                          label: 'Section',
+                          icon: Icons.group_outlined,
+                          bgBody: bgBody,
+                          textPrimary: textPrimary,
+                          textMuted: textMuted,
+                          sections: const [],
+                          isLoading: true,
+                        ),
+                        error: (error, stack) => _buildField(
+                          label: 'Section',
+                          icon: Icons.group_outlined,
+                          controller: _sectionController,
+                          hint: 'e.g. BSIT-3A, BSCS-2B',
+                          bgBody: bgBody,
+                          textPrimary: textPrimary,
+                          textMuted: textMuted,
+                        ),
+                        data: (sections) => _buildSectionDropdown(
+                          label: 'Section',
+                          icon: Icons.group_outlined,
+                          bgBody: bgBody,
+                          textPrimary: textPrimary,
+                          textMuted: textMuted,
+                          sections: sections,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Container(
@@ -983,6 +1022,195 @@ class _StudentModalState extends State<_StudentModal> {
               vertical: 14,
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionDropdown({
+    required String label,
+    required IconData icon,
+    required Color bgBody,
+    required Color textPrimary,
+    required Color textMuted,
+    required List<Section> sections,
+    bool isLoading = false,
+  }) {
+    if (isLoading) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8, left: 4),
+            child: Row(
+              children: [
+                Icon(icon, size: 16, color: textMuted),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: bgBody,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Loading sections...',
+                  style: GoogleFonts.poppins(fontSize: 14, color: textMuted),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    final sorted = List<Section>.from(sections)
+      ..sort(
+        (a, b) => _sectionDisplayLabel(a)
+            .toLowerCase()
+            .compareTo(_sectionDisplayLabel(b).toLowerCase()),
+      );
+
+    Section? selectedSection;
+    if (_selectedSectionId != null) {
+      for (final s in sorted) {
+        if (s.id == _selectedSectionId) {
+          selectedSection = s;
+          break;
+        }
+      }
+    }
+
+    if (selectedSection == null && _sectionController.text.trim().isNotEmpty) {
+      for (final s in sorted) {
+        if (s.sectionCode.trim().toLowerCase() ==
+            _sectionController.text.trim().toLowerCase()) {
+          selectedSection = s;
+          break;
+        }
+      }
+    }
+
+    if (selectedSection != null) {
+      if (_selectedSectionId == null || _selectedSectionId != selectedSection.id) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          setState(() {
+            _selectedSectionId = selectedSection?.id;
+          });
+        });
+      }
+      final normalizedCode = selectedSection.sectionCode.trim();
+      if (normalizedCode.isNotEmpty &&
+          _sectionController.text.trim() != normalizedCode) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _sectionController.text = normalizedCode;
+        });
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, left: 4),
+          child: Row(
+            children: [
+              Icon(icon, size: 16, color: textMuted),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        DropdownButtonFormField<int?>(
+          value: sorted.any((s) => s.id == _selectedSectionId)
+              ? _selectedSectionId
+              : null,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: bgBody,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: widget.maroonColor, width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+          ),
+          items: [
+            DropdownMenuItem<int?>(
+              value: null,
+              child: Text(
+                'Unassigned',
+                style: GoogleFonts.poppins(fontSize: 14, color: textMuted),
+              ),
+            ),
+            ...sorted.map(
+              (section) => DropdownMenuItem<int?>(
+                value: section.id,
+                child: Text(
+                  _sectionDisplayLabel(section),
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: textPrimary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _selectedSectionId = value;
+              if (value == null) {
+                _sectionController.text = '';
+                return;
+              }
+              final selected = sorted.firstWhere(
+                (s) => s.id == value,
+                orElse: () => Section(
+                  sectionCode: '',
+                  program: Program.it,
+                  yearLevel: 1,
+                  semester: 1,
+                  academicYear: '',
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                ),
+              );
+              _sectionController.text = selected.sectionCode.trim();
+            });
+          },
         ),
       ],
     );

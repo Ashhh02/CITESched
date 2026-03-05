@@ -320,6 +320,49 @@ class AdminEndpoint extends Endpoint {
       // Set the correct userInfoId
       student.userInfoId = userInfo.id!;
 
+      // Section Synchronization (ensure sectionId is set on create)
+      if (student.sectionId == null &&
+          student.section != null &&
+          student.section!.isNotEmpty) {
+        try {
+          var existingSection = await Section.db.findFirstRow(
+            session,
+            where: (t) => t.sectionCode.equals(student.section!),
+          );
+
+          if (existingSection != null) {
+            student.sectionId = existingSection.id;
+          } else {
+            var prog = Program.it;
+            var year = 1;
+            if (student.section!.toUpperCase().contains('EMC')) {
+              prog = Program.emc;
+            }
+            final yearMatch = RegExp(r'\d').firstMatch(student.section!);
+            if (yearMatch != null) {
+              year = int.parse(yearMatch.group(0)!);
+            }
+
+            final newSection = await Section.db.insertRow(
+              session,
+              Section(
+                sectionCode: student.section!,
+                program: prog,
+                yearLevel: year,
+                semester: 1,
+                academicYear:
+                    '${DateTime.now().year}-${DateTime.now().year + 1}',
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ),
+            );
+            student.sectionId = newSection.id;
+          }
+        } catch (e) {
+          session.log('Error syncing section during create: $e');
+        }
+      }
+
       // Set timestamps
       student.createdAt = DateTime.now();
       student.updatedAt = DateTime.now();
@@ -983,13 +1026,53 @@ class AdminEndpoint extends Endpoint {
     Schedule schedule,
   ) async {
     schedule.section = schedule.section.trim();
-    if (schedule.section.isEmpty) return;
+    if (schedule.sectionId != null) {
+      final byId = await Section.db.findById(session, schedule.sectionId!);
+      if (byId != null) {
+        schedule.section = byId.sectionCode.trim();
+        schedule.sectionId = byId.id;
+        return;
+      }
+    }
+
+    if (schedule.section.isEmpty) {
+      schedule.sectionId = null;
+      return;
+    }
 
     var section = await Section.db.findFirstRow(
       session,
       where: (t) => t.sectionCode.equals(schedule.section),
     );
+
+    section ??= await _findSectionByNormalizedCode(session, schedule.section);
+
+    if (section != null) {
+      schedule.section = section.sectionCode.trim();
+    }
     schedule.sectionId = section?.id;
+  }
+
+  Future<Section?> _findSectionByNormalizedCode(
+    Session session,
+    String rawCode,
+  ) async {
+    final normalizedTarget = _normalizeSectionCode(rawCode);
+    if (normalizedTarget.isEmpty) return null;
+
+    final sections = await Section.db.find(session);
+    for (final section in sections) {
+      if (_normalizeSectionCode(section.sectionCode) == normalizedTarget) {
+        return section;
+      }
+    }
+    return null;
+  }
+
+  String _normalizeSectionCode(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
   // ─── Dashboard Stats ─────────────────────────────────────────────────
 

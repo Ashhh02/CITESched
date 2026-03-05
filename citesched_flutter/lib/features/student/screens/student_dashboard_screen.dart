@@ -294,8 +294,14 @@ class StudentDashboardScreen extends ConsumerWidget {
                   );
                 }
 
+                final scheduled = schedules
+                    .where((s) => s.schedule.timeslot != null)
+                    .toList();
+                final unscheduledCount =
+                    schedules.length - scheduled.length;
+
                 // Sort schedules by day then start time for consistent render
-                schedules.sort((a, b) {
+                scheduled.sort((a, b) {
                   final ta = a.schedule.timeslot;
                   final tb = b.schedule.timeslot;
                   if (ta == null || tb == null) return 0;
@@ -307,6 +313,37 @@ class StudentDashboardScreen extends ConsumerWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (unscheduledCount > 0) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.amber.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: Colors.amber[800],
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Some classes do not have an assigned day/time yet. '
+                                'Ask the admin to set a timeslot in Faculty Loading.',
+                                style: GoogleFonts.poppins(fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     Row(
                       children: [
                         ElevatedButton.icon(
@@ -363,7 +400,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                     SizedBox(
                       height: ResponsiveHelper.calendarHeight(context),
                       child: WeeklyCalendarView(
-                        schedules: schedules,
+                        schedules: scheduled,
                         maroonColor: maroonColor,
                         isStudentView: true,
                       ),
@@ -398,13 +435,18 @@ class StudentDashboardScreen extends ConsumerWidget {
                               vertical: 4,
                             ),
                             title: Text(
-                              sched.subject?.name ?? 'Subject',
+                              '${sched.subject?.code ?? 'TBA'} - ${sched.subject?.name ?? 'Subject'}',
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             subtitle: Text(
-                              '${sched.section} • ${sched.room?.name ?? 'Room TBD'}',
+                              [
+                                'Section: ${sched.section}',
+                                if (sched.timeslot != null)
+                                  '${sched.timeslot!.day.name.toUpperCase()} ${sched.timeslot!.startTime}-${sched.timeslot!.endTime}',
+                                'Room: ${sched.room?.name ?? 'Room TBD'}',
+                              ].join(' | '),
                               style: GoogleFonts.poppins(fontSize: 13),
                             ),
                             trailing: Text(

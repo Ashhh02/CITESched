@@ -105,79 +105,139 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
       DayOfWeek.sat,
     ];
 
-    return SingleChildScrollView(
-      controller: _horizontalController,
-      scrollDirection: Axis.horizontal,
-      child: SingleChildScrollView(
-        controller: _verticalController,
-        scrollDirection: Axis.vertical,
-        child: Container(
-          width: 80 + (dayWidth * days.length),
-          height: hourHeight * (endHour - startHour + 1),
-          child: Stack(
-            children: [
-              // 1. Grid Background & Headers
-              _buildGrid(
-                context,
-                days,
-                startHour,
-                endHour,
-                hourHeight,
-                dayWidth,
-                gridColor,
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const headerHeight = 40.0;
+        final totalWidth = 80 + (dayWidth * days.length);
+        final fullGridHeight = hourHeight * (endHour - startHour + 1);
+        final availableHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : fullGridHeight + headerHeight;
+        final gridViewportHeight =
+            (availableHeight - headerHeight).clamp(0.0, double.infinity);
 
-              // 1.5 Lunch Time Cardbox (Instructor/Admin view)
-              if (!isStudentView)
-                _buildLunchCardbox(
-                  days,
-                  startHour,
-                  endHour,
-                  hourHeight,
-                  dayWidth,
-                ),
+        return SingleChildScrollView(
+          controller: _horizontalController,
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: totalWidth,
+            child: Column(
+              children: [
+                _buildDayHeaderRow(days, dayWidth, gridColor),
+                SizedBox(
+                  height: gridViewportHeight,
+                  child: SingleChildScrollView(
+                    controller: _verticalController,
+                    scrollDirection: Axis.vertical,
+                    child: SizedBox(
+                      width: totalWidth,
+                      height: fullGridHeight,
+                      child: Stack(
+                        children: [
+                          // 1. Grid Background (no headers)
+                          _buildGrid(
+                            context,
+                            days,
+                            startHour,
+                            endHour,
+                            hourHeight,
+                            dayWidth,
+                            gridColor,
+                          ),
 
-              // 2. Preference Cardboxes (High Visibility Black/Faded Highlight)
-              if (availabilities != null)
-                ...availabilities!
-                    .where((a) => a.isPreferred)
-                    .map(
-                      (avail) => _buildPreferenceCardbox(
-                        avail,
-                        days,
-                        startHour,
-                        hourHeight,
-                        dayWidth,
+                          // 1.5 Lunch Time Cardbox (Instructor/Admin view)
+                          if (!isStudentView)
+                            _buildLunchCardbox(
+                              days,
+                              startHour,
+                              endHour,
+                              hourHeight,
+                              dayWidth,
+                            ),
+
+                          // 2. Preference Cardboxes (High Visibility Black/Faded Highlight)
+                          if (availabilities != null)
+                            ...availabilities!
+                                .where((a) => a.isPreferred)
+                                .map(
+                                  (avail) => _buildPreferenceCardbox(
+                                    avail,
+                                    days,
+                                    startHour,
+                                    hourHeight,
+                                    dayWidth,
+                                  ),
+                                ),
+
+                          // 3. Shift Preference Watermarks (Faded vertical labels)
+                          if (selectedFaculty != null && availabilities == null)
+                            ...days.map(
+                              (day) => _buildShiftWatermark(
+                                day,
+                                days,
+                                startHour,
+                                hourHeight,
+                                dayWidth,
+                              ),
+                            ),
+
+                          // 4. Schedule Blocks
+                          ...schedules.map(
+                            (info) => _buildScheduleBlock(
+                              context,
+                              info,
+                              days,
+                              startHour,
+                              hourHeight,
+                              dayWidth,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-
-              // 3. Shift Preference Watermarks (Faded vertical labels)
-              if (selectedFaculty != null && availabilities == null)
-                ...days.map(
-                  (day) => _buildShiftWatermark(
-                    day,
-                    days,
-                    startHour,
-                    hourHeight,
-                    dayWidth,
                   ),
                 ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
-              // 4. Schedule Blocks
-              ...schedules.map(
-                (info) => _buildScheduleBlock(
-                  context,
-                  info,
-                  days,
-                  startHour,
-                  hourHeight,
-                  dayWidth,
-                ),
+  Widget _buildDayHeaderRow(
+    List<DayOfWeek> days,
+    double dayWidth,
+    Color gridColor,
+  ) {
+    return Row(
+      children: [
+        const SizedBox(width: 80),
+        ...days.map(
+          (day) => Container(
+            width: dayWidth,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _isDayHighlighted(day)
+                  ? maroonColor.withOpacity(0.1)
+                  : Colors.transparent,
+              border: Border(
+                bottom: BorderSide(color: gridColor),
+                left: BorderSide(color: gridColor),
               ),
-            ],
+            ),
+            child: Text(
+              _getDayName(day),
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: _isDayHighlighted(day) ? maroonColor : null,
+              ),
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -194,36 +254,6 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
 
     return Column(
       children: [
-        // Day Headers
-        Row(
-          children: [
-            const SizedBox(width: 80),
-            ...days.map(
-              (day) => Container(
-                width: dayWidth,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _isDayHighlighted(day)
-                      ? maroonColor.withOpacity(0.1)
-                      : Colors.transparent,
-                  border: Border(
-                    bottom: BorderSide(color: gridColor),
-                    left: BorderSide(color: gridColor),
-                  ),
-                ),
-                child: Text(
-                  _getDayName(day),
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: _isDayHighlighted(day) ? maroonColor : null,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
         // Time Rows
         Expanded(
           child: ListView.builder(
@@ -377,7 +407,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
         start.hour == 12 && start.minute == 0 && end.hour == 13 && end.minute == 0;
 
     final double top =
-        40 + (start.hour - startHour + start.minute / 60.0) * hourHeight;
+        (start.hour - startHour + start.minute / 60.0) * hourHeight;
     final double height =
         (end.hour - start.hour + (end.minute - start.minute) / 60.0) *
         hourHeight;
@@ -455,7 +485,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
     if (prefRange == null) return const SizedBox.shrink();
 
     final dayIndex = days.indexOf(day);
-    final double top = 40 + (prefRange.start - startHour) * hourHeight;
+    final double top = (prefRange.start - startHour) * hourHeight;
     final double height = (prefRange.end - prefRange.start) * hourHeight;
     final double left = 80 + (dayIndex * dayWidth);
 
@@ -581,7 +611,6 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
     final endTime = _parseTime(timeslot.endTime);
 
     final double top =
-        40 +
         (startTime.hour - startHour + startTime.minute / 60.0) * hourHeight;
     final double height =
         (endTime.hour -
@@ -640,10 +669,12 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (isStudentView)
-                  _buildStudentCardContent(
-                    schedule: schedule,
-                    timeslot: timeslot,
-                    hasConflict: hasConflict,
+                  Expanded(
+                    child: _buildStudentCardContent(
+                      schedule: schedule,
+                      timeslot: timeslot,
+                      hasConflict: hasConflict,
+                    ),
                   )
                 else if (isLunchSlot) ...[
                   Expanded(
@@ -797,7 +828,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
     }
 
     final double top =
-        40 + (lunchStartHour - startHour) * hourHeight + 2;
+        (lunchStartHour - startHour) * hourHeight + 2;
     final double height = (lunchEndHour - lunchStartHour) * hourHeight - 4;
     final double left = 80 + 4;
     final double width = (dayWidth * days.length) - 8;
@@ -851,10 +882,12 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
   }) {
     final subj = schedule.subject;
     final faculty = schedule.faculty?.name ?? 'TBA';
-    final program = subj?.program.name.toUpperCase() ?? schedule.section;
-    final year = subj?.yearLevel != null ? 'Y${subj!.yearLevel}' : '';
-    final room = schedule.room?.name ?? 'Room TBA';
-    final timeRange = '${timeslot.startTime} - ${timeslot.endTime}';
+    final room = (schedule.room?.name ?? 'Room TBA').toUpperCase();
+    final day = _getDayName(timeslot.day);
+    final start = _parseTime(timeslot.startTime);
+    final end = _parseTime(timeslot.endTime);
+    final timeRange =
+        '$day ${_formatTimeOfDay(start)} - ${_formatTimeOfDay(end)}';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -879,7 +912,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 ),
               ),
               Text(
-                '$program ${year.isNotEmpty ? '– $year' : ''}',
+                'Section: ${schedule.section}',
                 style: GoogleFonts.poppins(fontSize: 10, color: Colors.black87),
               ),
               Text(
@@ -911,7 +944,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                     color: Colors.black,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   subj?.code ?? 'TBA',
                   style: GoogleFonts.poppins(
@@ -920,17 +953,18 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                     color: Colors.black,
                   ),
                 ),
-                Text(
-                  subj?.name ?? 'No Subject Title',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+                Expanded(
+                  child: Text(
+                    subj?.name ?? 'No Subject Title',
+                    maxLines: hasConflict ? 1 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
                   ),
                 ),
-                const Spacer(),
                 if (hasConflict)
                   Align(
                     alignment: Alignment.bottomRight,
@@ -1096,9 +1130,31 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
   }
 
   TimeOfDay _parseTime(String time) {
-    // Expected format: "08:30" or "14:15"
-    final parts = time.split(':');
-    return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+    final raw = time.trim().toUpperCase();
+    if (raw.isEmpty) return const TimeOfDay(hour: 0, minute: 0);
+
+    final ampmMatch = RegExp(r'([AP]M)$').firstMatch(raw);
+    String value = raw;
+    String? suffix;
+    if (ampmMatch != null) {
+      suffix = ampmMatch.group(1);
+      value = raw.substring(0, ampmMatch.start).trim();
+    }
+
+    final parts = value.split(':');
+    int hour = int.tryParse(parts.first) ?? 0;
+    int minute = 0;
+    if (parts.length > 1) {
+      minute =
+          int.tryParse(parts[1].replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    }
+
+    if (suffix == 'PM' && hour < 12) hour += 12;
+    if (suffix == 'AM' && hour == 12) hour = 0;
+
+    hour = hour.clamp(0, 23);
+    minute = minute.clamp(0, 59);
+    return TimeOfDay(hour: hour, minute: minute);
   }
 
   String _formatTimeOfDay(TimeOfDay time) {

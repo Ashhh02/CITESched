@@ -5,6 +5,56 @@ import 'conflict_service.dart';
 class TimetableService {
   final ConflictService _conflictService = ConflictService();
 
+  String _normalizeSectionCode(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  Future<int?> resolveSectionIdByCode(
+    Session session,
+    String sectionCode,
+  ) async {
+    final code = sectionCode.trim();
+    if (code.isEmpty) return null;
+
+    final normalized = _normalizeSectionCode(code);
+    final sections = await Section.db.find(session);
+    for (final section in sections) {
+      if (_normalizeSectionCode(section.sectionCode) == normalized) {
+        return section.id;
+      }
+    }
+    return null;
+  }
+
+  Future<List<Schedule>> _fetchScheduleRowsByNormalizedSection(
+    Session session,
+    String sectionCode,
+  ) async {
+    final normalized = _normalizeSectionCode(sectionCode);
+    if (normalized.isEmpty) return [];
+
+    final schedules = await Schedule.db.find(
+      session,
+      where: (t) => t.section.notEquals(null) & t.isActive.equals(true),
+      include: Schedule.include(
+        subject: Subject.include(),
+        faculty: Faculty.include(),
+        room: Room.include(),
+        timeslot: Timeslot.include(),
+      ),
+    );
+
+    final matched = schedules
+        .where(
+          (s) => _normalizeSectionCode(s.section) == normalized,
+        )
+        .toList();
+
+    return matched;
+  }
+
   Future<List<ScheduleInfo>> fetchSchedulesWithFilters(
     Session session,
     TimetableFilterRequest filter,
@@ -65,7 +115,21 @@ class TimetableService {
     int sectionId, {
     String? fallbackSectionCode,
   }) async {
-    var schedules = await Schedule.db.find(
+    final collected = <Schedule>[];
+
+    void mergeSchedules(List<Schedule> incoming) {
+      for (final schedule in incoming) {
+        final id = schedule.id;
+        final exists = id != null
+            ? collected.any((s) => s.id == id)
+            : collected.contains(schedule);
+        if (!exists) {
+          collected.add(schedule);
+        }
+      }
+    }
+
+    final bySectionId = await Schedule.db.find(
       session,
       where: (t) => t.sectionId.equals(sectionId) & t.isActive.equals(true),
       include: Schedule.include(
@@ -75,11 +139,31 @@ class TimetableService {
         timeslot: Timeslot.include(),
       ),
     );
+    mergeSchedules(bySectionId);
 
-    if (schedules.isEmpty &&
-        fallbackSectionCode != null &&
+    if (fallbackSectionCode != null &&
         fallbackSectionCode.isNotEmpty) {
-      schedules = await Schedule.db.find(
+      final resolvedSectionId =
+          await resolveSectionIdByCode(session, fallbackSectionCode);
+      if (resolvedSectionId != null && resolvedSectionId != sectionId) {
+        final resolvedSectionRows = await Schedule.db.find(
+          session,
+          where: (t) =>
+              t.sectionId.equals(resolvedSectionId) & t.isActive.equals(true),
+          include: Schedule.include(
+            subject: Subject.include(),
+            faculty: Faculty.include(),
+            room: Room.include(),
+            timeslot: Timeslot.include(),
+          ),
+        );
+        mergeSchedules(resolvedSectionRows);
+      }
+    }
+
+    if (fallbackSectionCode != null &&
+        fallbackSectionCode.isNotEmpty) {
+      final byExactSectionCode = await Schedule.db.find(
         session,
         where: (t) =>
             t.section.equals(fallbackSectionCode) & t.isActive.equals(true),
@@ -90,9 +174,19 @@ class TimetableService {
           timeslot: Timeslot.include(),
         ),
       );
+      mergeSchedules(byExactSectionCode);
     }
 
-    return _toScheduleInfo(session, schedules);
+    if (fallbackSectionCode != null &&
+        fallbackSectionCode.isNotEmpty) {
+      final byNormalizedSectionCode = await _fetchScheduleRowsByNormalizedSection(
+        session,
+        fallbackSectionCode,
+      );
+      mergeSchedules(byNormalizedSectionCode);
+    }
+
+    return _toScheduleInfo(session, collected);
   }
 
   Future<List<ScheduleInfo>> _toScheduleInfo(
@@ -103,6 +197,20 @@ class TimetableService {
   }) async {
     var result = <ScheduleInfo>[];
     for (var s in schedules) {
+      // Defensive hydration for legacy rows / partial relation payloads.
+      if (s.timeslot == null && s.timeslotId != null) {
+        s.timeslot = await Timeslot.db.findById(session, s.timeslotId!);
+      }
+      if (s.subject == null) {
+        s.subject = await Subject.db.findById(session, s.subjectId);
+      }
+      if (s.faculty == null) {
+        s.faculty = await Faculty.db.findById(session, s.facultyId);
+      }
+      if (s.room == null && s.roomId != null) {
+        s.room = await Room.db.findById(session, s.roomId!);
+      }
+
       var conflicts = await _conflictService.validateSchedule(
         session,
         s,

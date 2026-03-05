@@ -3021,6 +3021,16 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                                 filteredById[s.id!] = s;
                               }
                             }
+                            // Always include the schedule's current section so
+                            // the edit dropdown cannot visually drift from
+                            // what will actually be saved.
+                            for (final s in sections) {
+                              if (s.id == null) continue;
+                              if (s.id == widget.schedule.sectionId ||
+                                  s.sectionCode == widget.schedule.section) {
+                                filteredById[s.id!] = s;
+                              }
+                            }
                             final filtered = filteredById.values.toList()
                               ..sort((a, b) => _sectionDisplayLabel(a)
                                   .compareTo(_sectionDisplayLabel(b)));

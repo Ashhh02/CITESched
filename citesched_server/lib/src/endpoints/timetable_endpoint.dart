@@ -80,6 +80,24 @@ class TimetableEndpoint extends Endpoint {
         );
       }
 
+      if (student.section != null && student.section!.isNotEmpty) {
+        final resolvedSectionId = await _timetableService.resolveSectionIdByCode(
+          session,
+          student.section!,
+        );
+        if (resolvedSectionId != null) {
+          student.sectionId = resolvedSectionId;
+          try {
+            await Student.db.updateRow(session, student);
+          } catch (_) {}
+          return await _timetableService.fetchSchedulesBySectionId(
+            session,
+            resolvedSectionId,
+            fallbackSectionCode: student.section,
+          );
+        }
+      }
+
       if (student.section == null || student.section!.isEmpty) {
         return [];
       }
