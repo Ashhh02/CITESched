@@ -368,10 +368,8 @@ class ConflictService {
       if (subject != null && room != null) {
         // 2. Program Mismatch
         final normalizedRoomName = _normalizeRoomName(room.name);
-        final isLabRoom = _labRoomNames.contains(normalizedRoomName);
         if (subject.program != room.program &&
-            normalizedRoomName != _lectureRoomName &&
-            !isLabRoom) {
+            normalizedRoomName != _lectureRoomName) {
           conflicts.add(
             ScheduleConflict(
               type: 'program_mismatch',

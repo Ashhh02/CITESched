@@ -96,7 +96,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
     final double hourHeight = isStudentView ? 64.0 : 100.0;
     const double dayWidth = 150.0;
     const int startHour = 7;
-    const int endHour = 19; // 7AM–7PM per student view spec
+    const int endHour = 21; // 7AM–9PM
     final List<DayOfWeek> days = [
       DayOfWeek.mon,
       DayOfWeek.tue,

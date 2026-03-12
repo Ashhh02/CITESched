@@ -707,7 +707,8 @@ class SchedulingService {
     return rooms.where((room) {
       final normalized = room.name.trim().toUpperCase();
       if (requiresLabRoom) {
-        return _labRoomNames.contains(normalized);
+        return _labRoomNames.contains(normalized) &&
+            room.program == subject.program;
       }
       // Lecture room is always ROOM 1 regardless of program.
       return normalized == _lectureRoomName;
@@ -723,7 +724,8 @@ class SchedulingService {
     return rooms.where((room) {
       final normalized = room.name.trim().toUpperCase();
       if (requiresLab) {
-        return _labRoomNames.contains(normalized);
+        return _labRoomNames.contains(normalized) &&
+            room.program == subject.program;
       }
       // Lecture room is always ROOM 1 regardless of program.
       return normalized == _lectureRoomName;
