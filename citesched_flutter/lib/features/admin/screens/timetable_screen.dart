@@ -71,6 +71,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
       final schedulableFaculty = faculty
           .where((f) => !adminUserIds.contains(f.userInfoId.toString()))
           .toList();
+      if (!mounted) return;
       setState(() {
         _facultyList = schedulableFaculty;
         _roomList = rooms;

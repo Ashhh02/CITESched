@@ -585,27 +585,11 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
                                               WidgetStateProperty.resolveWith<
                                                 Color?
                                               >(
-                                                (states) {
-                                                  if (states.contains(
-                                                    WidgetState.hovered,
-                                                  )) {
-                                                    return maroonColor
-                                                        .withOpacity(
-                                                          0.05,
-                                                        );
-                                                  }
-                                                  return index.isEven
-                                                      ? (isDark
-                                                            ? Colors.white
-                                                                  .withOpacity(
-                                                                    0.02,
-                                                                  )
-                                                            : Colors.grey
-                                                                  .withOpacity(
-                                                                    0.02,
-                                                                  ))
-                                                      : null;
-                                                },
+                                                (states) => _resolveRowColor(
+                                                  states,
+                                                  index,
+                                                  isDark,
+                                                ),
                                               ),
                                           cells: [
                                             DataCell(
@@ -1214,6 +1198,22 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
         ),
       ),
     );
+  }
+
+  Color? _resolveRowColor(
+    Set<WidgetState> states,
+    int index,
+    bool isDark,
+  ) {
+    if (states.contains(WidgetState.hovered)) {
+      return maroonColor.withOpacity(0.05);
+    }
+    if (!index.isEven) {
+      return null;
+    }
+    return isDark
+        ? Colors.white.withOpacity(0.02)
+        : Colors.grey.withOpacity(0.02);
   }
 }
 

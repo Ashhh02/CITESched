@@ -30,6 +30,12 @@ class AdminEndpoint extends Endpoint {
     return int.tryParse(match.group(0)!) ?? fallback;
   }
 
+  int _resolveYearLevel(int parsedYearLevel, int studentYearLevel) {
+    if (parsedYearLevel > 0) return parsedYearLevel;
+    if (studentYearLevel > 0) return studentYearLevel;
+    return 1;
+  }
+
   Future<int?> _resolveStudentSectionId(
     Session session,
     Student student,
@@ -41,9 +47,7 @@ class AdminEndpoint extends Endpoint {
 
     final program = _programFromStudentCourse(student.course);
     final parsedYearLevel = _yearLevelFromSectionCode(rawSection, fallback: 0);
-    final yearLevel = parsedYearLevel > 0
-        ? parsedYearLevel
-        : (student.yearLevel > 0 ? student.yearLevel : 1);
+    final yearLevel = _resolveYearLevel(parsedYearLevel, student.yearLevel);
 
     final existingSection = await Section.db.findFirstRow(
       session,

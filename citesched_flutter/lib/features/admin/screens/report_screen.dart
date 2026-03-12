@@ -245,10 +245,42 @@ class _ReportScreenState extends State<ReportScreen>
       ),
     );
   }
+
 }
 
 class _FacultyLoadTab extends ConsumerWidget {
   const _FacultyLoadTab();
+
+  Widget _loadStatusBadge(String status) {
+    final normalized = status.toLowerCase();
+    Color color;
+    switch (normalized) {
+      case 'overload':
+        color = Colors.red;
+        break;
+      case 'full':
+        color = Colors.orange;
+        break;
+      default:
+        color = Colors.green;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: GoogleFonts.poppins(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -287,316 +319,55 @@ class _FacultyLoadTab extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.badge_outlined, color: const Color(0xFF720045)),
-                    const SizedBox(width: 12),
+                    Icon(Icons.leaderboard_rounded, color: maroonColor, size: 20),
+                    const SizedBox(width: 8),
                     Text(
-                      'Faculty Teaching Load Analysis',
+                      'Faculty Load',
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const Spacer(),
-                    PopupMenuButton<String>(
-                      tooltip: 'Export All',
-                      offset: const Offset(0, 40),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'pdf',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.picture_as_pdf_rounded,
-                                color: Colors.red,
-                                size: 18,
-                              ),
-                              SizedBox(width: 10),
-                              Text('Export All as PDF'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'docx',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.description_rounded,
-                                color: Colors.blue,
-                                size: 18,
-                              ),
-                              SizedBox(width: 10),
-                              Text('Export All as Word (.docx)'),
-                            ],
-                          ),
-                        ),
-                      ],
-                      onSelected: (value) async {
-                        if (value == 'pdf') {
-                          await PdfGenerator.printAllSummaryAsPdf(data);
-                        } else {
-                          final path =
-                              await PdfGenerator.exportAllSummaryAsDocx(data);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  path != null
-                                      ? 'Saved to: $path'
-                                      : 'Export not supported on this platform.',
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      child: OutlinedButton.icon(
-                        onPressed: null,
-                        icon: const Icon(Icons.upload_file_rounded, size: 16),
-                        label: Text(
-                          'Export All',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF720045),
-                          side: const BorderSide(color: Color(0xFF720045)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            minWidth: constraints.maxWidth,
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.vertical,
-                              child: DataTable(
-                                columnSpacing: 28,
-                                horizontalMargin: 16,
-                                headingRowHeight: 44,
-                                dataRowMinHeight: 52,
-                                dataRowMaxHeight: 60,
-                                showBottomBorder: true,
-                                dividerThickness: 0.6,
-                                headingRowColor: WidgetStateProperty.all(
-                                  headerBg,
-                                ),
-                                headingTextStyle: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12,
-                                  color: isDark
-                                      ? Colors.white.withOpacity(0.85)
-                                      : Colors.grey[700],
-                                  letterSpacing: 0.8,
-                                ),
-                                dataTextStyle: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: isDark
-                                      ? Colors.white.withOpacity(0.9)
-                                      : Colors.black87,
-                                ),
-                                border: TableBorder(
-                                  horizontalInside: BorderSide(
-                                    color: dividerColor,
-                                  ),
-                                  bottom: BorderSide(color: dividerColor),
-                                  top: BorderSide(color: dividerColor),
-                                ),
-                                rows: data.asMap().entries.map((entry) {
-                                  final index = entry.key;
-                                  final item = entry.value;
-                                  Color statusColor;
-                                  if (item.loadStatus == 'Overloaded') {
-                                    statusColor = Colors.red;
-                                  } else if (item.loadStatus == 'Underloaded')
-                                    statusColor = Colors.orange;
-                                  else
-                                    statusColor = Colors.green;
-
-                                  return DataRow(
-                                    color: WidgetStateProperty.all(
-                                      index.isEven ? rowBgA : rowBgB,
-                                    ),
-                                    cells: [
-                                      DataCell(
-                                        Text(
-                                          item.facultyName,
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Text(
-                                          (item.program ?? '-').toUpperCase(),
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Text(
-                                          item.totalUnits.toStringAsFixed(0),
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: maroonColor,
-                                          ),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Text(
-                                          '${item.totalHours.toStringAsFixed(1)} hrs',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Text(
-                                          '${item.totalSubjects}',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: statusColor.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
-                                            border: Border.all(
-                                              color: statusColor.withOpacity(
-                                                0.5,
-                                              ),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            item.loadStatus.toUpperCase(),
-                                            style: GoogleFonts.poppins(
-                                              color: statusColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Tooltip(
-                                              message: 'Export as PDF',
-                                              child: IconButton(
-                                                icon: const Icon(
-                                                  Icons.picture_as_pdf_rounded,
-                                                  size: 18,
-                                                  color: Colors.red,
-                                                ),
-                                                onPressed: () {
-                                                  final schedules =
-                                                      schedulesAsync.value ??
-                                                      [];
-                                                  PdfGenerator.printFacultySummaryAsPdf(
-                                                    item,
-                                                    schedules,
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Tooltip(
-                                              message: 'Export as Word (.docx)',
-                                              child: IconButton(
-                                                icon: const Icon(
-                                                  Icons.description_rounded,
-                                                  size: 18,
-                                                  color: Colors.blue,
-                                                ),
-                                                onPressed: () async {
-                                                  final schedules =
-                                                      schedulesAsync.value ??
-                                                      [];
-                                                  final path =
-                                                      await PdfGenerator.exportFacultySummaryAsDocx(
-                                                        item,
-                                                        schedules,
-                                                      );
-                                                  if (context.mounted) {
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                          path != null
-                                                              ? 'Saved to: $path'
-                                                              : 'Export not supported on this platform.',
-                                                        ),
-                                                        backgroundColor:
-                                                            Colors.green,
-                                                      ),
-                                                    );
-                                                  }
-                                                },
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                }).toList(),
-                                columns: const [
-                                  DataColumn(label: Text('FACULTY')),
-                                  DataColumn(label: Text('PROGRAM')),
-                                  DataColumn(
-                                    label: Text('TOTAL UNITS'),
-                                    numeric: true,
-                                  ),
-                                  DataColumn(
-                                    label: Text('TOTAL HOURS'),
-                                    numeric: true,
-                                  ),
-                                  DataColumn(
-                                    label: Text('SUBJECTS'),
-                                    numeric: true,
-                                  ),
-                                  DataColumn(label: Text('STATUS')),
-                                  DataColumn(label: Text('EXPORT')),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowColor: WidgetStateProperty.all(headerBg),
+                      headingTextStyle: GoogleFonts.poppins(
+                        color: maroonColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                      dataRowColor: WidgetStateProperty.resolveWith(
+                        (states) => states.contains(WidgetState.selected)
+                            ? maroonColor.withOpacity(0.06)
+                            : null,
+                      ),
+                      columnSpacing: 20,
+                      columns: const [
+                        DataColumn(label: Text('FACULTY')),
+                        DataColumn(label: Text('PROGRAM')),
+                        DataColumn(label: Text('UNITS')),
+                        DataColumn(label: Text('HOURS')),
+                        DataColumn(label: Text('SUBJECTS')),
+                        DataColumn(label: Text('STATUS')),
+                      ],
+                      rows: data
+                          .map((r) => DataRow(
+                                cells: [
+                                  DataCell(Text(r.facultyName)),
+                                  DataCell(Text((r.program ?? 'N/A').toUpperCase())),
+                                  DataCell(Text(r.totalUnits.toStringAsFixed(1))),
+                                  DataCell(Text(r.totalHours.toStringAsFixed(1))),
+                                  DataCell(Text(r.totalSubjects.toString())),
+                                  DataCell(_loadStatusBadge(r.loadStatus)),
                                 ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
+                              ))
+                          .toList(),
+                    ),
                   ),
                 ),
               ],
@@ -607,7 +378,6 @@ class _FacultyLoadTab extends ConsumerWidget {
     );
   }
 
-  // Local PDF dialogs removed in favor of PdfGenerator
 }
 
 class _RoomUtilizationTab extends ConsumerWidget {
@@ -637,11 +407,7 @@ class _RoomUtilizationTab extends ConsumerWidget {
               itemCount: data.length,
               itemBuilder: (context, index) {
                 final item = data[index];
-                final color = item.utilizationPercentage > 80
-                    ? Colors.red
-                    : (item.utilizationPercentage > 50
-                          ? Colors.orange
-                          : Colors.green);
+                final color = _utilizationColor(item.utilizationPercentage);
 
                 return Container(
                   padding: const EdgeInsets.all(24),
@@ -722,6 +488,16 @@ class _RoomUtilizationTab extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Color _utilizationColor(double utilization) {
+    if (utilization > 80) {
+      return Colors.red;
+    }
+    if (utilization > 50) {
+      return Colors.orange;
+    }
+    return Colors.green;
   }
 }
 
@@ -806,223 +582,231 @@ class _ConflictSummaryTab extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Header ──────────────────────────────────────────
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: conflicts.isEmpty
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        conflicts.isEmpty
-                            ? Icons.verified_rounded
-                            : Icons.warning_rounded,
-                        color: conflicts.isEmpty ? Colors.green : Colors.red,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Conflict Summary',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            conflicts.isEmpty
-                                ? 'No conflicts detected — system is clean'
-                                : '${conflicts.length} conflict${conflicts.length == 1 ? '' : 's'} require attention',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: conflicts.isEmpty
-                                  ? Colors.green
-                                  : Colors.red[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (conflicts.isNotEmpty)
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        alignment: WrapAlignment.end,
-                        children: [
-                          _buildCountBadge(conflicts, 'CRITICAL', [
-                            'room_conflict',
-                            'faculty_conflict',
-                            'section_conflict',
-                          ], Colors.red),
-                          _buildCountBadge(conflicts, 'WARNING', [
-                            'max_load_exceeded',
-                            'room_inactive',
-                            'faculty_unavailable',
-                            'program_mismatch',
-                            'capacity_exceeded',
-                          ], Colors.orange),
-                        ],
-                      ),
-                  ],
-                ),
-
+                _buildConflictHeader(conflicts),
                 const SizedBox(height: 20),
                 const Divider(),
                 const SizedBox(height: 12),
-
-                // ── Conflict List or Empty State ─────────────────────
                 if (conflicts.isEmpty)
-                  Expanded(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.08),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.verified_rounded,
-                              size: 64,
-                              color: Colors.green.withOpacity(0.7),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            'All Clear!',
-                            style: GoogleFonts.poppins(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'No scheduling conflicts found. The timetable is valid.',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
+                  _buildEmptyState()
                 else
-                  Expanded(
-                    child: ListView.separated(
-                      itemCount: conflicts.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final conflict = conflicts[index];
-                        final cfg = _cfg(conflict.type);
-                        return Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? cfg.color.withOpacity(0.08)
-                                : cfg.color.withOpacity(0.04),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: cfg.color.withOpacity(0.25),
-                            ),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Warning Icon
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: cfg.color.withOpacity(0.12),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  cfg.icon,
-                                  color: cfg.color,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              // Content
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Type badge
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: cfg.color.withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        cfg.label,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: cfg.color,
-                                          letterSpacing: 1.0,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 5),
-                                    // Message
-                                    Text(
-                                      conflict.message,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark
-                                            ? Colors.white
-                                            : Colors.black87,
-                                      ),
-                                    ),
-                                    if (conflict.details != null) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        conflict.details!,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 11,
-                                          color: isDark
-                                              ? Colors.grey[400]
-                                              : Colors.grey[600],
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              // Severity indicator
-                              Icon(
-                                Icons.warning_amber_rounded,
-                                size: 18,
-                                color: cfg.color.withOpacity(0.7),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                  _buildConflictList(conflicts, isDark),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildConflictHeader(List<ScheduleConflict> conflicts) {
+    final hasConflicts = conflicts.isNotEmpty;
+    final statusColor = hasConflicts ? Colors.red : Colors.green;
+    final summaryColor = hasConflicts ? Colors.red[700] : Colors.green;
+    final statusIcon =
+        hasConflicts ? Icons.warning_rounded : Icons.verified_rounded;
+
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: statusColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            statusIcon,
+            color: statusColor,
+            size: 22,
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Conflict Summary',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                _conflictSummaryText(conflicts.length),
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: summaryColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (hasConflicts)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.end,
+            children: [
+              _buildCountBadge(conflicts, 'CRITICAL', [
+                'room_conflict',
+                'faculty_conflict',
+                'section_conflict',
+              ], Colors.red),
+              _buildCountBadge(conflicts, 'WARNING', [
+                'max_load_exceeded',
+                'room_inactive',
+                'faculty_unavailable',
+                'program_mismatch',
+                'capacity_exceeded',
+              ], Colors.orange),
+            ],
+          ),
+      ],
+    );
+  }
+
+  String _conflictSummaryText(int conflictCount) {
+    if (conflictCount == 0) {
+      return 'No conflicts detected — system is clean';
+    }
+    final suffix = conflictCount == 1 ? '' : 's';
+    return '$conflictCount conflict$suffix require attention';
+  }
+
+  Widget _buildEmptyState() {
+    return Expanded(
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.verified_rounded,
+                size: 64,
+                color: Colors.green.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'All Clear!',
+              style: GoogleFonts.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'No scheduling conflicts found. The timetable is valid.',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConflictList(
+    List<ScheduleConflict> conflicts,
+    bool isDark,
+  ) {
+    return Expanded(
+      child: ListView.separated(
+        itemCount: conflicts.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          final conflict = conflicts[index];
+          final cfg = _cfg(conflict.type);
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? cfg.color.withOpacity(0.08)
+                  : cfg.color.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: cfg.color.withOpacity(0.25),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: cfg.color.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    cfg.icon,
+                    color: cfg.color,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cfg.color.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          cfg.label,
+                          style: GoogleFonts.poppins(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: cfg.color,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        conflict.message,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      if (conflict.details != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          conflict.details!,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  size: 18,
+                  color: cfg.color.withOpacity(0.7),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 

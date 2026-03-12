@@ -57,40 +57,9 @@ class TimetableService {
     Session session,
     TimetableFilterRequest filter,
   ) async {
-    // Build query based on filters
-    var query = Schedule.db.find(
+    final schedules = await Schedule.db.find(
       session,
-      where: (t) {
-        Expression where = t.isActive.equals(true);
-
-        if (filter.program != null) {
-          where &= t.subject.program.equals(filter.program);
-        }
-
-        // Section filter
-        if (filter.section != null && filter.section!.isNotEmpty) {
-          where &= t.section.equals(filter.section);
-        }
-
-        // Year Level filter
-        if (filter.yearLevel != null) {
-          where &= t.subject.yearLevel.equals(filter.yearLevel);
-        }
-
-        // Faculty filter
-        if (filter.facultyId != null) {
-          where &= t.facultyId.equals(filter.facultyId);
-        }
-
-        // Room filter
-        if (filter.roomId != null) {
-          where &= t.roomId.equals(filter.roomId);
-        }
-
-        // Load Type filter is handled post-query since loadTypes is a List
-
-        return where;
-      },
+      where: (t) => _buildScheduleFilter(t, filter),
       include: Schedule.include(
         subject: Subject.include(),
         faculty: Faculty.include(),
@@ -98,8 +67,6 @@ class TimetableService {
         timeslot: Timeslot.include(),
       ),
     );
-
-    var schedules = await query;
     return _toScheduleInfo(
       session,
       schedules,
@@ -114,18 +81,8 @@ class TimetableService {
     String? fallbackSectionCode,
   }) async {
     final collected = <Schedule>[];
-
-    void mergeSchedules(List<Schedule> incoming) {
-      for (final schedule in incoming) {
-        final id = schedule.id;
-        final exists = id != null
-            ? collected.any((s) => s.id == id)
-            : collected.contains(schedule);
-        if (!exists) {
-          collected.add(schedule);
-        }
-      }
-    }
+    void mergeSchedules(List<Schedule> incoming) =>
+        _mergeSchedules(collected, incoming);
 
     final bySectionId = await Schedule.db.find(
       session,
@@ -145,34 +102,16 @@ class TimetableService {
         fallbackSectionCode,
       );
       if (resolvedSectionId != null && resolvedSectionId != sectionId) {
-        final resolvedSectionRows = await Schedule.db.find(
-          session,
-          where: (t) =>
-              t.sectionId.equals(resolvedSectionId) & t.isActive.equals(true),
-          include: Schedule.include(
-            subject: Subject.include(),
-            faculty: Faculty.include(),
-            room: Room.include(),
-            timeslot: Timeslot.include(),
-          ),
+        mergeSchedules(
+          await _fetchSchedulesBySectionId(session, resolvedSectionId),
         );
-        mergeSchedules(resolvedSectionRows);
       }
     }
 
     if (fallbackSectionCode != null && fallbackSectionCode.isNotEmpty) {
-      final byExactSectionCode = await Schedule.db.find(
-        session,
-        where: (t) =>
-            t.section.equals(fallbackSectionCode) & t.isActive.equals(true),
-        include: Schedule.include(
-          subject: Subject.include(),
-          faculty: Faculty.include(),
-          room: Room.include(),
-          timeslot: Timeslot.include(),
-        ),
+      mergeSchedules(
+        await _fetchSchedulesBySectionCode(session, fallbackSectionCode),
       );
-      mergeSchedules(byExactSectionCode);
     }
 
     if (fallbackSectionCode != null && fallbackSectionCode.isNotEmpty) {
@@ -187,48 +126,129 @@ class TimetableService {
     return _toScheduleInfo(session, collected);
   }
 
+  Expression _buildScheduleFilter(
+    ScheduleTable t,
+    TimetableFilterRequest filter,
+  ) {
+    Expression where = t.isActive.equals(true);
+
+    if (filter.program != null) {
+      where &= t.subject.program.equals(filter.program);
+    }
+    if (filter.section != null && filter.section!.isNotEmpty) {
+      where &= t.section.equals(filter.section);
+    }
+    if (filter.yearLevel != null) {
+      where &= t.subject.yearLevel.equals(filter.yearLevel);
+    }
+    if (filter.facultyId != null) {
+      where &= t.facultyId.equals(filter.facultyId);
+    }
+    if (filter.roomId != null) {
+      where &= t.roomId.equals(filter.roomId);
+    }
+    return where;
+  }
+
+  void _mergeSchedules(List<Schedule> target, List<Schedule> incoming) {
+    for (final schedule in incoming) {
+      final id = schedule.id;
+      final exists = id != null
+          ? target.any((s) => s.id == id)
+          : target.contains(schedule);
+      if (!exists) {
+        target.add(schedule);
+      }
+    }
+  }
+
+  Future<List<Schedule>> _fetchSchedulesBySectionId(
+    Session session,
+    int sectionId,
+  ) {
+    return Schedule.db.find(
+      session,
+      where: (t) => t.sectionId.equals(sectionId) & t.isActive.equals(true),
+      include: Schedule.include(
+        subject: Subject.include(),
+        faculty: Faculty.include(),
+        room: Room.include(),
+        timeslot: Timeslot.include(),
+      ),
+    );
+  }
+
+  Future<List<Schedule>> _fetchSchedulesBySectionCode(
+    Session session,
+    String sectionCode,
+  ) {
+    return Schedule.db.find(
+      session,
+      where: (t) => t.section.equals(sectionCode) & t.isActive.equals(true),
+      include: Schedule.include(
+        subject: Subject.include(),
+        faculty: Faculty.include(),
+        room: Room.include(),
+        timeslot: Timeslot.include(),
+      ),
+    );
+  }
+
   Future<List<ScheduleInfo>> _toScheduleInfo(
     Session session,
     List<Schedule> schedules, {
     bool? hasConflictsFilter,
     SubjectType? loadTypeFilter,
   }) async {
-    var result = <ScheduleInfo>[];
+    final result = <ScheduleInfo>[];
     for (var s in schedules) {
-      // Defensive hydration for legacy rows / partial relation payloads.
-      if (s.timeslot == null && s.timeslotId != null) {
-        s.timeslot = await Timeslot.db.findById(session, s.timeslotId!);
-      }
-      s.subject ??= await Subject.db.findById(session, s.subjectId);
-      s.faculty ??= await Faculty.db.findById(session, s.facultyId);
-      if (s.room == null && s.roomId != null) {
-        s.room = await Room.db.findById(session, s.roomId!);
-      }
-
-      var conflicts = await _conflictService.validateSchedule(
+      await _hydrateSchedule(session, s);
+      final conflicts = await _conflictService.validateSchedule(
         session,
         s,
         excludeScheduleId: s.id,
       );
 
-      if (hasConflictsFilter != null) {
-        if (hasConflictsFilter && conflicts.isEmpty) continue;
-        if (!hasConflictsFilter && conflicts.isNotEmpty) continue;
-      }
+      if (!_passesConflictFilter(conflicts, hasConflictsFilter)) continue;
+      if (!_passesLoadTypeFilter(s, loadTypeFilter)) continue;
 
-      if (loadTypeFilter != null) {
-        if (!(s.loadTypes?.contains(loadTypeFilter) ?? false)) continue;
-      }
-
-      result.add(
-        ScheduleInfo(
-          schedule: s,
-          conflicts: conflicts,
-        ),
-      );
+      result.add(ScheduleInfo(schedule: s, conflicts: conflicts));
     }
 
     return result;
+  }
+
+  Future<void> _hydrateSchedule(Session session, Schedule schedule) async {
+    if (schedule.timeslot == null && schedule.timeslotId != null) {
+      schedule.timeslot =
+          await Timeslot.db.findById(session, schedule.timeslotId!);
+    }
+    schedule.subject ??= await Subject.db.findById(
+      session,
+      schedule.subjectId,
+    );
+    schedule.faculty ??= await Faculty.db.findById(
+      session,
+      schedule.facultyId,
+    );
+    if (schedule.room == null && schedule.roomId != null) {
+      schedule.room = await Room.db.findById(session, schedule.roomId!);
+    }
+  }
+
+  bool _passesConflictFilter(
+    List<ScheduleConflict> conflicts,
+    bool? hasConflictsFilter,
+  ) {
+    if (hasConflictsFilter == null) return true;
+    if (hasConflictsFilter && conflicts.isEmpty) return false;
+    if (!hasConflictsFilter && conflicts.isNotEmpty) return false;
+    return true;
+  }
+
+  bool _passesLoadTypeFilter(Schedule schedule, SubjectType? loadTypeFilter) {
+    if (loadTypeFilter == null) return true;
+    return schedule.loadTypes?.contains(loadTypeFilter) ?? false;
   }
 
   Future<TimetableSummary> fetchSectionSummary(
@@ -240,30 +260,15 @@ class TimetableService {
 
     double totalUnits = 0;
     double totalWeeklyHours = 0;
-    Set<int> uniqueSubjects = {};
+    final uniqueSubjects = <int>{};
     int conflictCount = 0;
 
     for (var info in schedulesInfo) {
-      var s = info.schedule;
+      final s = info.schedule;
       totalUnits += s.units ?? 0;
-
-      // Calculate hours from timeslot if available
-      if (s.timeslot != null) {
-        try {
-          var start = DateTime.parse('2000-01-01 ${s.timeslot!.startTime}');
-          var end = DateTime.parse('2000-01-01 ${s.timeslot!.endTime}');
-          totalWeeklyHours += end.difference(start).inMinutes / 60.0;
-        } catch (_) {
-          // Fallback if parsing fails
-          totalWeeklyHours += 3.0;
-        }
-      }
-
+      totalWeeklyHours += _hoursFromTimeslot(s.timeslot);
       uniqueSubjects.add(s.subjectId);
-
-      if (info.conflicts.isNotEmpty) {
-        conflictCount++;
-      }
+      if (info.conflicts.isNotEmpty) conflictCount++;
     }
 
     return TimetableSummary(
@@ -272,5 +277,16 @@ class TimetableService {
       totalWeeklyHours: totalWeeklyHours,
       conflictCount: conflictCount,
     );
+  }
+
+  double _hoursFromTimeslot(Timeslot? timeslot) {
+    if (timeslot == null) return 0;
+    try {
+      final start = DateTime.parse('2000-01-01 ${timeslot.startTime}');
+      final end = DateTime.parse('2000-01-01 ${timeslot.endTime}');
+      return end.difference(start).inMinutes / 60.0;
+    } catch (_) {
+      return 3.0;
+    }
   }
 }

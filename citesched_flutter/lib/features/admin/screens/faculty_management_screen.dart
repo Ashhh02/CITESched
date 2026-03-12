@@ -11,6 +11,9 @@ import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
 import 'package:citesched_flutter/core/utils/error_handler.dart';
 
+const String kEndTimeAfterStartMessage =
+    'End time must be after start time.';
+
 // Helper extension for conflicts (already in core/providers/conflict_provider.dart)
 
 class FacultyManagementScreen extends ConsumerStatefulWidget {
@@ -460,786 +463,21 @@ class _FacultyManagementScreenState
                   ),
                 ),
                 data: (facultyList) {
-                  final filteredFaculty = facultyList.where((faculty) {
-                    // Search filter
-                    final matchesSearch =
-                        _searchQuery.isEmpty ||
-                        faculty.name.toLowerCase().contains(_searchQuery) ||
-                        faculty.email.toLowerCase().contains(_searchQuery) ||
-                        (faculty.facultyId.toLowerCase().contains(
-                          _searchQuery,
-                        ));
-
-                    // Program filter
-                    final matchesProgram =
-                        _selectedProgram == null ||
-                        faculty.program == _selectedProgram;
-
-                    return matchesSearch && matchesProgram;
-                  }).toList();
+                  final filteredFaculty = _filteredFaculty(facultyList);
 
                   if (filteredFaculty.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 64,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _searchQuery.isEmpty
-                                ? 'No faculty members yet'
-                                : 'No faculty found',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          if (_searchQuery.isEmpty) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              'Click "Add Faculty" to get started',
-                              style: GoogleFonts.poppins(
-                                color: Colors.grey[500],
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
+                    return _buildEmptyFacultyState();
                   }
 
                   if (isMobile) {
                     return _buildMobileFacultyList(filteredFaculty, isDark);
                   }
 
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border(
-                        left: BorderSide(color: maroonColor, width: 4),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        // Table Header
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 16,
-                          ),
-                          decoration: BoxDecoration(
-                            color: maroonColor.withOpacity(0.05),
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(16),
-                              topRight: Radius.circular(16),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.people_rounded,
-                                color: maroonColor,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Faculty Members',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: maroonColor,
-                                ),
-                              ),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: maroonColor,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  '${filteredFaculty.length} Total',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Table Content
-                        Expanded(
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              return SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    minWidth: constraints.maxWidth,
-                                  ),
-                                  child: SingleChildScrollView(
-                                    scrollDirection: Axis.vertical,
-                                    child: DataTable(
-                                      headingRowColor: WidgetStateProperty.all(
-                                        maroonColor,
-                                      ),
-                                      headingTextStyle: GoogleFonts.poppins(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                        letterSpacing: 0.5,
-                                      ),
-                                      dataRowMinHeight: 65,
-                                      dataRowMaxHeight: 85,
-                                      columnSpacing: 32,
-                                      horizontalMargin: 24,
-                                      decoration: BoxDecoration(
-                                        color: Colors.transparent,
-                                      ),
-                                      columns: const [
-                                        DataColumn(label: Text('FACULTY ID')),
-                                        DataColumn(label: Text('NAME')),
-                                        DataColumn(label: Text('EMAIL')),
-                                        DataColumn(label: Text('PROGRAM')),
-                                        DataColumn(label: Text('STATUS')),
-                                        DataColumn(label: Text('CONFLICTS')),
-                                        DataColumn(label: Text('SHIFT')),
-                                        DataColumn(label: Text('MAX LOAD')),
-                                        DataColumn(label: Text('ACTIONS')),
-                                      ],
-                                      rows: filteredFaculty.asMap().entries.map((
-                                        entry,
-                                      ) {
-                                        final faculty = entry.value;
-                                        final index = entry.key;
-
-                                        return DataRow(
-                                          onSelectChanged: (selected) {
-                                            if (selected == true) {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      FacultyDetailsScreen(
-                                                        faculty: faculty,
-                                                      ),
-                                                ),
-                                              );
-                                            }
-                                          },
-                                          color:
-                                              WidgetStateProperty.resolveWith<
-                                                Color?
-                                              >(
-                                                (states) {
-                                                  if (states.contains(
-                                                    WidgetState.hovered,
-                                                  )) {
-                                                    return maroonColor
-                                                        .withOpacity(
-                                                          0.05,
-                                                        );
-                                                  }
-                                                  return index.isEven
-                                                      ? (isDark
-                                                            ? Colors.white
-                                                                  .withOpacity(
-                                                                    0.02,
-                                                                  )
-                                                            : Colors.grey
-                                                                  .withOpacity(
-                                                                    0.02,
-                                                                  ))
-                                                      : null;
-                                                },
-                                              ),
-                                          cells: [
-                                            DataCell(
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 6,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: maroonColor
-                                                      .withOpacity(0.08),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        8,
-                                                      ),
-                                                ),
-                                                child: Text(
-                                                  faculty.facultyId,
-                                                  style: GoogleFonts.poppins(
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 13,
-                                                    color: maroonColor,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            DataCell(
-                                              conflictsAsync.when(
-                                                loading: () => Row(
-                                                  children: [
-                                                    Container(
-                                                      width: 40,
-                                                      height: 40,
-                                                      decoration: BoxDecoration(
-                                                        color: maroonColor,
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              10,
-                                                            ),
-                                                      ),
-                                                      child: Center(
-                                                        child: Text(
-                                                          faculty
-                                                                  .name
-                                                                  .isNotEmpty
-                                                              ? faculty.name[0]
-                                                                    .toUpperCase()
-                                                              : '?',
-                                                          style:
-                                                              GoogleFonts.poppins(
-                                                                color: Colors
-                                                                    .white,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                fontSize: 16,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 12),
-                                                    Text(
-                                                      faculty.name,
-                                                      style:
-                                                          GoogleFonts.poppins(
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            fontSize: 14,
-                                                          ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                error: (_, __) => Text(
-                                                  faculty.name,
-                                                  style: GoogleFonts.poppins(
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 14,
-                                                  ),
-                                                ),
-                                                data: (conflicts) {
-                                                  final hasNameConflict =
-                                                      conflicts
-                                                          .hasConflictForFaculty(
-                                                            faculty.id!,
-                                                          );
-                                                  return Row(
-                                                    children: [
-                                                      Container(
-                                                        width: 40,
-                                                        height: 40,
-                                                        decoration: BoxDecoration(
-                                                          color: maroonColor,
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                10,
-                                                              ),
-                                                        ),
-                                                        child: Center(
-                                                          child: Text(
-                                                            faculty
-                                                                    .name
-                                                                    .isNotEmpty
-                                                                ? faculty
-                                                                      .name[0]
-                                                                      .toUpperCase()
-                                                                : '?',
-                                                            style:
-                                                                GoogleFonts.poppins(
-                                                                  color: Colors
-                                                                      .white,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
-                                                                  fontSize: 16,
-                                                                ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 12),
-                                                      Text(
-                                                        faculty.name,
-                                                        style:
-                                                            GoogleFonts.poppins(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                              fontSize: 14,
-                                                            ),
-                                                      ),
-                                                      if (hasNameConflict) ...[
-                                                        const SizedBox(
-                                                          width: 6,
-                                                        ),
-                                                        Icon(
-                                                          Icons.warning_rounded,
-                                                          color: Colors.red,
-                                                          size: 16,
-                                                        ),
-                                                      ],
-                                                    ],
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                            DataCell(
-                                              Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.email_outlined,
-                                                    size: 16,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Text(
-                                                    faculty.email,
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 13,
-                                                      color: Colors.grey[700],
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            DataCell(
-                                              Text(
-                                                (faculty.program?.name ?? '�')
-                                                    .toUpperCase(),
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                            DataCell(
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 14,
-                                                      vertical: 7,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  gradient: LinearGradient(
-                                                    colors: [
-                                                      _getStatusColor(
-                                                        faculty
-                                                            .employmentStatus,
-                                                      ),
-                                                      _getStatusColor(
-                                                        faculty
-                                                            .employmentStatus,
-                                                      ).withOpacity(0.7),
-                                                    ],
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        20,
-                                                      ),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: _getStatusColor(
-                                                        faculty
-                                                            .employmentStatus,
-                                                      ).withOpacity(0.3),
-                                                      blurRadius: 8,
-                                                      offset: const Offset(
-                                                        0,
-                                                        2,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Icon(
-                                                      _getStatusIcon(
-                                                        faculty
-                                                            .employmentStatus,
-                                                      ),
-                                                      size: 14,
-                                                      color: Colors.white,
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      _getStatusText(
-                                                        faculty
-                                                            .employmentStatus,
-                                                      ),
-                                                      style:
-                                                          GoogleFonts.poppins(
-                                                            fontSize: 12,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color: Colors.white,
-                                                          ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            DataCell(
-                                              conflictsAsync.when(
-                                                loading: () => const SizedBox(),
-                                                error: (_, __) =>
-                                                    const SizedBox(),
-                                                data: (conflicts) {
-                                                  final hasConflict = conflicts
-                                                      .hasConflictForFaculty(
-                                                        faculty.id!,
-                                                      );
-                                                  final conflictCount = conflicts
-                                                      .where(
-                                                        (c) =>
-                                                            c.facultyId ==
-                                                                faculty.id ||
-                                                            c.conflictingScheduleId ==
-                                                                faculty.id,
-                                                      )
-                                                      .length;
-                                                  return Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 10,
-                                                          vertical: 4,
-                                                        ),
-                                                    decoration: BoxDecoration(
-                                                      color: hasConflict
-                                                          ? Colors.red
-                                                                .withOpacity(
-                                                                  0.1,
-                                                                )
-                                                          : Colors.green
-                                                                .withOpacity(
-                                                                  0.1,
-                                                                ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            10,
-                                                          ),
-                                                      border: Border.all(
-                                                        color: hasConflict
-                                                            ? Colors.red
-                                                                  .withOpacity(
-                                                                    0.3,
-                                                                  )
-                                                            : Colors.green
-                                                                  .withOpacity(
-                                                                    0.3,
-                                                                  ),
-                                                      ),
-                                                    ),
-                                                    child: Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        if (hasConflict) ...[
-                                                          const Icon(
-                                                            Icons
-                                                                .warning_rounded,
-                                                            color: Colors.red,
-                                                            size: 14,
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 4,
-                                                          ),
-                                                        ],
-                                                        Text(
-                                                          hasConflict
-                                                              ? '$conflictCount conflicts'
-                                                              : 'No conflicts',
-                                                          style:
-                                                              GoogleFonts.poppins(
-                                                                fontSize: 10,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                color:
-                                                                    hasConflict
-                                                                    ? Colors.red
-                                                                    : Colors
-                                                                          .grey,
-                                                              ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                            DataCell(
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 6,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: _getShiftColor(
-                                                    faculty.shiftPreference,
-                                                  ).withOpacity(0.1),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        16,
-                                                      ),
-                                                  border: Border.all(
-                                                    color: _getShiftColor(
-                                                      faculty.shiftPreference,
-                                                    ).withOpacity(0.3),
-                                                  ),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Icon(
-                                                      _getShiftIcon(
-                                                        faculty.shiftPreference,
-                                                      ),
-                                                      size: 14,
-                                                      color: _getShiftColor(
-                                                        faculty.shiftPreference,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      _getShiftText(
-                                                        faculty.shiftPreference,
-                                                      ),
-                                                      style: GoogleFonts.poppins(
-                                                        fontSize: 11,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color: _getShiftColor(
-                                                          faculty
-                                                              .shiftPreference,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            DataCell(
-                                              Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.schedule,
-                                                    size: 16,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Text(
-                                                    faculty.maxLoad != null
-                                                        ? '${faculty.maxLoad} Units'
-                                                        : '�',
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            DataCell(
-                                              Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  if (!_isShowingArchived) ...[
-                                                    Material(
-                                                      color: Colors.transparent,
-                                                      child: InkWell(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              8,
-                                                            ),
-                                                        onTap: () =>
-                                                            _showEditFacultyModal(
-                                                              faculty,
-                                                            ),
-                                                        child: Container(
-                                                          padding:
-                                                              const EdgeInsets.all(
-                                                                8,
-                                                              ),
-                                                          decoration: BoxDecoration(
-                                                            color: maroonColor
-                                                                .withOpacity(
-                                                                  0.1,
-                                                                ),
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  8,
-                                                                ),
-                                                          ),
-                                                          child: Icon(
-                                                            Icons.edit_outlined,
-                                                            color: maroonColor,
-                                                            size: 18,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Material(
-                                                      color: Colors.transparent,
-                                                      child: InkWell(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              8,
-                                                            ),
-                                                        onTap: () =>
-                                                            _archiveFaculty(
-                                                              faculty,
-                                                            ),
-                                                        child: Container(
-                                                          padding:
-                                                              const EdgeInsets.all(
-                                                                8,
-                                                              ),
-                                                          decoration: BoxDecoration(
-                                                            color: Colors.orange
-                                                                .withOpacity(
-                                                                  0.1,
-                                                                ),
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  8,
-                                                                ),
-                                                          ),
-                                                          child: const Icon(
-                                                            Icons
-                                                                .archive_outlined,
-                                                            color:
-                                                                Colors.orange,
-                                                            size: 18,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ] else ...[
-                                                    Material(
-                                                      color: Colors.transparent,
-                                                      child: InkWell(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              8,
-                                                            ),
-                                                        onTap: () =>
-                                                            _restoreFaculty(
-                                                              faculty,
-                                                            ),
-                                                        child: Container(
-                                                          padding:
-                                                              const EdgeInsets.all(
-                                                                8,
-                                                              ),
-                                                          decoration: BoxDecoration(
-                                                            color: Colors.green
-                                                                .withOpacity(
-                                                                  0.1,
-                                                                ),
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  8,
-                                                                ),
-                                                          ),
-                                                          child: const Icon(
-                                                            Icons
-                                                                .restore_rounded,
-                                                            color: Colors.green,
-                                                            size: 18,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Material(
-                                                      color: Colors.transparent,
-                                                      child: InkWell(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              8,
-                                                            ),
-                                                        onTap: () =>
-                                                            _permanentDeleteFaculty(
-                                                              faculty,
-                                                            ),
-                                                        child: Container(
-                                                          padding:
-                                                              const EdgeInsets.all(
-                                                                8,
-                                                              ),
-                                                          decoration: BoxDecoration(
-                                                            color: Colors.red
-                                                                .withOpacity(
-                                                                  0.1,
-                                                                ),
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  8,
-                                                                ),
-                                                          ),
-                                                          child: const Icon(
-                                                            Icons
-                                                                .delete_forever_rounded,
-                                                            color: Colors.red,
-                                                            size: 18,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
+                  return _buildDesktopFacultyTable(
+                    context,
+                    filteredFaculty,
+                    conflictsAsync,
+                    isDark,
                   );
                 },
               ),
@@ -1326,6 +564,467 @@ class _FacultyManagementScreenState
       case FacultyShiftPreference.custom:
         return Icons.tune;
     }
+  }
+
+  String _getShiftLabel(FacultyShiftPreference? preference) =>
+      _getShiftText(preference);
+
+  List<Faculty> _filteredFaculty(List<Faculty> facultyList) {
+    return facultyList.where((faculty) {
+      final matchesSearch = _searchQuery.isEmpty ||
+          faculty.name.toLowerCase().contains(_searchQuery) ||
+          faculty.email.toLowerCase().contains(_searchQuery) ||
+          faculty.facultyId.toLowerCase().contains(_searchQuery);
+      final matchesProgram =
+          _selectedProgram == null || faculty.program == _selectedProgram;
+      return matchesSearch && matchesProgram;
+    }).toList();
+  }
+
+  Widget _buildEmptyFacultyState() {
+    final hasQuery = _searchQuery.isNotEmpty;
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            hasQuery ? 'No faculty found' : 'No faculty members yet',
+            style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey[600]),
+          ),
+          if (!hasQuery) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Click \"Add Faculty\" to get started',
+              style: GoogleFonts.poppins(color: Colors.grey[500]),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Color? _resolveRowColor(
+    Set<WidgetState> states,
+    int index,
+    bool isDark,
+  ) {
+    if (states.contains(WidgetState.hovered)) {
+      return maroonColor.withOpacity(0.05);
+    }
+    if (!index.isEven) return null;
+    return isDark
+        ? Colors.white.withOpacity(0.02)
+        : Colors.grey.withOpacity(0.02);
+  }
+
+  Widget _buildDesktopFacultyTable(
+    BuildContext context,
+    List<Faculty> filteredFaculty,
+    AsyncValue<List<ScheduleConflict>> conflictsAsync,
+    bool isDark,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border(left: BorderSide(color: maroonColor, width: 4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildTableHeader(filteredFaculty.length),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: DataTable(
+                        headingRowColor: WidgetStateProperty.all(maroonColor),
+                        headingTextStyle: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          letterSpacing: 0.5,
+                        ),
+                        dataRowMinHeight: 65,
+                        dataRowMaxHeight: 85,
+                        columnSpacing: 32,
+                        horizontalMargin: 24,
+                        decoration: const BoxDecoration(color: Colors.transparent),
+                        columns: const [
+                          DataColumn(label: Text('FACULTY ID')),
+                          DataColumn(label: Text('NAME')),
+                          DataColumn(label: Text('EMAIL')),
+                          DataColumn(label: Text('PROGRAM')),
+                          DataColumn(label: Text('STATUS')),
+                          DataColumn(label: Text('CONFLICTS')),
+                          DataColumn(label: Text('SHIFT')),
+                          DataColumn(label: Text('MAX LOAD')),
+                          DataColumn(label: Text('ACTIONS')),
+                        ],
+                        rows: filteredFaculty.asMap().entries.map(
+                          (entry) => _facultyDataRow(
+                            context,
+                            entry.value,
+                            entry.key,
+                            conflictsAsync,
+                            isDark,
+                          ),
+                        ).toList(),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTableHeader(int count) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        color: maroonColor.withOpacity(0.05),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.people_rounded, color: maroonColor, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            'Faculty Members',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: maroonColor,
+            ),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: maroonColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '$count Total',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  DataRow _facultyDataRow(
+    BuildContext context,
+    Faculty faculty,
+    int index,
+    AsyncValue<List<ScheduleConflict>> conflictsAsync,
+    bool isDark,
+  ) {
+    return DataRow(
+      onSelectChanged: (selected) {
+        if (selected == true) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => FacultyDetailsScreen(faculty: faculty),
+            ),
+          );
+        }
+      },
+      color: WidgetStateProperty.resolveWith(
+        (states) => _resolveRowColor(states, index, isDark),
+      ),
+      cells: [
+        DataCell(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: maroonColor.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              faculty.facultyId,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: maroonColor,
+              ),
+            ),
+          ),
+        ),
+        DataCell(
+          conflictsAsync.when(
+            loading: () => _facultyNameCell(faculty),
+            error: (_, __) => _facultyNameCell(faculty),
+            data: (conflicts) {
+              final hasNameConflict =
+                  conflicts.hasConflictForFaculty(faculty.id!);
+              return _facultyNameCell(faculty, hasConflict: hasNameConflict);
+            },
+          ),
+        ),
+        DataCell(
+          Row(
+            children: [
+              Icon(Icons.email_outlined, size: 16, color: Colors.grey[600]),
+              const SizedBox(width: 6),
+              Text(
+                faculty.email,
+                style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[700]),
+              ),
+            ],
+          ),
+        ),
+        DataCell(
+          Text(
+            (faculty.program?.name ?? 'N/A').toUpperCase(),
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        DataCell(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  _getStatusColor(faculty.employmentStatus),
+                  _getStatusColor(faculty.employmentStatus).withOpacity(0.7),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: _getStatusColor(faculty.employmentStatus)
+                      .withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _getStatusIcon(faculty.employmentStatus),
+                  size: 14,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  faculty.employmentStatus != null
+                      ? faculty.employmentStatus!.name.toUpperCase()
+                      : 'UNKNOWN',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        DataCell(
+          conflictsAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (conflicts) {
+              final hasConflict =
+                  conflicts.hasConflictForFaculty(faculty.id!);
+              return _conflictBadge(hasConflict);
+            },
+          ),
+        ),
+        DataCell(
+          Row(
+            children: [
+              Icon(
+                _getShiftIcon(faculty.shiftPreference),
+                size: 15,
+                color: Colors.grey[700],
+              ),
+              const SizedBox(width: 6),
+              Text(
+                _getShiftLabel(faculty.shiftPreference),
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        DataCell(
+          Text(
+            '${faculty.maxLoad?.toStringAsFixed(1) ?? 'N/A'} hrs',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        DataCell(
+          Row(
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => FacultyDetailsScreen(faculty: faculty),
+                    ),
+                  );
+                },
+                icon: const Icon(
+                  Icons.visibility_rounded,
+                  color: Colors.blueAccent,
+                  size: 20,
+                ),
+              ),
+              IconButton(
+                onPressed: () => _showEditFacultyModal(faculty),
+                icon: const Icon(
+                  Icons.edit_rounded,
+                  color: Colors.orange,
+                  size: 20,
+                ),
+              ),
+              if (!_isShowingArchived) ...[
+                IconButton(
+                  onPressed: () => _archiveFaculty(faculty),
+                  icon: const Icon(
+                    Icons.archive_outlined,
+                    color: Colors.purple,
+                    size: 20,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => _permanentDeleteFaculty(faculty),
+                  icon: const Icon(
+                    Icons.delete_forever,
+                    color: Colors.red,
+                    size: 20,
+                  ),
+                ),
+              ] else ...[
+                IconButton(
+                  onPressed: () => _restoreFaculty(faculty),
+                  icon: const Icon(
+                    Icons.restore_from_trash_rounded,
+                    color: Colors.green,
+                    size: 20,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => _permanentDeleteFaculty(faculty),
+                  icon: const Icon(
+                    Icons.delete_forever,
+                    color: Colors.red,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _facultyNameCell(Faculty faculty, {bool hasConflict = false}) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: maroonColor,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Center(
+            child: Text(
+              faculty.name.isNotEmpty ? faculty.name[0].toUpperCase() : '?',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          faculty.name,
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+        if (hasConflict) ...[
+          const SizedBox(width: 6),
+          const Icon(Icons.warning_rounded, color: Colors.red, size: 16),
+        ],
+      ],
+    );
+  }
+
+  Widget _conflictBadge(bool hasConflict) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: hasConflict
+            ? Colors.red.withOpacity(0.15)
+            : Colors.green.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            hasConflict ? Icons.warning_rounded : Icons.check_circle_rounded,
+            size: 14,
+            color: hasConflict ? Colors.red : Colors.green,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            hasConflict ? 'Has Conflicts' : 'Clear',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: hasConflict ? Colors.red : Colors.green,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSearchBar(bool isDark) {
@@ -1862,7 +1561,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
 
     if (endMinutes <= startMinutes) {
       if (mounted) {
-        _showErrorDialog(context, 'End time must be after start time.');
+        _showErrorDialog(context, kEndTimeAfterStartMessage);
       }
       return;
     }
@@ -2662,7 +2361,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
               if (eM <= sM) {
                 AppErrorDialog.show(
                   context,
-                  'End time must be after start time.',
+                  kEndTimeAfterStartMessage,
                 );
                 return;
               }
@@ -3019,7 +2718,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
 
     if (endMinutes <= startMinutes) {
       if (mounted) {
-        _showErrorDialog(context, 'End time must be after start time.');
+        _showErrorDialog(context, kEndTimeAfterStartMessage);
       }
       return;
     }
@@ -3742,7 +3441,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
               final startMins = _startTime.hour * 60 + _startTime.minute;
               final endMins = _endTime.hour * 60 + _endTime.minute;
               if (endMins <= startMins) {
-                _showErrorDialog(context, 'End time must be after start time.');
+                _showErrorDialog(context, kEndTimeAfterStartMessage);
                 return;
               }
               // Check duplicate day/time overlap

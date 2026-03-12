@@ -20,9 +20,32 @@ class SchedulingService {
     Session session,
     GenerateScheduleRequest request,
   ) async {
-    final generatedSchedules = <Schedule>[];
-    final conflicts = <ScheduleConflict>[];
+    final validationResponse = _validateGenerateScheduleRequest(request);
+    if (validationResponse != null) return validationResponse;
 
+    final data = await _loadGenerateData(session, request);
+    final tracking = _initFacultyTracking(
+      data.validFaculties,
+      data.existingSchedules,
+    );
+    final assignedKeys = _buildAssignedSubjectSectionKeys(
+      data.existingSchedules,
+    );
+
+    final outcome = await _generateSchedulesForSubjects(
+      session: session,
+      data: data,
+      tracking: tracking,
+      assignedSubjectSectionKeys: assignedKeys,
+    );
+
+    _logConflicts(session, outcome.conflicts);
+    return _buildGenerateResponse(outcome);
+  }
+
+  GenerateScheduleResponse? _validateGenerateScheduleRequest(
+    GenerateScheduleRequest request,
+  ) {
     if (request.subjectIds.isEmpty) {
       return GenerateScheduleResponse(
         success: false,
@@ -32,7 +55,6 @@ class SchedulingService {
         unassignedSubjects: 0,
       );
     }
-
     if (request.facultyIds.isEmpty) {
       return GenerateScheduleResponse(
         success: false,
@@ -42,7 +64,6 @@ class SchedulingService {
         unassignedSubjects: request.subjectIds.length,
       );
     }
-
     if (request.sections.isEmpty) {
       return GenerateScheduleResponse(
         success: false,
@@ -52,7 +73,13 @@ class SchedulingService {
         unassignedSubjects: 0,
       );
     }
+    return null;
+  }
 
+  Future<_GenerateData> _loadGenerateData(
+    Session session,
+    GenerateScheduleRequest request,
+  ) async {
     final subjects = await Future.wait(
       request.subjectIds.map((id) => Subject.db.findById(session, id)),
     );
@@ -78,10 +105,7 @@ class SchedulingService {
         .whereType<Faculty>()
         .where((f) => f.isActive)
         .toList();
-    final validRooms = rooms
-        .whereType<Room>()
-        .where((r) => r.isActive)
-        .toList();
+    final validRooms = rooms.whereType<Room>().where((r) => r.isActive).toList();
     final validTimeslots = timeslots.whereType<Timeslot>().toList();
     final timeslotCache = <String, Timeslot>{
       for (final t in validTimeslots)
@@ -106,6 +130,23 @@ class SchedulingService {
       facultyAvailMap[faculty.id!] = avails;
     }
 
+    return _GenerateData(
+      request: request,
+      validSubjects: validSubjects,
+      validFaculties: validFaculties,
+      validRooms: validRooms,
+      validTimeslots: validTimeslots,
+      timeslotCache: timeslotCache,
+      candidateSections: candidateSections,
+      facultyAvailMap: facultyAvailMap,
+      existingSchedules: existingSchedules,
+    );
+  }
+
+  _FacultyTracking _initFacultyTracking(
+    List<Faculty> validFaculties,
+    List<Schedule> existingSchedules,
+  ) {
     final facultyAssignments = <int, double>{};
     final facultyTimeslotUsage = <int, Map<int, int>>{};
     for (final faculty in validFaculties) {
@@ -123,7 +164,16 @@ class SchedulingService {
       }
     }
 
-    final assignedSubjectSectionKeys = <String>{
+    return _FacultyTracking(
+      assignments: facultyAssignments,
+      timeslotUsage: facultyTimeslotUsage,
+    );
+  }
+
+  Set<String> _buildAssignedSubjectSectionKeys(
+    List<Schedule> existingSchedules,
+  ) {
+    return <String>{
       for (final s in existingSchedules)
         _componentKey(
           s.subjectId,
@@ -132,283 +182,438 @@ class SchedulingService {
           _componentTagFromLoadTypes(s.loadTypes),
         ),
     };
+  }
 
-    for (final subject in validSubjects) {
-      final matchingSections = candidateSections.where((section) {
-        if (section.program != subject.program) return false;
-        if (subject.yearLevel != null &&
-            section.yearLevel != subject.yearLevel) {
-          return false;
-        }
-        return true;
-      }).toList();
+  Future<_GenerationOutcome> _generateSchedulesForSubjects({
+    required Session session,
+    required _GenerateData data,
+    required _FacultyTracking tracking,
+    required Set<String> assignedSubjectSectionKeys,
+  }) async {
+    final generatedSchedules = <Schedule>[];
+    final conflicts = <ScheduleConflict>[];
 
-      if (matchingSections.isEmpty) {
+    for (final subject in data.validSubjects) {
+      await _generateForSubject(
+        session: session,
+        data: data,
+        subject: subject,
+        tracking: tracking,
+        assignedSubjectSectionKeys: assignedSubjectSectionKeys,
+        generatedSchedules: generatedSchedules,
+        conflicts: conflicts,
+      );
+    }
+
+    return _GenerationOutcome(
+      generatedSchedules: generatedSchedules,
+      conflicts: conflicts,
+    );
+  }
+
+  Future<void> _generateForSubject({
+    required Session session,
+    required _GenerateData data,
+    required Subject subject,
+    required _FacultyTracking tracking,
+    required Set<String> assignedSubjectSectionKeys,
+    required List<Schedule> generatedSchedules,
+    required List<ScheduleConflict> conflicts,
+  }) async {
+    final matchingSections =
+        _matchingSectionsForSubject(subject, data.candidateSections);
+
+    if (matchingSections.isEmpty) {
+      conflicts.add(
+        ScheduleConflict(
+          type: 'generation_failed',
+          message:
+              'No matching section found for ${subject.name} (${subject.code})',
+          details:
+              'Subject program/year does not match any available active section.',
+        ),
+      );
+      return;
+    }
+
+    for (final section in matchingSections) {
+      final result = await _generateForSection(
+        session: session,
+        data: data,
+        subject: subject,
+        section: section,
+        tracking: tracking,
+        assignedSubjectSectionKeys: assignedSubjectSectionKeys,
+        generatedSchedules: generatedSchedules,
+        conflicts: conflicts,
+      );
+
+      if (!result.allAssigned) {
+        final details = await _buildGenerationFailureDetails(
+          session: session,
+          data: data,
+          subject: subject,
+          section: section,
+          tracking: tracking,
+          maxComponentHours: result.maxComponentHours,
+        );
         conflicts.add(
           ScheduleConflict(
             type: 'generation_failed',
             message:
-                'No matching section found for ${subject.name} (${subject.code})',
-            details:
-                'Subject program/year does not match any available active section.',
+                'Could not assign ${subject.name} (${subject.code}) - Section ${section.sectionCode}',
+            details: details,
           ),
         );
+      }
+    }
+  }
+
+  List<_SectionCandidate> _matchingSectionsForSubject(
+    Subject subject,
+    List<_SectionCandidate> candidateSections,
+  ) {
+    return candidateSections.where((section) {
+      if (section.program != subject.program) return false;
+      if (subject.yearLevel != null && section.yearLevel != subject.yearLevel) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
+
+  Future<_SectionGenerationResult> _generateForSection({
+    required Session session,
+    required _GenerateData data,
+    required Subject subject,
+    required _SectionCandidate section,
+    required _FacultyTracking tracking,
+    required Set<String> assignedSubjectSectionKeys,
+    required List<Schedule> generatedSchedules,
+    required List<ScheduleConflict> conflicts,
+  }) async {
+    final components = _componentsForSubject(subject);
+    double maxComponentHours = 0;
+    for (final component in components) {
+      if (component.hours > maxComponentHours) {
+        maxComponentHours = component.hours;
+      }
+    }
+
+    final insertedForPair = <Schedule>[];
+    var allAssigned = true;
+
+    for (final component in components) {
+      final pairKey = _componentKey(
+        subject.id!,
+        section.id,
+        section.sectionCode,
+        component.tag,
+      );
+      if (assignedSubjectSectionKeys.contains(pairKey)) {
         continue;
       }
 
-      for (final section in matchingSections) {
-        final components = _componentsForSubject(subject);
-        double maxComponentHours = 0;
-        for (final component in components) {
-          if (component.hours > maxComponentHours) {
-            maxComponentHours = component.hours;
-          }
+      final eligibleRooms = _eligibleRoomsForComponent(
+        rooms: data.validRooms,
+        subject: subject,
+        componentTypes: component.types,
+      );
+      if (eligibleRooms.isEmpty) {
+        conflicts.add(
+          ScheduleConflict(
+            type: 'generation_failed',
+            message:
+                'No eligible room for ${subject.name} (${subject.code})',
+            details: 'No room matches subject type/program constraints.',
+          ),
+        );
+        allAssigned = false;
+        break;
+      }
+
+      final assigned = await _assignComponentToSection(
+        session: session,
+        data: data,
+        subject: subject,
+        section: section,
+        component: component,
+        eligibleRooms: eligibleRooms,
+        tracking: tracking,
+        assignedSubjectSectionKeys: assignedSubjectSectionKeys,
+        generatedSchedules: generatedSchedules,
+        insertedForPair: insertedForPair,
+      );
+
+      if (!assigned) {
+        allAssigned = false;
+        break;
+      }
+    }
+
+    if (!allAssigned && insertedForPair.isNotEmpty) {
+      for (final inserted in insertedForPair) {
+        await Schedule.db.deleteRow(session, inserted);
+      }
+    }
+
+    return _SectionGenerationResult(
+      allAssigned: allAssigned,
+      maxComponentHours: maxComponentHours,
+    );
+  }
+
+  Future<bool> _assignComponentToSection({
+    required Session session,
+    required _GenerateData data,
+    required Subject subject,
+    required _SectionCandidate section,
+    required _LoadComponent component,
+    required List<Room> eligibleRooms,
+    required _FacultyTracking tracking,
+    required Set<String> assignedSubjectSectionKeys,
+    required List<Schedule> generatedSchedules,
+    required List<Schedule> insertedForPair,
+  }) async {
+    final rankedFaculties = _rankFacultiesByLoad(
+      data.validFaculties,
+      tracking.assignments,
+    );
+
+    for (final faculty in rankedFaculties) {
+      if (!_isFacultyEligibleForSubject(faculty, subject)) {
+        continue;
+      }
+
+      final currentLoad = tracking.assignments[faculty.id!] ?? 0;
+      if ((currentLoad + component.units) > (faculty.maxLoad ?? 0)) continue;
+
+      final candidateTimeslots = await _candidateTimeslotsForFaculty(
+        session: session,
+        allTimeslots: data.validTimeslots,
+        availability: data.facultyAvailMap[faculty.id!] ?? const [],
+        requiredHours: component.hours,
+        cache: data.timeslotCache,
+        requireLabStartAfterNine:
+            component.types.contains(SubjectType.laboratory),
+      );
+      final rankedTimeslots = _rankTimeslotsForFaculty(
+        timeslots: candidateTimeslots,
+        timeslotUsage: tracking.timeslotUsage[faculty.id!] ?? const {},
+      );
+      if (rankedTimeslots.isEmpty) {
+        continue;
+      }
+
+      final assigned = await _assignWithFaculty(
+        session: session,
+        subject: subject,
+        section: section,
+        component: component,
+        faculty: faculty,
+        rankedTimeslots: rankedTimeslots,
+        eligibleRooms: eligibleRooms,
+        tracking: tracking,
+        assignedSubjectSectionKeys: assignedSubjectSectionKeys,
+        generatedSchedules: generatedSchedules,
+        insertedForPair: insertedForPair,
+      );
+      if (assigned) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  List<Faculty> _rankFacultiesByLoad(
+    List<Faculty> validFaculties,
+    Map<int, double> facultyAssignments,
+  ) {
+    final ranked = [...validFaculties];
+    ranked.sort((a, b) {
+      final aLoad = facultyAssignments[a.id!] ?? 0;
+      final bLoad = facultyAssignments[b.id!] ?? 0;
+      final aMax = (a.maxLoad ?? 1).toDouble();
+      final bMax = (b.maxLoad ?? 1).toDouble();
+      final aRatio = aMax <= 0 ? 1.0 : aLoad / aMax;
+      final bRatio = bMax <= 0 ? 1.0 : bLoad / bMax;
+      return aRatio.compareTo(bRatio);
+    });
+    return ranked;
+  }
+
+  bool _isFacultyEligibleForSubject(Faculty faculty, Subject subject) {
+    if (subject.facultyId != null && faculty.id != subject.facultyId) {
+      return false;
+    }
+    return _canTeachProgram(faculty, subject);
+  }
+
+  Future<bool> _assignWithFaculty({
+    required Session session,
+    required Subject subject,
+    required _SectionCandidate section,
+    required _LoadComponent component,
+    required Faculty faculty,
+    required List<Timeslot> rankedTimeslots,
+    required List<Room> eligibleRooms,
+    required _FacultyTracking tracking,
+    required Set<String> assignedSubjectSectionKeys,
+    required List<Schedule> generatedSchedules,
+    required List<Schedule> insertedForPair,
+  }) async {
+    for (final timeslot in rankedTimeslots) {
+      for (final room in eligibleRooms) {
+        final candidate = Schedule(
+          subjectId: subject.id!,
+          facultyId: faculty.id!,
+          roomId: room.id!,
+          timeslotId: timeslot.id!,
+          section: section.sectionCode,
+          sectionId: section.id,
+          loadTypes: component.types,
+          units: component.units,
+          hours: component.hours,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        final validationConflicts = await _conflictService.validateSchedule(
+          session,
+          candidate,
+        );
+        if (validationConflicts.isNotEmpty) {
+          continue;
         }
-        final insertedForPair = <Schedule>[];
-        var allAssigned = true;
-        for (final component in components) {
-          final pairKey = _componentKey(
+
+        final inserted = await _tryInsertSchedule(session, candidate);
+        if (inserted == null) {
+          continue;
+        }
+
+        generatedSchedules.add(inserted);
+        insertedForPair.add(inserted);
+        tracking.assignments[faculty.id!] =
+            (tracking.assignments[faculty.id!] ?? 0) + component.units;
+        final usage = tracking.timeslotUsage[faculty.id!]!;
+        usage[timeslot.id!] = (usage[timeslot.id!] ?? 0) + 1;
+        assignedSubjectSectionKeys.add(
+          _componentKey(
             subject.id!,
             section.id,
             section.sectionCode,
             component.tag,
-          );
-          if (assignedSubjectSectionKeys.contains(pairKey)) {
-            continue;
-          }
-
-          var assigned = false;
-          final requiredHours = component.hours;
-          final eligibleRooms = _eligibleRoomsForComponent(
-            rooms: validRooms,
-            subject: subject,
-            componentTypes: component.types,
-          );
-          if (eligibleRooms.isEmpty) {
-            conflicts.add(
-              ScheduleConflict(
-                type: 'generation_failed',
-                message:
-                    'No eligible room for ${subject.name} (${subject.code})',
-                details: 'No room matches subject type/program constraints.',
-              ),
-            );
-            allAssigned = false;
-            break;
-          }
-
-          final rankedFaculties = [...validFaculties]
-            ..sort((a, b) {
-              final aLoad = facultyAssignments[a.id!] ?? 0;
-              final bLoad = facultyAssignments[b.id!] ?? 0;
-              final aMax = (a.maxLoad ?? 1).toDouble();
-              final bMax = (b.maxLoad ?? 1).toDouble();
-              final aRatio = aMax <= 0 ? 1.0 : aLoad / aMax;
-              final bRatio = bMax <= 0 ? 1.0 : bLoad / bMax;
-              return aRatio.compareTo(bRatio);
-            });
-
-          for (final faculty in rankedFaculties) {
-            if (assigned) break;
-
-            // If a subject is explicitly assigned to an instructor, enforce it.
-            if (subject.facultyId != null && faculty.id != subject.facultyId) {
-              continue;
-            }
-
-            if (!_canTeachProgram(faculty, subject)) {
-              continue;
-            }
-
-            final currentLoad = facultyAssignments[faculty.id!] ?? 0;
-            final subjectUnits = component.units;
-            if ((currentLoad + subjectUnits) > (faculty.maxLoad ?? 0)) continue;
-
-            final candidateTimeslots = await _candidateTimeslotsForFaculty(
-              session: session,
-              allTimeslots: validTimeslots,
-              availability: facultyAvailMap[faculty.id!] ?? const [],
-              requiredHours: requiredHours,
-              cache: timeslotCache,
-              requireLabStartAfterNine: component.types.contains(
-                SubjectType.laboratory,
-              ),
-            );
-            final rankedTimeslots = _rankTimeslotsForFaculty(
-              timeslots: candidateTimeslots,
-              timeslotUsage: facultyTimeslotUsage[faculty.id!] ?? const {},
-            );
-            if (rankedTimeslots.isEmpty) {
-              continue;
-            }
-
-            for (final timeslot in rankedTimeslots) {
-              if (assigned) break;
-
-              for (final room in eligibleRooms) {
-                if (assigned) break;
-
-                final candidate = Schedule(
-                  subjectId: subject.id!,
-                  facultyId: faculty.id!,
-                  roomId: room.id!,
-                  timeslotId: timeslot.id!,
-                  section: section.sectionCode,
-                  sectionId: section.id,
-                  loadTypes: component.types,
-                  units: component.units,
-                  hours: component.hours,
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                );
-
-                final validationConflicts = await _conflictService
-                    .validateSchedule(
-                      session,
-                      candidate,
-                    );
-
-                if (validationConflicts.isEmpty) {
-                  final inserted = await _tryInsertSchedule(
-                    session,
-                    candidate,
-                  );
-                  if (inserted == null) {
-                    continue;
-                  }
-                  generatedSchedules.add(inserted);
-                  insertedForPair.add(inserted);
-                  facultyAssignments[faculty.id!] =
-                      (facultyAssignments[faculty.id!] ?? 0) + subjectUnits;
-                  final usage = facultyTimeslotUsage[faculty.id!]!;
-                  usage[timeslot.id!] = (usage[timeslot.id!] ?? 0) + 1;
-                  assignedSubjectSectionKeys.add(pairKey);
-                  assigned = true;
-                }
-              }
-            }
-          }
-
-          if (!assigned) {
-            allAssigned = false;
-            break;
-          }
-        }
-
-        if (!allAssigned && insertedForPair.isNotEmpty) {
-          for (final inserted in insertedForPair) {
-            await Schedule.db.deleteRow(session, inserted);
-          }
-        }
-
-        if (!allAssigned) {
-          var details =
-              'No valid faculty/room/timeslot combination satisfies all constraints.';
-
-          if (subject.facultyId != null) {
-            final lockedFaculty = await Faculty.db.findById(
-              session,
-              subject.facultyId!,
-            );
-            final lockedName =
-                lockedFaculty?.name ?? 'Faculty ID ${subject.facultyId}';
-
-            if (lockedFaculty == null || !lockedFaculty.isActive) {
-              details =
-                  'Subject ${subject.code} is locked to $lockedName, but that faculty member is missing or inactive.';
-            } else if (!request.facultyIds.contains(lockedFaculty.id)) {
-              details =
-                  'Subject ${subject.code} is locked to $lockedName, but that faculty member is not included in the selected faculty filter.';
-            } else if (lockedFaculty.program != null &&
-                lockedFaculty.program != subject.program) {
-              details =
-                  'Subject ${subject.code} is locked to $lockedName, but program does not match (${lockedFaculty.program} vs ${subject.program}).';
-            } else {
-              final lockedId = lockedFaculty.id!;
-              final lockedCurrentLoad =
-                  facultyAssignments[lockedId] ??
-                  existingSchedules
-                      .where((s) => s.facultyId == lockedId)
-                      .fold<double>(0, (sum, s) => sum + (s.units ?? 0));
-              final subjectUnits = subject.units.toDouble();
-
-              if ((lockedCurrentLoad + subjectUnits) >
-                  (lockedFaculty.maxLoad ?? 0).toDouble()) {
-                details =
-                    'Subject ${subject.code} is locked to $lockedName, but assigning it would exceed max load (${lockedCurrentLoad.toStringAsFixed(1)} + ${subjectUnits.toStringAsFixed(1)} > ${(lockedFaculty.maxLoad ?? 0).toDouble().toStringAsFixed(1)}).';
-              } else {
-                final lockedAvailability =
-                    facultyAvailMap[lockedId] ??
-                    await FacultyAvailability.db.find(
-                      session,
-                      where: (t) => t.facultyId.equals(lockedId),
-                    );
-                final lockedUsage =
-                    facultyTimeslotUsage[lockedId] ??
-                    <int, int>{
-                      for (final s in existingSchedules.where(
-                        (s) => s.facultyId == lockedId && s.timeslotId != null,
-                      ))
-                        s.timeslotId!: 1,
-                    };
-                final lockedCandidates = await _candidateTimeslotsForFaculty(
-                  session: session,
-                  allTimeslots: validTimeslots,
-                  availability: lockedAvailability,
-                  requiredHours: maxComponentHours > 0
-                      ? maxComponentHours
-                      : _requiredHours(subject),
-                  cache: timeslotCache,
-                );
-                final lockedTimeslots = _rankTimeslotsForFaculty(
-                  timeslots: lockedCandidates,
-                  timeslotUsage: lockedUsage,
-                );
-
-                if (lockedTimeslots.isEmpty) {
-                  details =
-                      'Subject ${subject.code} is locked to $lockedName, but no timeslot fits preferred availability and required hours.';
-                } else {
-                  details =
-                      'Subject ${subject.code} is locked to $lockedName, but no room/timeslot combination is conflict-free for section ${section.sectionCode}.';
-                }
-              }
-            }
-          }
-
-          conflicts.add(
-            ScheduleConflict(
-              type: 'generation_failed',
-              message:
-                  'Could not assign ${subject.name} (${subject.code}) - Section ${section.sectionCode}',
-              details: details,
-            ),
-          );
-        }
-      }
-    }
-
-    if (conflicts.isNotEmpty) {
-      final limit = conflicts.length < 10 ? conflicts.length : 10;
-      for (var i = 0; i < limit; i++) {
-        final c = conflicts[i];
-        session.log(
-          '[SCHEDULE_CONFLICT] ${c.type}: ${c.message} :: ${c.details ?? ''}',
-          level: LogLevel.warning,
+          ),
         );
+        return true;
       }
     }
+    return false;
+  }
 
+  Future<String> _buildGenerationFailureDetails({
+    required Session session,
+    required _GenerateData data,
+    required Subject subject,
+    required _SectionCandidate section,
+    required _FacultyTracking tracking,
+    required double maxComponentHours,
+  }) async {
+    var details =
+        'No valid faculty/room/timeslot combination satisfies all constraints.';
+
+    if (subject.facultyId == null) return details;
+
+    final lockedFaculty = await Faculty.db.findById(
+      session,
+      subject.facultyId!,
+    );
+    final lockedName = lockedFaculty?.name ?? 'Faculty ID ${subject.facultyId}';
+
+    if (lockedFaculty == null || !lockedFaculty.isActive) {
+      return 'Subject ${subject.code} is locked to $lockedName, but that faculty member is missing or inactive.';
+    }
+    if (!data.request.facultyIds.contains(lockedFaculty.id)) {
+      return 'Subject ${subject.code} is locked to $lockedName, but that faculty member is not included in the selected faculty filter.';
+    }
+    if (lockedFaculty.program != null &&
+        lockedFaculty.program != subject.program) {
+      return 'Subject ${subject.code} is locked to $lockedName, but program does not match (${lockedFaculty.program} vs ${subject.program}).';
+    }
+
+    final lockedId = lockedFaculty.id!;
+    final lockedCurrentLoad =
+        tracking.assignments[lockedId] ??
+        data.existingSchedules
+            .where((s) => s.facultyId == lockedId)
+            .fold<double>(0, (sum, s) => sum + (s.units ?? 0));
+    final subjectUnits = subject.units.toDouble();
+
+    if ((lockedCurrentLoad + subjectUnits) >
+        (lockedFaculty.maxLoad ?? 0).toDouble()) {
+      return 'Subject ${subject.code} is locked to $lockedName, but assigning it would exceed max load (${lockedCurrentLoad.toStringAsFixed(1)} + ${subjectUnits.toStringAsFixed(1)} > ${(lockedFaculty.maxLoad ?? 0).toDouble().toStringAsFixed(1)}).';
+    }
+
+    final lockedAvailability =
+        data.facultyAvailMap[lockedId] ??
+        await FacultyAvailability.db.find(
+          session,
+          where: (t) => t.facultyId.equals(lockedId),
+        );
+    final lockedUsage =
+        tracking.timeslotUsage[lockedId] ??
+        <int, int>{
+          for (final s in data.existingSchedules.where(
+            (s) => s.facultyId == lockedId && s.timeslotId != null,
+          ))
+            s.timeslotId!: 1,
+        };
+    final lockedCandidates = await _candidateTimeslotsForFaculty(
+      session: session,
+      allTimeslots: data.validTimeslots,
+      availability: lockedAvailability,
+      requiredHours:
+          maxComponentHours > 0 ? maxComponentHours : _requiredHours(subject),
+      cache: data.timeslotCache,
+    );
+    final lockedTimeslots = _rankTimeslotsForFaculty(
+      timeslots: lockedCandidates,
+      timeslotUsage: lockedUsage,
+    );
+
+    if (lockedTimeslots.isEmpty) {
+      return 'Subject ${subject.code} is locked to $lockedName, but no timeslot fits preferred availability and required hours.';
+    }
+
+    return 'Subject ${subject.code} is locked to $lockedName, but no room/timeslot combination is conflict-free for section ${section.sectionCode}.';
+  }
+
+  void _logConflicts(Session session, List<ScheduleConflict> conflicts) {
+    if (conflicts.isEmpty) return;
+    final limit = conflicts.length < 10 ? conflicts.length : 10;
+    for (var i = 0; i < limit; i++) {
+      final c = conflicts[i];
+      session.log(
+        '[SCHEDULE_CONFLICT] ${c.type}: ${c.message} :: ${c.details ?? ''}',
+        level: LogLevel.warning,
+      );
+    }
+  }
+
+  GenerateScheduleResponse _buildGenerateResponse(
+    _GenerationOutcome outcome,
+  ) {
     return GenerateScheduleResponse(
-      success: conflicts.isEmpty,
-      schedules: generatedSchedules,
-      conflicts: conflicts.isEmpty ? null : conflicts,
-      totalAssigned: generatedSchedules.length,
-      conflictsDetected: conflicts.length,
-      unassignedSubjects: conflicts.length,
-      message: conflicts.isEmpty
-          ? 'Successfully generated ${generatedSchedules.length} schedule entries'
-          : '${generatedSchedules.length} assigned, ${conflicts.length} unassigned',
+      success: outcome.conflicts.isEmpty,
+      schedules: outcome.generatedSchedules,
+      conflicts: outcome.conflicts.isEmpty ? null : outcome.conflicts,
+      totalAssigned: outcome.generatedSchedules.length,
+      conflictsDetected: outcome.conflicts.length,
+      unassignedSubjects: outcome.conflicts.length,
+      message: outcome.conflicts.isEmpty
+          ? 'Successfully generated ${outcome.generatedSchedules.length} schedule entries'
+          : '${outcome.generatedSchedules.length} assigned, ${outcome.conflicts.length} unassigned',
     );
   }
 
@@ -605,40 +810,71 @@ class SchedulingService {
     final requiredMinutes = (requiredHours * 60).round();
     if (requiredMinutes <= 0) return const [];
 
-    // If no availability set, derive sub-slots from existing timeslots.
     if (availability.isEmpty) {
-      final stepMinutes = requiredMinutes % 60 == 0 ? 60 : 30;
-      final candidates = <Timeslot>[];
-      final seen = <String>{};
-
-      for (final slot in allTimeslots) {
-        final start = _parseTimeToMinutes(slot.startTime);
-        final end = _parseTimeToMinutes(slot.endTime);
-        if (end - start < requiredMinutes) continue;
-
-        for (var s = start; s + requiredMinutes <= end; s += stepMinutes) {
-          if (requireLabStartAfterNine && s < _labEarliestStartMinutes) {
-            continue;
-          }
-          final e = s + requiredMinutes;
-          final startTime = _formatMinutes(s);
-          final endTime = _formatMinutes(e);
-          final key = _timeslotKey(slot.day, startTime, endTime);
-          if (!seen.add(key)) continue;
-          final created = await _getOrCreateTimeslot(
-            session: session,
-            day: slot.day,
-            startTime: startTime,
-            endTime: endTime,
-            cache: cache,
-          );
-          candidates.add(created);
-        }
-      }
-
-      return candidates;
+      return await _candidateTimeslotsFromExisting(
+        session: session,
+        allTimeslots: allTimeslots,
+        requiredMinutes: requiredMinutes,
+        cache: cache,
+        requireLabStartAfterNine: requireLabStartAfterNine,
+      );
     }
 
+    return await _candidateTimeslotsFromAvailability(
+      session: session,
+      availability: availability,
+      requiredMinutes: requiredMinutes,
+      cache: cache,
+      requireLabStartAfterNine: requireLabStartAfterNine,
+    );
+  }
+
+  Future<List<Timeslot>> _candidateTimeslotsFromExisting({
+    required Session session,
+    required List<Timeslot> allTimeslots,
+    required int requiredMinutes,
+    required Map<String, Timeslot> cache,
+    required bool requireLabStartAfterNine,
+  }) async {
+    final stepMinutes = requiredMinutes % 60 == 0 ? 60 : 30;
+    final candidates = <Timeslot>[];
+    final seen = <String>{};
+
+    for (final slot in allTimeslots) {
+      final start = _parseTimeToMinutes(slot.startTime);
+      final end = _parseTimeToMinutes(slot.endTime);
+      if (end - start < requiredMinutes) continue;
+
+      for (var s = start; s + requiredMinutes <= end; s += stepMinutes) {
+        if (requireLabStartAfterNine && s < _labEarliestStartMinutes) {
+          continue;
+        }
+        final e = s + requiredMinutes;
+        final startTime = _formatMinutes(s);
+        final endTime = _formatMinutes(e);
+        final key = _timeslotKey(slot.day, startTime, endTime);
+        if (!seen.add(key)) continue;
+        final created = await _getOrCreateTimeslot(
+          session: session,
+          day: slot.day,
+          startTime: startTime,
+          endTime: endTime,
+          cache: cache,
+        );
+        candidates.add(created);
+      }
+    }
+
+    return candidates;
+  }
+
+  Future<List<Timeslot>> _candidateTimeslotsFromAvailability({
+    required Session session,
+    required List<FacultyAvailability> availability,
+    required int requiredMinutes,
+    required Map<String, Timeslot> cache,
+    required bool requireLabStartAfterNine,
+  }) async {
     final stepMinutes = requiredMinutes % 60 == 0 ? 60 : 30;
     final candidates = <Timeslot>[];
     final seen = <String>{};
@@ -850,5 +1086,59 @@ class _SectionCandidate {
     required this.sectionCode,
     required this.program,
     required this.yearLevel,
+  });
+}
+
+class _GenerateData {
+  final GenerateScheduleRequest request;
+  final List<Subject> validSubjects;
+  final List<Faculty> validFaculties;
+  final List<Room> validRooms;
+  final List<Timeslot> validTimeslots;
+  final Map<String, Timeslot> timeslotCache;
+  final List<_SectionCandidate> candidateSections;
+  final Map<int, List<FacultyAvailability>> facultyAvailMap;
+  final List<Schedule> existingSchedules;
+
+  const _GenerateData({
+    required this.request,
+    required this.validSubjects,
+    required this.validFaculties,
+    required this.validRooms,
+    required this.validTimeslots,
+    required this.timeslotCache,
+    required this.candidateSections,
+    required this.facultyAvailMap,
+    required this.existingSchedules,
+  });
+}
+
+class _FacultyTracking {
+  final Map<int, double> assignments;
+  final Map<int, Map<int, int>> timeslotUsage;
+
+  const _FacultyTracking({
+    required this.assignments,
+    required this.timeslotUsage,
+  });
+}
+
+class _GenerationOutcome {
+  final List<Schedule> generatedSchedules;
+  final List<ScheduleConflict> conflicts;
+
+  const _GenerationOutcome({
+    required this.generatedSchedules,
+    required this.conflicts,
+  });
+}
+
+class _SectionGenerationResult {
+  final bool allAssigned;
+  final double maxComponentHours;
+
+  const _SectionGenerationResult({
+    required this.allAssigned,
+    required this.maxComponentHours,
   });
 }

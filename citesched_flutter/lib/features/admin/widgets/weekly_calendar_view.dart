@@ -29,6 +29,7 @@ class WeeklyCalendarView extends StatefulWidget {
 class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
   final ScrollController _verticalController = ScrollController();
   final ScrollController _horizontalController = ScrollController();
+  static const String _lunchLabel = 'LUNCH TIME';
 
   List<ScheduleInfo> get schedules => widget.schedules;
   List<FacultyAvailability>? get availabilities => widget.availabilities;
@@ -316,12 +317,11 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                       (day) => Container(
                         width: dayWidth,
                         decoration: BoxDecoration(
-                          color: isPreferredTime
-                              ? Colors.black.withOpacity(0.04)
-                              : (_isDayHighlighted(day) &&
-                                        _isTimeHighlighted(hour)
-                                    ? maroonColor.withOpacity(0.03)
-                                    : Colors.transparent),
+                          color: _gridCellColor(
+                            day,
+                            hour,
+                            isPreferredTime,
+                          ),
                           border: Border(left: BorderSide(color: gridColor)),
                         ),
                       ),
@@ -457,7 +457,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                   const SizedBox(height: 4),
                   Text(
                     isLunchSlot
-                        ? 'LUNCH TIME'
+                        ? _lunchLabel
                         : _buildAssignedSlotLabel(avail, start, end),
                     textAlign: TextAlign.center,
                     maxLines: 5,
@@ -645,21 +645,21 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
     final Color typeFillColor = classType == 'LAB'
         ? const Color(0xFF0B3A82) // blue fill for lab
         : const Color(0xFF0B5D2A); // green fill for lecture
-    final Color blockColor = isStudentView
-        ? Colors.white
-        : hasConflict
-        ? const Color(0xFF2D0000)
-        : typeFillColor;
+    final Color blockColor = _blockFillColor(
+      isStudentView: isStudentView,
+      hasConflict: hasConflict,
+      typeFillColor: typeFillColor,
+    );
 
     final Color typeOutlineColor = classType == 'LAB'
         ? const Color(0xFF2563EB) // blue for lab
         : const Color(0xFF16A34A); // green for lecture
 
-    final Color borderColor = hasConflict
-        ? Colors.red.shade400
-        : isStudentView
-        ? Colors.black87
-        : typeOutlineColor;
+    final Color borderColor = _blockBorderColor(
+      isStudentView: isStudentView,
+      hasConflict: hasConflict,
+      typeOutlineColor: typeOutlineColor,
+    );
 
     return Positioned(
       top: top + 2,
@@ -695,7 +695,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                   Expanded(
                     child: Center(
                       child: Text(
-                        'LUNCH TIME',
+                        _lunchLabel,
                         textAlign: TextAlign.center,
                         style: GoogleFonts.poppins(
                           fontSize: 14,
@@ -760,7 +760,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
           ),
           child: Center(
             child: Text(
-              'LUNCH TIME',
+              _lunchLabel,
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 14,
@@ -773,6 +773,40 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
         ),
       ),
     );
+  }
+
+  Color _gridCellColor(
+    DayOfWeek day,
+    int hour,
+    bool isPreferredTime,
+  ) {
+    if (isPreferredTime) {
+      return Colors.black.withOpacity(0.04);
+    }
+    if (_isDayHighlighted(day) && _isTimeHighlighted(hour)) {
+      return maroonColor.withOpacity(0.03);
+    }
+    return Colors.transparent;
+  }
+
+  Color _blockFillColor({
+    required bool isStudentView,
+    required bool hasConflict,
+    required Color typeFillColor,
+  }) {
+    if (isStudentView) return Colors.white;
+    if (hasConflict) return const Color(0xFF2D0000);
+    return typeFillColor;
+  }
+
+  Color _blockBorderColor({
+    required bool isStudentView,
+    required bool hasConflict,
+    required Color typeOutlineColor,
+  }) {
+    if (hasConflict) return Colors.red.shade400;
+    if (isStudentView) return Colors.black87;
+    return typeOutlineColor;
   }
 
   bool _isLunchSlot(Schedule schedule, Timeslot timeslot) {

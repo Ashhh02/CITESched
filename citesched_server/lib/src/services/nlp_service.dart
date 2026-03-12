@@ -180,137 +180,14 @@ class NLPService {
     List<String> scopes,
   ) async {
     try {
-      final isAdmin = scopes.contains('admin');
-      final isFaculty = scopes.contains('faculty');
-      final isStudent = scopes.contains('student');
-
-      // Admin sees all conflicts
-      if (isAdmin) {
-        final conflicts = await _conflictService.getAllConflicts(session);
-        if (conflicts.isEmpty) {
-          return NLPResponse(
-            text:
-                "Great news! There are currently no conflicts detected in the system.",
-            intent: NLPIntent.conflict,
-          );
-        }
-
-        final roomConflicts = conflicts
-            .where((c) => c.type.toLowerCase().contains('room'))
-            .length;
-        final facultyConflicts = conflicts
-            .where((c) => c.type.toLowerCase().contains('faculty'))
-            .length;
-
-        var summary = "I found ${conflicts.length} conflict(s): ";
-        if (roomConflicts > 0) summary += "$roomConflicts room conflict(s). ";
-        if (facultyConflicts > 0) {
-          summary += "$facultyConflicts faculty conflict(s). ";
-        }
-
-        return NLPResponse(
-          text:
-              "$summary You can view details in the Conflict Module or use Timetable to resolve.",
-          intent: NLPIntent.conflict,
-          dataJson:
-              '{"count": ${conflicts.length}, "room": $roomConflicts, "faculty": $facultyConflicts}',
-        );
+      if (scopes.contains('admin')) {
+        return await _handleAdminConflicts(session);
       }
-
-      // Faculty sees conflicts related to their schedules
-      if (isFaculty) {
-        final faculty = await Faculty.db.findFirstRow(
-          session,
-          where: (t) => t.facultyId.equals(userId),
-        );
-
-        if (faculty == null) {
-          return NLPResponse(
-            text: "Could not find your faculty profile.",
-            intent: NLPIntent.conflict,
-          );
-        }
-
-        final schedules = await Schedule.db.find(
-          session,
-          where: (t) => t.facultyId.equals(faculty.id!),
-        );
-
-        // Check for conflicts in this faculty's schedules
-        int conflictCount = 0;
-        for (var schedule in schedules) {
-          final timeslotConflict = await _conflictService
-              .checkFacultyAvailability(
-                session,
-                facultyId: faculty.id!,
-                timeslotId: schedule.timeslotId,
-                excludeScheduleId: schedule.id,
-              );
-          if (timeslotConflict != null) conflictCount++;
-        }
-
-        if (conflictCount == 0) {
-          return NLPResponse(
-            text:
-                "Good news! You have no conflicts in your schedule. All your classes are scheduled properly.",
-            intent: NLPIntent.conflict,
-          );
-        }
-
-        return NLPResponse(
-          text:
-              "⚠️ You have $conflictCount conflict(s) in your schedule. Please check the Timetable to resolve them.",
-          intent: NLPIntent.conflict,
-          dataJson: '{"count": $conflictCount}',
-        );
+      if (scopes.contains('faculty')) {
+        return await _handleFacultyConflicts(session, userId);
       }
-
-      // Students see conflicts related to their section
-      if (isStudent) {
-        final student = await Student.db.findFirstRow(
-          session,
-          where: (t) => t.studentNumber.equals(userId),
-        );
-
-        if (student == null || student.section == null) {
-          return NLPResponse(
-            text: "Could not find your section information.",
-            intent: NLPIntent.conflict,
-          );
-        }
-
-        final schedules = await Schedule.db.find(
-          session,
-          where: (t) => t.section.equals(student.section!),
-        );
-
-        // Check for section conflicts
-        int conflictCount = 0;
-        for (var schedule in schedules) {
-          final sectionConflict = await _conflictService
-              .checkSectionAvailability(
-                session,
-                section: student.section!,
-                timeslotId: schedule.timeslotId,
-                excludeScheduleId: schedule.id,
-              );
-          if (sectionConflict != null) conflictCount++;
-        }
-
-        if (conflictCount == 0) {
-          return NLPResponse(
-            text:
-                "Good news! Your section has no conflicts. All classes are properly scheduled.",
-            intent: NLPIntent.conflict,
-          );
-        }
-
-        return NLPResponse(
-          text:
-              "⚠️ Your section has $conflictCount conflict(s). Please contact your administrator.",
-          intent: NLPIntent.conflict,
-          dataJson: '{"count": $conflictCount}',
-        );
+      if (scopes.contains('student')) {
+        return await _handleStudentConflicts(session, userId);
       }
 
       return NLPResponse(
@@ -324,6 +201,131 @@ class NLPService {
         intent: NLPIntent.conflict,
       );
     }
+  }
+
+  Future<NLPResponse> _handleAdminConflicts(Session session) async {
+    final conflicts = await _conflictService.getAllConflicts(session);
+    if (conflicts.isEmpty) {
+      return NLPResponse(
+        text:
+            "Great news! There are currently no conflicts detected in the system.",
+        intent: NLPIntent.conflict,
+      );
+    }
+    final roomConflicts =
+        conflicts.where((c) => c.type.toLowerCase().contains('room')).length;
+    final facultyConflicts =
+        conflicts.where((c) => c.type.toLowerCase().contains('faculty')).length;
+
+    var summary = "I found ${conflicts.length} conflict(s): ";
+    if (roomConflicts > 0) summary += "$roomConflicts room conflict(s). ";
+    if (facultyConflicts > 0) {
+      summary += "$facultyConflicts faculty conflict(s). ";
+    }
+
+    return NLPResponse(
+      text:
+          "$summary You can view details in the Conflict Module or use Timetable to resolve.",
+      intent: NLPIntent.conflict,
+      dataJson:
+          '{"count": ${conflicts.length}, "room": $roomConflicts, "faculty": $facultyConflicts}',
+    );
+  }
+
+  Future<NLPResponse> _handleFacultyConflicts(
+    Session session,
+    String userId,
+  ) async {
+    final faculty = await Faculty.db.findFirstRow(
+      session,
+      where: (t) => t.facultyId.equals(userId),
+    );
+
+    if (faculty == null) {
+      return NLPResponse(
+        text: "Could not find your faculty profile.",
+        intent: NLPIntent.conflict,
+      );
+    }
+
+    final schedules = await Schedule.db.find(
+      session,
+      where: (t) => t.facultyId.equals(faculty.id!),
+    );
+
+    int conflictCount = 0;
+    for (var schedule in schedules) {
+      final timeslotConflict = await _conflictService.checkFacultyAvailability(
+        session,
+        facultyId: faculty.id!,
+        timeslotId: schedule.timeslotId,
+        excludeScheduleId: schedule.id,
+      );
+      if (timeslotConflict != null) conflictCount++;
+    }
+
+    if (conflictCount == 0) {
+      return NLPResponse(
+        text:
+            "Good news! You have no conflicts in your schedule. All your classes are scheduled properly.",
+        intent: NLPIntent.conflict,
+      );
+    }
+
+    return NLPResponse(
+      text:
+          "⚠️ You have $conflictCount conflict(s) in your schedule. Please check the Timetable to resolve them.",
+      intent: NLPIntent.conflict,
+      dataJson: '{"count": $conflictCount}',
+    );
+  }
+
+  Future<NLPResponse> _handleStudentConflicts(
+    Session session,
+    String userId,
+  ) async {
+    final student = await Student.db.findFirstRow(
+      session,
+      where: (t) => t.studentNumber.equals(userId),
+    );
+
+    if (student == null || student.section == null) {
+      return NLPResponse(
+        text: "Could not find your section information.",
+        intent: NLPIntent.conflict,
+      );
+    }
+
+    final schedules = await Schedule.db.find(
+      session,
+      where: (t) => t.section.equals(student.section!),
+    );
+
+    int conflictCount = 0;
+    for (var schedule in schedules) {
+      final sectionConflict = await _conflictService.checkSectionAvailability(
+        session,
+        section: student.section!,
+        timeslotId: schedule.timeslotId,
+        excludeScheduleId: schedule.id,
+      );
+      if (sectionConflict != null) conflictCount++;
+    }
+
+    if (conflictCount == 0) {
+      return NLPResponse(
+        text:
+            "Good news! Your section has no conflicts. All classes are properly scheduled.",
+        intent: NLPIntent.conflict,
+      );
+    }
+
+    return NLPResponse(
+      text:
+          "⚠️ Your section has $conflictCount conflict(s). Please contact your administrator.",
+      intent: NLPIntent.conflict,
+      dataJson: '{"count": $conflictCount}',
+    );
   }
 
   /// Handles faculty overload detection

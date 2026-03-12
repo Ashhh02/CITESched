@@ -45,6 +45,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                 onPressed: () async {
                   try {
                     final debugInfo = await client.debug.getSessionInfo();
+                    if (!context.mounted) return;
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
@@ -61,6 +62,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                       ),
                     );
                   } catch (e) {
+                    if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Debug failed: $e')),
                     );

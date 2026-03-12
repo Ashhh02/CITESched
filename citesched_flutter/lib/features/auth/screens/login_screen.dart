@@ -38,9 +38,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     0xFFF7F9FC,
   ); // Used for right side background if distinct
   static const _cardBgLight = Colors.white;
-  static const _textPrimaryLight = Color.fromARGB(255, 182, 182, 182);
-  static const _textMutedLight = Color(0xFF666666);
-  static const _inputBorderLight = Color(0xFFDDDDDD);
 
   // Dark Mode Colors
   static const _bgBodyDark = Color(0xFF0F172A);
@@ -48,9 +45,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     0xFF1E293B,
   ); // Used for right side background if distinct
   static const _cardBgDark = Color(0xFF1E293B);
-  static const _textPrimaryDark = Color(0xFFE2E8F0);
-  static const _textMutedDark = Color(0xFF94A3B8);
-  static const _inputBorderDark = Color(0xFF475569);
 
   Future<void> _login() async {
     setState(() {
@@ -166,51 +160,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final displayName = profile.fullName ?? profile.userName;
 
       final authNotifier = ref.read(authProvider.notifier);
-      UserInfo? userInfo;
-      if (email != null && email.isNotEmpty) {
-        userInfo = await client.setup.getUserInfoByEmail(email: email);
-      }
+      final userInfo = await _loadUserInfoByEmail(email);
       if (userInfo != null) {
         authNotifier.updateUserInfo(userInfo);
       }
 
       final roles = _rolesFromScopes(userInfo?.scopeNames ?? const []);
-      String? selectedRole;
-      if (roles.isEmpty) {
-        selectedRole = await _showRoleSelectionDialog(
-          const ['faculty', 'student', 'admin'],
-        );
-        if (selectedRole == null) {
-          await client.auth.signOutDevice();
-          authNotifier.updateUserInfo(null);
-          return;
-        }
-
-        final completed = await _completeGoogleProfile(
-          selectedRole,
-          email: email,
-          displayName: displayName,
-        );
-        if (!completed) {
-          throw Exception('Failed to set up account details.');
-        }
-
-        if (email == null || email.isEmpty) {
-          throw Exception('Missing email from Google profile.');
-        }
-        final refreshedInfo = await client.setup.getUserInfoByEmail(
-          email: email,
-        );
-        if (refreshedInfo == null) {
-          throw Exception('Unable to refresh user info after setup.');
-        }
-        authNotifier.updateUserInfo(refreshedInfo);
-      } else {
-        selectedRole = await _showRoleSelectionDialog(roles);
-      }
+      final selectedRole = await _resolveGoogleRoleSelection(
+        roles: roles,
+        email: email,
+        displayName: displayName,
+        authNotifier: authNotifier,
+      );
       if (selectedRole == null) {
-        await client.auth.signOutDevice();
-        authNotifier.updateUserInfo(null);
+        await _signOutAfterGoogle(authNotifier);
         return;
       }
 
@@ -221,7 +184,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _errorMessage = e.toString();
         });
       }
-      await client.auth.signOutDevice();
+      await _signOutAfterGoogle(ref.read(authProvider.notifier));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -283,11 +246,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             borderRadius: BorderRadius.circular(16),
           ),
           title: Text(
-            role == 'student'
-                ? 'Student Details'
-                : role == 'faculty'
-                ? 'Faculty Details'
-                : 'Admin Details',
+            _roleDetailsTitle(role),
             style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
           ),
           content: SingleChildScrollView(
@@ -366,11 +325,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: roles.map((role) {
-              final label = role == 'admin'
-                  ? 'Administrator'
-                  : role == 'faculty'
-                  ? 'Faculty'
-                  : 'Student';
+              final label = _roleLabel(role);
               return Container(
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 8),
@@ -442,9 +397,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final inputTextColor = isDark ? Colors.white : Colors.black87;
 
     // Active Brand Color (Purple/Pink)
-    final activeThemeColor = isDark
-        ? (_isFaculty ? _facultyColorDark : _studentColorDark)
-        : (_isFaculty ? _facultyColorLight : _studentColorLight);
+    final activeThemeColor = _resolveActiveThemeColor(isDark: isDark);
 
     // Google Button Specifics
     final googleBtnBg = isDark ? Colors.transparent : Colors.white;
@@ -882,53 +835,83 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildInput({
-    required TextEditingController controller,
-    required String hintText,
-    required Color bgBody,
-    required Color cardBg,
-    required Color inputBorder,
-    required Color activeTheme,
-    required Color textPrimary,
-    bool isPassword = false,
-  }) {
-    return Focus(
-      child: Builder(
-        builder: (context) {
-          final hasFocus = Focus.of(context).hasFocus;
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: hasFocus ? cardBg : bgBody,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: hasFocus ? activeTheme : inputBorder,
-                width: 1.5,
-              ),
-              boxShadow: hasFocus
-                  ? [
-                      // Remove focus shadow if not in design, but bootstrap has subtle one.
-                      // CSS says: box-shadow: none; border-color: var(--active-theme);
-                      // so we stick to border color change.
-                    ]
-                  : [],
-            ),
-            child: TextField(
-              controller: controller,
-              obscureText: isPassword && _obscurePassword,
-              style: GoogleFonts.poppins(color: textPrimary),
-              decoration: InputDecoration(
-                hintText: hintText,
-                hintStyle: GoogleFonts.poppins(
-                  color: textPrimary.withValues(alpha: 0.5),
-                ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.all(14),
-              ),
-            ),
-          );
-        },
-      ),
+  Future<UserInfo?> _loadUserInfoByEmail(String? email) async {
+    if (email == null || email.isEmpty) {
+      return null;
+    }
+    return client.setup.getUserInfoByEmail(email: email);
+  }
+
+  Future<void> _signOutAfterGoogle(AuthNotifier authNotifier) async {
+    await client.auth.signOutDevice();
+    authNotifier.updateUserInfo(null);
+  }
+
+  Future<String?> _resolveGoogleRoleSelection({
+    required List<String> roles,
+    required String? email,
+    required String? displayName,
+    required AuthNotifier authNotifier,
+  }) async {
+    if (roles.isNotEmpty) {
+      return _showRoleSelectionDialog(roles);
+    }
+
+    final selectedRole = await _showRoleSelectionDialog(
+      const ['faculty', 'student', 'admin'],
     );
+    if (selectedRole == null) {
+      return null;
+    }
+
+    final completed = await _completeGoogleProfile(
+      selectedRole,
+      email: email,
+      displayName: displayName,
+    );
+    if (!completed) {
+      throw Exception('Failed to set up account details.');
+    }
+
+    final resolvedEmail = email?.trim();
+    if (resolvedEmail == null || resolvedEmail.isEmpty) {
+      throw Exception('Missing email from Google profile.');
+    }
+
+    final refreshedInfo = await client.setup.getUserInfoByEmail(
+      email: resolvedEmail,
+    );
+    if (refreshedInfo == null) {
+      throw Exception('Unable to refresh user info after setup.');
+    }
+    authNotifier.updateUserInfo(refreshedInfo);
+    return selectedRole;
+  }
+
+  String _roleDetailsTitle(String role) {
+    if (role == 'student') {
+      return 'Student Details';
+    }
+    if (role == 'faculty') {
+      return 'Faculty Details';
+    }
+    return 'Admin Details';
+  }
+
+  String _roleLabel(String role) {
+    if (role == 'admin') {
+      return 'Administrator';
+    }
+    if (role == 'faculty') {
+      return 'Faculty';
+    }
+    return 'Student';
+  }
+
+  Color _resolveActiveThemeColor({required bool isDark}) {
+    if (isDark) {
+      return _isFaculty ? _facultyColorDark : _studentColorDark;
+    }
+    return _isFaculty ? _facultyColorLight : _studentColorLight;
   }
 }

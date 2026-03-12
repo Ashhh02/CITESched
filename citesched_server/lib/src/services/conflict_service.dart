@@ -305,6 +305,271 @@ class ConflictService {
     return false; // No matching availability window
   }
 
+  Future<void> _appendRoomConflicts(
+    Session session,
+    Schedule schedule,
+    Subject? subject,
+    List<ScheduleConflict> conflicts, {
+    int? excludeScheduleId,
+  }) async {
+    final roomId = schedule.roomId;
+    final timeslotId = schedule.timeslotId;
+    if (roomId == null || timeslotId == null) return;
+
+    final roomConflict = await checkRoomAvailability(
+      session,
+      roomId: roomId,
+      timeslotId: timeslotId,
+      excludeScheduleId: excludeScheduleId,
+    );
+
+    if (roomConflict != null) {
+      conflicts.add(
+        ScheduleConflict(
+          type: 'room_conflict',
+          message: 'Room is already booked for this timeslot',
+          conflictingScheduleId: roomConflict.id,
+          facultyId: schedule.facultyId,
+          roomId: roomId,
+          subjectId: schedule.subjectId,
+          details:
+              'Room ID $roomId is already assigned to schedule ID ${roomConflict.id}',
+        ),
+      );
+    }
+
+    if (subject == null) return;
+    final room = await Room.db.findById(session, roomId);
+    if (room == null) return;
+
+    final normalizedRoomName = _normalizeRoomName(room.name);
+    if (subject.program != room.program &&
+        normalizedRoomName != _lectureRoomName) {
+      conflicts.add(
+        ScheduleConflict(
+          type: 'program_mismatch',
+          message: 'Subject program does not match Room program',
+          facultyId: schedule.facultyId,
+          roomId: roomId,
+          subjectId: schedule.subjectId,
+          details:
+              '${subject.name} (${subject.program.name.toUpperCase()}) cannot use ${room.name} (${room.program.name.toUpperCase()})',
+        ),
+      );
+    }
+
+    if (room.capacity < subject.studentsCount) {
+      conflicts.add(
+        ScheduleConflict(
+          type: 'capacity_exceeded',
+          message: 'Room capacity is smaller than student count',
+          facultyId: schedule.facultyId,
+          roomId: roomId,
+          subjectId: schedule.subjectId,
+          details:
+              '${room.name} capacity: ${room.capacity}, ${subject.name} students: ${subject.studentsCount}',
+        ),
+      );
+    }
+
+    if (!room.isActive) {
+      conflicts.add(
+        ScheduleConflict(
+          type: 'room_inactive',
+          message: 'The selected room is currently inactive',
+          facultyId: schedule.facultyId,
+          roomId: roomId,
+          subjectId: schedule.subjectId,
+          details: '${room.name} must be active for assignment',
+        ),
+      );
+    }
+
+    final roomTypeConflict = _buildRoomTypeConflict(
+      schedule: schedule,
+      subject: subject,
+      room: room,
+    );
+    if (roomTypeConflict != null) {
+      conflicts.add(roomTypeConflict);
+    }
+  }
+
+  Future<void> _appendFacultyTimeConflict(
+    Session session,
+    Schedule schedule,
+    List<ScheduleConflict> conflicts, {
+    int? excludeScheduleId,
+  }) async {
+    if (schedule.timeslotId == null) return;
+    final facultyConflict = await checkFacultyAvailability(
+      session,
+      facultyId: schedule.facultyId,
+      timeslotId: schedule.timeslotId,
+      excludeScheduleId: excludeScheduleId,
+    );
+    if (facultyConflict == null) return;
+
+    conflicts.add(
+      ScheduleConflict(
+        type: 'faculty_conflict',
+        message: 'Faculty is already assigned at this timeslot',
+        conflictingScheduleId: facultyConflict.id,
+        facultyId: schedule.facultyId,
+        roomId: schedule.roomId,
+        subjectId: schedule.subjectId,
+        details:
+            'Faculty ID ${schedule.facultyId} already teaches at schedule ID ${facultyConflict.id}',
+      ),
+    );
+  }
+
+  Future<void> _appendSectionConflict(
+    Session session,
+    Schedule schedule,
+    List<ScheduleConflict> conflicts, {
+    int? excludeScheduleId,
+  }) async {
+    if (schedule.timeslotId == null || schedule.section.isEmpty) return;
+    final sectionConflict = await checkSectionAvailability(
+      session,
+      section: schedule.section,
+      sectionId: schedule.sectionId,
+      timeslotId: schedule.timeslotId,
+      excludeScheduleId: excludeScheduleId,
+    );
+    if (sectionConflict == null) return;
+
+    conflicts.add(
+      ScheduleConflict(
+        type: 'section_conflict',
+        message: 'Section is already in another class at this timeslot',
+        conflictingScheduleId: sectionConflict.id,
+        facultyId: schedule.facultyId,
+        roomId: schedule.roomId,
+        subjectId: schedule.subjectId,
+        details:
+            'Section ${schedule.section} is already in schedule ID ${sectionConflict.id}',
+      ),
+    );
+  }
+
+  Future<void> _appendMaxLoadConflict(
+    Session session,
+    Schedule schedule,
+    List<ScheduleConflict> conflicts, {
+    int? excludeScheduleId,
+  }) async {
+    var newUnits = schedule.units ?? 0;
+    if (newUnits == 0) {
+      final subject = await Subject.db.findById(session, schedule.subjectId);
+      newUnits = subject?.units.toDouble() ?? 0;
+    }
+
+    final canTakeMore = await checkFacultyMaxLoad(
+      session,
+      facultyId: schedule.facultyId,
+      newUnits: newUnits,
+      excludeScheduleId: excludeScheduleId,
+    );
+    if (canTakeMore) return;
+
+    final faculty = await Faculty.db.findById(session, schedule.facultyId);
+    conflicts.add(
+      ScheduleConflict(
+        type: 'max_load_exceeded',
+        message: 'Faculty has reached maximum teaching load',
+        facultyId: schedule.facultyId,
+        subjectId: schedule.subjectId,
+        details:
+            '${faculty?.name ?? 'Faculty ID ${schedule.facultyId}'} has reached max load of ${faculty?.maxLoad ?? 0} units',
+      ),
+    );
+  }
+
+  Future<void> _appendFacultyAvailabilityConflict(
+    Session session,
+    Schedule schedule,
+    List<ScheduleConflict> conflicts,
+  ) async {
+    if (schedule.timeslotId == null) return;
+    final isWithinPreference = await checkFacultyDayTimeAvailability(
+      session,
+      facultyId: schedule.facultyId,
+      timeslotId: schedule.timeslotId!,
+    );
+    if (isWithinPreference) return;
+
+    conflicts.add(
+      ScheduleConflict(
+        type: 'faculty_unavailable',
+        message: 'Timeslot is outside faculty preferred availability',
+        facultyId: schedule.facultyId,
+        subjectId: schedule.subjectId,
+        details:
+            'Faculty ID ${schedule.facultyId} has no availability window covering this timeslot',
+      ),
+    );
+  }
+
+  Future<void> _appendTimeslotDurationConflicts(
+    Session session,
+    Schedule schedule,
+    Subject subject,
+    List<ScheduleConflict> conflicts,
+  ) async {
+    if (schedule.timeslotId == null) return;
+    final timeslot = await Timeslot.db.findById(
+      session,
+      schedule.timeslotId!,
+    );
+    if (timeslot == null) return;
+
+    final requiredHours =
+        schedule.hours ?? subject.hours ?? subject.units.toDouble();
+    if (requiredHours <= 0) return;
+
+    final tsMinutes =
+        _parseTimeToMinutes(timeslot.endTime) -
+        _parseTimeToMinutes(timeslot.startTime);
+    final tsHours = tsMinutes / 60.0;
+    if (tsHours + 1e-6 < requiredHours) {
+      conflicts.add(
+        ScheduleConflict(
+          type: 'insufficient_block',
+          message:
+              'Timeslot ${timeslot.day.name} ${timeslot.startTime}-${timeslot.endTime} is too short for ${subject.name}',
+          scheduleId: schedule.id,
+          facultyId: schedule.facultyId,
+          subjectId: schedule.subjectId,
+          details:
+              'Required continuous hours: ${requiredHours.toStringAsFixed(1)}, available: ${tsHours.toStringAsFixed(1)}',
+        ),
+      );
+    }
+
+    final room = schedule.roomId != null
+        ? await Room.db.findById(session, schedule.roomId!)
+        : null;
+    if (_isLabSchedule(subject, schedule, room)) {
+      final startMinutes = _parseTimeToMinutes(timeslot.startTime);
+      if (startMinutes < _labEarliestStartMinutes) {
+        conflicts.add(
+          ScheduleConflict(
+            type: 'lab_start_time',
+            message: 'Laboratory classes must start at 9:00 AM or later',
+            scheduleId: schedule.id,
+            facultyId: schedule.facultyId,
+            subjectId: schedule.subjectId,
+            roomId: schedule.roomId,
+            details:
+                'Lab starts at ${timeslot.startTime} on ${timeslot.day.name}',
+          ),
+        );
+      }
+    }
+  }
+
   /// Helper: parse "HH:MM" or "H:MM" to minutes since midnight.
   int _parseTimeToMinutes(String time) {
     final parts = time.split(':');
@@ -332,292 +597,77 @@ class ConflictService {
     Schedule schedule, {
     int? excludeScheduleId,
   }) async {
-    var conflicts = <ScheduleConflict>[];
+    final conflicts = <ScheduleConflict>[];
     final subject = await Subject.db.findById(session, schedule.subjectId);
 
-    // 1. Room Conflict
-    var roomId = schedule.roomId;
-    var timeslotId = schedule.timeslotId;
-
-    if (roomId != null && timeslotId != null) {
-      var roomConflict = await checkRoomAvailability(
-        session,
-        roomId: roomId,
-        timeslotId: timeslotId,
-        excludeScheduleId: excludeScheduleId,
-      );
-
-      if (roomConflict != null) {
-        conflicts.add(
-          ScheduleConflict(
-            type: 'room_conflict',
-            message: 'Room is already booked for this timeslot',
-            conflictingScheduleId: roomConflict.id,
-            facultyId: schedule.facultyId,
-            roomId: roomId,
-            subjectId: schedule.subjectId,
-            details:
-                'Room ID $roomId is already assigned to schedule ID ${roomConflict.id}',
-          ),
-        );
-      }
-
-      // Fetch Room for property checks (subject already loaded)
-      var room = await Room.db.findById(session, roomId);
-
-      if (subject != null && room != null) {
-        // 2. Program Mismatch
-        final normalizedRoomName = _normalizeRoomName(room.name);
-        if (subject.program != room.program &&
-            normalizedRoomName != _lectureRoomName) {
-          conflicts.add(
-            ScheduleConflict(
-              type: 'program_mismatch',
-              message: 'Subject program does not match Room program',
-              facultyId: schedule.facultyId,
-              roomId: roomId,
-              subjectId: schedule.subjectId,
-              details:
-                  '${subject.name} (${subject.program.name.toUpperCase()}) cannot use ${room.name} (${room.program.name.toUpperCase()})',
-            ),
-          );
-        }
-
-        // 3. Capacity Exceeded
-        if (room.capacity < subject.studentsCount) {
-          conflicts.add(
-            ScheduleConflict(
-              type: 'capacity_exceeded',
-              message: 'Room capacity is smaller than student count',
-              facultyId: schedule.facultyId,
-              roomId: roomId,
-              subjectId: schedule.subjectId,
-              details:
-                  '${room.name} capacity: ${room.capacity}, ${subject.name} students: ${subject.studentsCount}',
-            ),
-          );
-        }
-
-        // 4. Room Inactive
-        if (!room.isActive) {
-          conflicts.add(
-            ScheduleConflict(
-              type: 'room_inactive',
-              message: 'The selected room is currently inactive',
-              facultyId: schedule.facultyId,
-              roomId: roomId,
-              subjectId: schedule.subjectId,
-              details: '${room.name} must be active for assignment',
-            ),
-          );
-        }
-
-        // 5. Lab/Lecture Room Rule
-        final roomTypeConflict = _buildRoomTypeConflict(
-          schedule: schedule,
-          subject: subject,
-          room: room,
-        );
-        if (roomTypeConflict != null) {
-          conflicts.add(roomTypeConflict);
-        }
-      }
-    }
-
-    // 6. Faculty Time Conflict
-    if (schedule.timeslotId != null) {
-      var facultyConflict = await checkFacultyAvailability(
-        session,
-        facultyId: schedule.facultyId,
-        timeslotId: schedule.timeslotId,
-        excludeScheduleId: excludeScheduleId,
-      );
-
-      if (facultyConflict != null) {
-        conflicts.add(
-          ScheduleConflict(
-            type: 'faculty_conflict',
-            message: 'Faculty is already assigned at this timeslot',
-            conflictingScheduleId: facultyConflict.id,
-            facultyId: schedule.facultyId,
-            roomId: schedule.roomId,
-            subjectId: schedule.subjectId,
-            details:
-                'Faculty ID ${schedule.facultyId} already teaches at schedule ID ${facultyConflict.id}',
-          ),
-        );
-      }
-    }
-
-    // 6. Section Conflict
-    if (schedule.timeslotId != null && schedule.section.isNotEmpty) {
-      var sectionConflict = await checkSectionAvailability(
-        session,
-        section: schedule.section,
-        sectionId: schedule.sectionId,
-        timeslotId: schedule.timeslotId,
-        excludeScheduleId: excludeScheduleId,
-      );
-
-      if (sectionConflict != null) {
-        conflicts.add(
-          ScheduleConflict(
-            type: 'section_conflict',
-            message: 'Section is already in another class at this timeslot',
-            conflictingScheduleId: sectionConflict.id,
-            facultyId: schedule.facultyId,
-            roomId: schedule.roomId,
-            subjectId: schedule.subjectId,
-            details:
-                'Section ${schedule.section} is already in schedule ID ${sectionConflict.id}',
-          ),
-        );
-      }
-    }
-
-    // 7. Faculty Max Load
-    var newUnits = schedule.units ?? 0;
-    if (newUnits == 0) {
-      var subject = await Subject.db.findById(session, schedule.subjectId);
-      newUnits = subject?.units.toDouble() ?? 0;
-    }
-
-    var canTakeMore = await checkFacultyMaxLoad(
+    await _appendRoomConflicts(
       session,
-      facultyId: schedule.facultyId,
-      newUnits: newUnits,
+      schedule,
+      subject,
+      conflicts,
       excludeScheduleId: excludeScheduleId,
     );
-
-    if (!canTakeMore) {
-      var faculty = await Faculty.db.findById(session, schedule.facultyId);
-      conflicts.add(
-        ScheduleConflict(
-          type: 'max_load_exceeded',
-          message: 'Faculty has reached maximum teaching load',
-          facultyId: schedule.facultyId,
-          subjectId: schedule.subjectId,
-          details:
-              '${faculty?.name ?? 'Faculty ID ${schedule.facultyId}'} has reached max load of ${faculty?.maxLoad ?? 0} units',
-        ),
-      );
-    }
-
-    // 8. Faculty Day/Time Availability Preference
-    if (schedule.timeslotId != null) {
-      var isWithinPreference = await checkFacultyDayTimeAvailability(
+    await _appendFacultyTimeConflict(
+      session,
+      schedule,
+      conflicts,
+      excludeScheduleId: excludeScheduleId,
+    );
+    await _appendSectionConflict(
+      session,
+      schedule,
+      conflicts,
+      excludeScheduleId: excludeScheduleId,
+    );
+    await _appendMaxLoadConflict(
+      session,
+      schedule,
+      conflicts,
+      excludeScheduleId: excludeScheduleId,
+    );
+    await _appendFacultyAvailabilityConflict(
+      session,
+      schedule,
+      conflicts,
+    );
+    if (subject != null) {
+      await _appendTimeslotDurationConflicts(
         session,
-        facultyId: schedule.facultyId,
-        timeslotId: schedule.timeslotId!,
+        schedule,
+        subject,
+        conflicts,
       );
-
-      if (!isWithinPreference) {
-        conflicts.add(
-          ScheduleConflict(
-            type: 'faculty_unavailable',
-            message: 'Timeslot is outside faculty preferred availability',
-            facultyId: schedule.facultyId,
-            subjectId: schedule.subjectId,
-            details:
-                'Faculty ID ${schedule.facultyId} has no availability window covering this timeslot',
-          ),
-        );
-      }
-
-      // Continuous-block validation: timeslot duration must cover required hours
-      if (subject != null) {
-        final timeslot = await Timeslot.db.findById(
-          session,
-          schedule.timeslotId!,
-        );
-        final requiredHours =
-            schedule.hours ?? subject.hours ?? subject.units.toDouble();
-        if (timeslot != null && requiredHours > 0) {
-          final tsMinutes =
-              _parseTimeToMinutes(timeslot.endTime) -
-              _parseTimeToMinutes(timeslot.startTime);
-          final tsHours = tsMinutes / 60.0;
-          if (tsHours + 1e-6 < requiredHours) {
-            conflicts.add(
-              ScheduleConflict(
-                type: 'insufficient_block',
-                message:
-                    'Timeslot ${timeslot.day.name} ${timeslot.startTime}-${timeslot.endTime} is too short for ${subject.name}',
-                scheduleId: schedule.id,
-                facultyId: schedule.facultyId,
-                subjectId: schedule.subjectId,
-                details:
-                    'Required continuous hours: ${requiredHours.toStringAsFixed(1)}, available: ${tsHours.toStringAsFixed(1)}',
-              ),
-            );
-          }
-
-          final room = schedule.roomId != null
-              ? await Room.db.findById(session, schedule.roomId!)
-              : null;
-          if (_isLabSchedule(subject, schedule, room)) {
-            final startMinutes = _parseTimeToMinutes(timeslot.startTime);
-            if (startMinutes < _labEarliestStartMinutes) {
-              conflicts.add(
-                ScheduleConflict(
-                  type: 'lab_start_time',
-                  message: 'Laboratory classes must start at 9:00 AM or later',
-                  scheduleId: schedule.id,
-                  facultyId: schedule.facultyId,
-                  subjectId: schedule.subjectId,
-                  roomId: schedule.roomId,
-                  details:
-                      'Lab starts at ${timeslot.startTime} on ${timeslot.day.name}',
-                ),
-              );
-            }
-          }
-        }
-      }
     }
 
     return conflicts;
-  }
+   }
 
-  // ─── Full System Conflict Scan ─────────────────────────────────────
+  Future<_ConflictContext> _buildConflictContext(Session session) async {
+    final schedules = await Schedule.db.find(session);
+    final subjects = await Subject.db.find(session);
+    final rooms = await Room.db.find(session);
+    final faculty = await Faculty.db.find(session);
+    final timeslots = await Timeslot.db.find(session);
 
-  /// Scans the ENTIRE schedule system for all conflict types.
-  /// This is a comprehensive check that detects:
-  ///   - Room conflicts (same room, same timeslot)
-  ///   - Faculty conflicts (same faculty, same timeslot)
-  ///   - Section conflicts (same section, same timeslot)
-  ///   - Program mismatches (subject program ≠ room program)
-  ///   - Capacity exceeded (room capacity < student count)
-  ///   - Faculty max load exceeded
-  Future<List<ScheduleConflict>> getAllConflicts(Session session) async {
-    var allSchedules = await Schedule.db.find(session);
-    var allSubjects = await Subject.db.find(session);
-    var allRooms = await Room.db.find(session);
-    var allFaculty = await Faculty.db.find(session);
-    var allTimeslots = await Timeslot.db.find(session);
-
-    List<ScheduleConflict> conflicts = [];
-
-    // Build lookup maps
-    var subjectMap = <int, Subject>{};
-    for (var s in allSubjects) {
-      if (s.id != null) subjectMap[s.id!] = s;
-    }
-    var roomMap = <int, Room>{};
-    for (var r in allRooms) {
-      if (r.id != null) roomMap[r.id!] = r;
-    }
-    var facultyMap = <int, Faculty>{};
-    for (var f in allFaculty) {
-      if (f.id != null) facultyMap[f.id!] = f;
-    }
-    var timeslotMap = <int, Timeslot>{};
-    for (var t in allTimeslots) {
-      if (t.id != null) timeslotMap[t.id!] = t;
-    }
+    final subjectMap = <int, Subject>{
+      for (final s in subjects)
+        if (s.id != null) s.id!: s,
+    };
+    final roomMap = <int, Room>{
+      for (final r in rooms)
+        if (r.id != null) r.id!: r,
+    };
+    final facultyMap = <int, Faculty>{
+      for (final f in faculty)
+        if (f.id != null) f.id!: f,
+    };
+    final timeslotMap = <int, Timeslot>{
+      for (final t in timeslots)
+        if (t.id != null) t.id!: t,
+    };
 
     final scheduleSlots = <_ScheduleSlot>[];
-    for (var s in allSchedules) {
+    for (final s in schedules) {
       final tid = s.timeslotId;
       if (tid == null) continue;
       final ts = timeslotMap[tid];
@@ -625,66 +675,92 @@ class ConflictService {
       scheduleSlots.add(_ScheduleSlot(schedule: s, timeslot: ts));
     }
 
-    // ── 1. Room Conflicts (same room, overlapping time) ──
+    return _ConflictContext(
+      schedules: schedules,
+      subjectMap: subjectMap,
+      roomMap: roomMap,
+      facultyMap: facultyMap,
+      timeslotMap: timeslotMap,
+      scheduleSlots: scheduleSlots,
+    );
+  }
+
+  void _addRoomOverlapConflicts(
+    _ConflictContext context,
+    List<ScheduleConflict> conflicts,
+  ) {
     final byRoom = <int, List<_ScheduleSlot>>{};
-    for (final slot in scheduleSlots) {
+    for (final slot in context.scheduleSlots) {
       final rid = slot.schedule.roomId;
       if (rid != null) {
         byRoom.putIfAbsent(rid, () => []).add(slot);
       }
     }
+
     byRoom.forEach((roomId, roomSchedules) {
-      final room = roomMap[roomId];
+      final room = context.roomMap[roomId];
       _addOverlapConflicts(
         conflicts: conflicts,
         slots: roomSchedules,
-        type: 'room_conflict',
-        resourceLabel: room?.name ?? 'Room $roomId',
-        buildMessage: (a, b, slotLabel) =>
-            '${room?.name ?? 'Room $roomId'} already booked at $slotLabel',
-        buildDetails: (a, b) {
-          final subjA =
-              subjectMap[a.subjectId]?.code ?? 'Subject ${a.subjectId}';
-          final subjB =
-              subjectMap[b.subjectId]?.code ?? 'Subject ${b.subjectId}';
-          final facA =
-              facultyMap[a.facultyId]?.name ?? 'Faculty ${a.facultyId}';
-          final facB =
-              facultyMap[b.facultyId]?.name ?? 'Faculty ${b.facultyId}';
-          return 'Conflicts: $subjA / $facA / ${a.section} <> $subjB / $facB / ${b.section}';
-        },
-        roomId: roomId,
+        config: _OverlapConflictConfig(
+          type: 'room_conflict',
+          resourceLabel: room?.name ?? 'Room $roomId',
+          buildMessage: (a, b, slotLabel) =>
+              '${room?.name ?? 'Room $roomId'} already booked at $slotLabel',
+          buildDetails: (a, b) {
+            final subjA = context.subjectMap[a.subjectId]?.code ??
+                'Subject ${a.subjectId}';
+            final subjB = context.subjectMap[b.subjectId]?.code ??
+                'Subject ${b.subjectId}';
+            final facA = context.facultyMap[a.facultyId]?.name ??
+                'Faculty ${a.facultyId}';
+            final facB = context.facultyMap[b.facultyId]?.name ??
+                'Faculty ${b.facultyId}';
+            return 'Conflicts: $subjA / $facA / ${a.section} <> $subjB / $facB / ${b.section}';
+          },
+          roomId: roomId,
+        ),
       );
     });
+  }
 
-    // ── 2. Faculty Conflicts (same faculty, overlapping time) ──
+  void _addFacultyOverlapConflicts(
+    _ConflictContext context,
+    List<ScheduleConflict> conflicts,
+  ) {
     final byFaculty = <int, List<_ScheduleSlot>>{};
-    for (final slot in scheduleSlots) {
+    for (final slot in context.scheduleSlots) {
       byFaculty.putIfAbsent(slot.schedule.facultyId, () => []).add(slot);
     }
     byFaculty.forEach((facultyId, facSchedules) {
-      final faculty = facultyMap[facultyId];
+      final faculty = context.facultyMap[facultyId];
       _addOverlapConflicts(
         conflicts: conflicts,
         slots: facSchedules,
-        type: 'faculty_conflict',
-        resourceLabel: faculty?.name ?? 'Faculty $facultyId',
-        buildMessage: (a, b, slotLabel) =>
-            '${faculty?.name ?? 'Faculty $facultyId'} has overlapping classes at $slotLabel',
-        buildDetails: (a, b) {
-          final subjA =
-              subjectMap[a.subjectId]?.code ?? 'Subject ${a.subjectId}';
-          final subjB =
-              subjectMap[b.subjectId]?.code ?? 'Subject ${b.subjectId}';
-          return 'Subjects: $subjA, $subjB (Schedule IDs: ${a.id}, ${b.id})';
-        },
-        facultyId: facultyId,
+        config: _OverlapConflictConfig(
+          type: 'faculty_conflict',
+          resourceLabel: faculty?.name ?? 'Faculty $facultyId',
+          buildMessage: (a, b, slotLabel) =>
+              '${faculty?.name ?? 'Faculty $facultyId'} has overlapping classes at $slotLabel',
+          buildDetails: (a, b) {
+            final subjA = context.subjectMap[a.subjectId]?.code ??
+                'Subject ${a.subjectId}';
+            final subjB = context.subjectMap[b.subjectId]?.code ??
+                'Subject ${b.subjectId}';
+            return 'Subjects: $subjA, $subjB (Schedule IDs: ${a.id}, ${b.id})';
+          },
+          facultyId: facultyId,
+        ),
       );
     });
+  }
 
-    // ── 3. Section Conflicts (same section, overlapping time) ──
+  void _addSectionOverlapConflicts(
+    _ConflictContext context,
+    List<ScheduleConflict> conflicts,
+  ) {
     final bySection = <String, List<_ScheduleSlot>>{};
-    for (final slot in scheduleSlots) {
+    for (final slot in context.scheduleSlots) {
       if (slot.schedule.section.isNotEmpty) {
         final key = slot.schedule.sectionId != null
             ? 'id:${slot.schedule.sectionId}'
@@ -697,79 +773,88 @@ class ConflictService {
       _addOverlapConflicts(
         conflicts: conflicts,
         slots: secSchedules,
-        type: 'section_conflict',
-        resourceLabel: 'Section $sectionLabel',
-        buildMessage: (a, b, slotLabel) =>
-            'Section $sectionLabel double-booked at $slotLabel',
-        buildDetails: (a, b) {
-          final subjA =
-              subjectMap[a.subjectId]?.code ?? 'Subject ${a.subjectId}';
-          final subjB =
-              subjectMap[b.subjectId]?.code ?? 'Subject ${b.subjectId}';
-          return 'Subjects: $subjA, $subjB (Schedule IDs: ${a.id}, ${b.id})';
-        },
+        config: _OverlapConflictConfig(
+          type: 'section_conflict',
+          resourceLabel: 'Section $sectionLabel',
+          buildMessage: (a, b, slotLabel) =>
+              'Section $sectionLabel double-booked at $slotLabel',
+          buildDetails: (a, b) {
+            final subjA = context.subjectMap[a.subjectId]?.code ??
+                'Subject ${a.subjectId}';
+            final subjB = context.subjectMap[b.subjectId]?.code ??
+                'Subject ${b.subjectId}';
+            return 'Subjects: $subjA, $subjB (Schedule IDs: ${a.id}, ${b.id})';
+          },
+        ),
       );
     });
+  }
 
-    // ── 4. Program Mismatch (subject.program ≠ room.program) ──
-    for (var s in allSchedules) {
-      var subject = subjectMap[s.subjectId];
-      var room = s.roomId != null ? roomMap[s.roomId!] : null;
-      if (subject != null && room != null) {
-        final normalizedRoomName = _normalizeRoomName(room.name);
-        if (subject.program != room.program &&
-            normalizedRoomName != _lectureRoomName) {
-          conflicts.add(
-            ScheduleConflict(
-              type: 'program_mismatch',
-              message:
-                  '${subject.name} (${subject.program.name.toUpperCase()}) assigned to ${room.name} (${room.program.name.toUpperCase()})',
-              scheduleId: s.id,
-              subjectId: s.subjectId,
-              roomId: s.roomId,
-              facultyId: s.facultyId,
-              details: 'Subject and Room programs do not match',
-            ),
-          );
-        }
+  void _addRoomSubjectConflicts(
+    _ConflictContext context,
+    List<ScheduleConflict> conflicts,
+  ) {
+    for (final s in context.schedules) {
+      final subject = context.subjectMap[s.subjectId];
+      final room = s.roomId != null ? context.roomMap[s.roomId!] : null;
+      if (subject == null || room == null) continue;
 
-        // ── 5. Capacity Exceeded ──
-        if (room.capacity < subject.studentsCount) {
-          conflicts.add(
-            ScheduleConflict(
-              type: 'capacity_exceeded',
-              message:
-                  '${room.name} (capacity ${room.capacity}) too small for ${subject.name} (${subject.studentsCount} students)',
-              scheduleId: s.id,
-              subjectId: s.subjectId,
-              roomId: s.roomId,
-              details:
-                  'Room capacity: ${room.capacity}, Required: ${subject.studentsCount}',
-            ),
-          );
-        }
-
-        final roomTypeConflict = _buildRoomTypeConflict(
-          schedule: s,
-          subject: subject,
-          room: room,
+      final normalizedRoomName = _normalizeRoomName(room.name);
+      if (subject.program != room.program &&
+          normalizedRoomName != _lectureRoomName) {
+        conflicts.add(
+          ScheduleConflict(
+            type: 'program_mismatch',
+            message:
+                '${subject.name} (${subject.program.name.toUpperCase()}) assigned to ${room.name} (${room.program.name.toUpperCase()})',
+            scheduleId: s.id,
+            subjectId: s.subjectId,
+            roomId: s.roomId,
+            facultyId: s.facultyId,
+            details: 'Subject and Room programs do not match',
+          ),
         );
-        if (roomTypeConflict != null) {
-          conflicts.add(roomTypeConflict);
-        }
+      }
+
+      if (room.capacity < subject.studentsCount) {
+        conflicts.add(
+          ScheduleConflict(
+            type: 'capacity_exceeded',
+            message:
+                '${room.name} (capacity ${room.capacity}) too small for ${subject.name} (${subject.studentsCount} students)',
+            scheduleId: s.id,
+            subjectId: s.subjectId,
+            roomId: s.roomId,
+            details:
+                'Room capacity: ${room.capacity}, Required: ${subject.studentsCount}',
+          ),
+        );
+      }
+
+      final roomTypeConflict = _buildRoomTypeConflict(
+        schedule: s,
+        subject: subject,
+        room: room,
+      );
+      if (roomTypeConflict != null) {
+        conflicts.add(roomTypeConflict);
       }
     }
+  }
 
-    // ── 6. Faculty Max Load Exceeded ──
-    var facultyUnits = <int, double>{};
-    for (var s in allSchedules) {
-      var subject = subjectMap[s.subjectId];
-      var units = subject?.units.toDouble() ?? (s.units ?? 0);
+  void _addFacultyMaxLoadConflicts(
+    _ConflictContext context,
+    List<ScheduleConflict> conflicts,
+  ) {
+    final facultyUnits = <int, double>{};
+    for (final s in context.schedules) {
+      final subject = context.subjectMap[s.subjectId];
+      final units = subject?.units.toDouble() ?? (s.units ?? 0);
       facultyUnits[s.facultyId] = (facultyUnits[s.facultyId] ?? 0) + units;
     }
 
     facultyUnits.forEach((facultyId, totalUnits) {
-      var faculty = facultyMap[facultyId];
+      final faculty = context.facultyMap[facultyId];
       if (faculty != null && totalUnits > (faculty.maxLoad ?? 0)) {
         conflicts.add(
           ScheduleConflict(
@@ -783,42 +868,49 @@ class ConflictService {
         );
       }
     });
+  }
 
-    // ── 7. Room Inactive (room is inactive but used in a schedule) ──
-    for (var s in allSchedules) {
-      if (s.roomId != null) {
-        var room = roomMap[s.roomId!];
-        if (room != null && !room.isActive) {
-          conflicts.add(
-            ScheduleConflict(
-              type: 'room_inactive',
-              message: '${room.name} is inactive but assigned to a schedule',
-              scheduleId: s.id,
-              roomId: s.roomId,
-              facultyId: s.facultyId,
-              subjectId: s.subjectId,
-              details:
-                  'Room "${room.name}" must be set to active before being used in scheduling',
-            ),
-          );
-        }
+  void _addRoomInactiveConflicts(
+    _ConflictContext context,
+    List<ScheduleConflict> conflicts,
+  ) {
+    for (final s in context.schedules) {
+      if (s.roomId == null) continue;
+      final room = context.roomMap[s.roomId!];
+      if (room != null && !room.isActive) {
+        conflicts.add(
+          ScheduleConflict(
+            type: 'room_inactive',
+            message: '${room.name} is inactive but assigned to a schedule',
+            scheduleId: s.id,
+            roomId: s.roomId,
+            facultyId: s.facultyId,
+            subjectId: s.subjectId,
+            details:
+                'Room "${room.name}" must be set to active before being used in scheduling',
+          ),
+        );
       }
     }
+  }
 
-    // ── 8. Faculty Unavailable (timeslot outside faculty preferred hours) ──
-    var allAvailabilities = await FacultyAvailability.db.find(session);
-
-    var availByFaculty = <int, List<FacultyAvailability>>{};
-    for (var a in allAvailabilities) {
+  Future<void> _addFacultyAvailabilityConflicts(
+    Session session,
+    _ConflictContext context,
+    List<ScheduleConflict> conflicts,
+  ) async {
+    final allAvailabilities = await FacultyAvailability.db.find(session);
+    final availByFaculty = <int, List<FacultyAvailability>>{};
+    for (final a in allAvailabilities) {
       availByFaculty.putIfAbsent(a.facultyId, () => []).add(a);
     }
 
-    for (var s in allSchedules) {
+    for (final s in context.schedules) {
       if (s.timeslotId == null) continue;
       final avails = availByFaculty[s.facultyId];
-      if (avails == null || avails.isEmpty) continue; // no prefs = always ok
+      if (avails == null || avails.isEmpty) continue;
 
-      final ts = timeslotMap[s.timeslotId!];
+      final ts = context.timeslotMap[s.timeslotId!];
       if (ts == null) continue;
 
       final tsStart = _parseTimeToMinutes(ts.startTime);
@@ -833,7 +925,7 @@ class ConflictService {
       });
 
       if (!covered) {
-        final faculty = facultyMap[s.facultyId];
+        final faculty = context.facultyMap[s.facultyId];
         conflicts.add(
           ScheduleConflict(
             type: 'faculty_unavailable',
@@ -843,27 +935,32 @@ class ConflictService {
             facultyId: s.facultyId,
             subjectId: s.subjectId,
             details:
-                'Timeslot ${ts.startTime}–${ts.endTime} on ${ts.day.name} is outside faculty availability',
+                'Timeslot ${ts.startTime}â€“${ts.endTime} on ${ts.day.name} is outside faculty availability',
           ),
         );
       }
     }
+  }
 
-    // â”€â”€ 9. Continuous block check (timeslot duration vs subject hours) â”€â”€
-    for (var s in allSchedules) {
+  void _addContinuousBlockConflicts(
+    _ConflictContext context,
+    List<ScheduleConflict> conflicts,
+  ) {
+    for (final s in context.schedules) {
       if (s.timeslotId == null) continue;
-      final subject = subjectMap[s.subjectId];
+      final subject = context.subjectMap[s.subjectId];
       if (subject == null) continue;
       final requiredHours =
           s.hours ?? subject.hours ?? subject.units.toDouble();
       if (requiredHours <= 0) continue;
-      final ts = timeslotMap[s.timeslotId!];
+      final ts = context.timeslotMap[s.timeslotId!];
       if (ts == null) continue;
+
       final tsMinutes =
           _parseTimeToMinutes(ts.endTime) - _parseTimeToMinutes(ts.startTime);
       final tsHours = tsMinutes / 60.0;
       if (tsHours + 1e-6 < requiredHours) {
-        final faculty = facultyMap[s.facultyId];
+        final faculty = context.facultyMap[s.facultyId];
         conflicts.add(
           ScheduleConflict(
             type: 'insufficient_block',
@@ -874,12 +971,12 @@ class ConflictService {
             subjectId: s.subjectId,
             roomId: s.roomId,
             details:
-                'Continuous block required. Faculty: ${faculty?.name ?? s.facultyId}, Section: ${s.section}, Room: ${roomMap[s.roomId ?? -1]?.name ?? 'N/A'}',
+                'Continuous block required. Faculty: ${faculty?.name ?? s.facultyId}, Section: ${s.section}, Room: ${context.roomMap[s.roomId ?? -1]?.name ?? 'N/A'}',
           ),
         );
       }
 
-      final room = s.roomId != null ? roomMap[s.roomId!] : null;
+      final room = s.roomId != null ? context.roomMap[s.roomId!] : null;
       if (_isLabSchedule(subject, s, room)) {
         final startMinutes = _parseTimeToMinutes(ts.startTime);
         if (startMinutes < _labEarliestStartMinutes) {
@@ -897,16 +994,77 @@ class ConflictService {
         }
       }
     }
+  }
+
+  // ─── Full System Conflict Scan ─────────────────────────────────────
+
+  /// Scans the ENTIRE schedule system for all conflict types.
+  /// This is a comprehensive check that detects:
+  ///   - Room conflicts (same room, same timeslot)
+  ///   - Faculty conflicts (same faculty, same timeslot)
+  ///   - Section conflicts (same section, same timeslot)
+  ///   - Program mismatches (subject program ≠ room program)
+  ///   - Capacity exceeded (room capacity < student count)
+  ///   - Faculty max load exceeded
+  Future<List<ScheduleConflict>> getAllConflicts(Session session) async {
+    final conflicts = <ScheduleConflict>[];
+    final context = await _buildConflictContext(session);
+
+    _addRoomOverlapConflicts(context, conflicts);
+    _addFacultyOverlapConflicts(context, conflicts);
+    _addSectionOverlapConflicts(context, conflicts);
+    _addRoomSubjectConflicts(context, conflicts);
+    _addFacultyMaxLoadConflicts(context, conflicts);
+    _addRoomInactiveConflicts(context, conflicts);
+    await _addFacultyAvailabilityConflicts(session, context, conflicts);
+    _addContinuousBlockConflicts(context, conflicts);
 
     return conflicts;
   }
 }
+
 
 class _ScheduleSlot {
   final Schedule schedule;
   final Timeslot timeslot;
 
   _ScheduleSlot({required this.schedule, required this.timeslot});
+}
+
+class _ConflictContext {
+  final List<Schedule> schedules;
+  final Map<int, Subject> subjectMap;
+  final Map<int, Room> roomMap;
+  final Map<int, Faculty> facultyMap;
+  final Map<int, Timeslot> timeslotMap;
+  final List<_ScheduleSlot> scheduleSlots;
+
+  const _ConflictContext({
+    required this.schedules,
+    required this.subjectMap,
+    required this.roomMap,
+    required this.facultyMap,
+    required this.timeslotMap,
+    required this.scheduleSlots,
+  });
+}
+
+class _OverlapConflictConfig {
+  final String type;
+  final String resourceLabel;
+  final String Function(Schedule a, Schedule b, String slotLabel) buildMessage;
+  final String Function(Schedule a, Schedule b) buildDetails;
+  final int? roomId;
+  final int? facultyId;
+
+  const _OverlapConflictConfig({
+    required this.type,
+    required this.resourceLabel,
+    required this.buildMessage,
+    required this.buildDetails,
+    this.roomId,
+    this.facultyId,
+  });
 }
 
 extension _OverlapHelpers on ConflictService {
@@ -926,13 +1084,7 @@ extension _OverlapHelpers on ConflictService {
   void _addOverlapConflicts({
     required List<ScheduleConflict> conflicts,
     required List<_ScheduleSlot> slots,
-    required String type,
-    required String resourceLabel,
-    required String Function(Schedule a, Schedule b, String slotLabel)
-    buildMessage,
-    required String Function(Schedule a, Schedule b) buildDetails,
-    int? roomId,
-    int? facultyId,
+    required _OverlapConflictConfig config,
   }) {
     if (slots.length < 2) return;
     for (var i = 0; i < slots.length; i++) {
@@ -943,11 +1095,11 @@ extension _OverlapHelpers on ConflictService {
         final label = _slotLabel(a.timeslot);
         conflicts.add(
           ScheduleConflict(
-            type: type,
-            message: buildMessage(a.schedule, b.schedule, label),
-            roomId: roomId,
-            facultyId: facultyId,
-            details: buildDetails(a.schedule, b.schedule),
+            type: config.type,
+            message: config.buildMessage(a.schedule, b.schedule, label),
+            roomId: config.roomId,
+            facultyId: config.facultyId,
+            details: config.buildDetails(a.schedule, b.schedule),
           ),
         );
       }
