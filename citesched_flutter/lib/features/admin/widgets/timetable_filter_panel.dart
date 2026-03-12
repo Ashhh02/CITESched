@@ -137,7 +137,7 @@ class TimetableFilterPanel extends StatelessWidget {
     required Function(T?) onChanged,
   }) {
     return DropdownButtonFormField<T>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: GoogleFonts.poppins(fontSize: 14),

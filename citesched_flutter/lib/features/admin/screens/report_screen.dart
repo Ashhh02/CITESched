@@ -396,7 +396,7 @@ class _FacultyLoadTab extends ConsumerWidget {
                                 dataRowMaxHeight: 60,
                                 showBottomBorder: true,
                                 dividerThickness: 0.6,
-                                headingRowColor: MaterialStateProperty.all(
+                                headingRowColor: WidgetStateProperty.all(
                                   headerBg,
                                 ),
                                 headingTextStyle: GoogleFonts.poppins(
@@ -425,15 +425,15 @@ class _FacultyLoadTab extends ConsumerWidget {
                                   final index = entry.key;
                                   final item = entry.value;
                                   Color statusColor;
-                                  if (item.loadStatus == 'Overloaded')
+                                  if (item.loadStatus == 'Overloaded') {
                                     statusColor = Colors.red;
-                                  else if (item.loadStatus == 'Underloaded')
+                                  } else if (item.loadStatus == 'Underloaded')
                                     statusColor = Colors.orange;
                                   else
                                     statusColor = Colors.green;
 
                                   return DataRow(
-                                    color: MaterialStateProperty.all(
+                                    color: WidgetStateProperty.all(
                                       index.isEven ? rowBgA : rowBgB,
                                     ),
                                     cells: [
@@ -455,7 +455,7 @@ class _FacultyLoadTab extends ConsumerWidget {
                                       ),
                                       DataCell(
                                         Text(
-                                          '${item.totalUnits.toStringAsFixed(0)}',
+                                          item.totalUnits.toStringAsFixed(0),
                                           style: GoogleFonts.poppins(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 13,
@@ -1362,7 +1362,7 @@ class _ScheduleOverviewTab extends ConsumerWidget {
                   ),
                 ),
               )
-              .toList(),
+              ,
         ],
       ),
     );
@@ -1407,7 +1407,7 @@ class _ScheduleOverviewTab extends ConsumerWidget {
                   ),
                 ),
               )
-              .toList(),
+              ,
         ],
       ),
     );

@@ -204,8 +204,9 @@ class NLPService {
 
         var summary = "I found ${conflicts.length} conflict(s): ";
         if (roomConflicts > 0) summary += "$roomConflicts room conflict(s). ";
-        if (facultyConflicts > 0)
+        if (facultyConflicts > 0) {
           summary += "$facultyConflicts faculty conflict(s). ";
+        }
 
         return NLPResponse(
           text:
@@ -465,30 +466,28 @@ class NLPService {
       final facultyLoad = <int, Map<String, dynamic>>{};
       for (var s in allSchedules) {
         final facultyId = s.facultyId;
-        if (facultyId != null) {
-          if (!facultyLoad.containsKey(facultyId)) {
-            facultyLoad[facultyId] = {
-              'units': 0.0,
-              'hours': 0.0,
-              'faculty': s.faculty,
-              'count': 0,
-            };
-          }
-          facultyLoad[facultyId]!['units'] += s.units ?? 0;
-          facultyLoad[facultyId]!['count']++;
+        if (!facultyLoad.containsKey(facultyId)) {
+          facultyLoad[facultyId] = {
+            'units': 0.0,
+            'hours': 0.0,
+            'faculty': s.faculty,
+            'count': 0,
+          };
+        }
+        facultyLoad[facultyId]!['units'] += s.units ?? 0;
+        facultyLoad[facultyId]!['count']++;
 
-          if (s.timeslot != null) {
-            try {
-              var start = DateTime.parse('2000-01-01 ${s.timeslot!.startTime}');
-              var end = DateTime.parse('2000-01-01 ${s.timeslot!.endTime}');
-              facultyLoad[facultyId]!['hours'] +=
-                  end.difference(start).inMinutes / 60.0;
-            } catch (_) {
-              facultyLoad[facultyId]!['hours'] += 3.0;
-            }
+        if (s.timeslot != null) {
+          try {
+            var start = DateTime.parse('2000-01-01 ${s.timeslot!.startTime}');
+            var end = DateTime.parse('2000-01-01 ${s.timeslot!.endTime}');
+            facultyLoad[facultyId]!['hours'] +=
+                end.difference(start).inMinutes / 60.0;
+          } catch (_) {
+            facultyLoad[facultyId]!['hours'] += 3.0;
           }
         }
-      }
+            }
 
       final overloadedFaculty = facultyLoad.entries
           .where(

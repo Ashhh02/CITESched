@@ -6,7 +6,7 @@ class DebugEndpoint extends Endpoint {
   bool get requireLogin => false; // Allow public access to debug why auth fails
 
   Future<String> getSessionInfo(Session session) async {
-    var authInfo = await session.authenticated;
+    var authInfo = session.authenticated;
     var userId = authInfo?.userIdentifier;
     var scopes = authInfo?.scopes.map((s) => s.name).toList();
 

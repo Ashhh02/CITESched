@@ -388,6 +388,17 @@ class SchedulingService {
       }
     }
 
+    if (conflicts.isNotEmpty) {
+      final limit = conflicts.length < 10 ? conflicts.length : 10;
+      for (var i = 0; i < limit; i++) {
+        final c = conflicts[i];
+        session.log(
+          '[SCHEDULE_CONFLICT] ${c.type}: ${c.message} :: ${c.details ?? ''}',
+          level: LogLevel.warning,
+        );
+      }
+    }
+
     return GenerateScheduleResponse(
       success: conflicts.isEmpty,
       schedules: generatedSchedules,
@@ -594,17 +605,38 @@ class SchedulingService {
     final requiredMinutes = (requiredHours * 60).round();
     if (requiredMinutes <= 0) return const [];
 
-    // If no availability set, fall back to existing timeslots that fit.
+    // If no availability set, derive sub-slots from existing timeslots.
     if (availability.isEmpty) {
-      return allTimeslots.where((t) {
-        if (((_timeslotHours(t) * 60).round() - requiredMinutes).abs() > 1) {
-          return false;
+      final stepMinutes = requiredMinutes % 60 == 0 ? 60 : 30;
+      final candidates = <Timeslot>[];
+      final seen = <String>{};
+
+      for (final slot in allTimeslots) {
+        final start = _parseTimeToMinutes(slot.startTime);
+        final end = _parseTimeToMinutes(slot.endTime);
+        if (end - start < requiredMinutes) continue;
+
+        for (var s = start; s + requiredMinutes <= end; s += stepMinutes) {
+          if (requireLabStartAfterNine && s < _labEarliestStartMinutes) {
+            continue;
+          }
+          final e = s + requiredMinutes;
+          final startTime = _formatMinutes(s);
+          final endTime = _formatMinutes(e);
+          final key = _timeslotKey(slot.day, startTime, endTime);
+          if (!seen.add(key)) continue;
+          final created = await _getOrCreateTimeslot(
+            session: session,
+            day: slot.day,
+            startTime: startTime,
+            endTime: endTime,
+            cache: cache,
+          );
+          candidates.add(created);
         }
-        if (requireLabStartAfterNine) {
-          return _parseTimeToMinutes(t.startTime) >= _labEarliestStartMinutes;
-        }
-        return true;
-      }).toList();
+      }
+
+      return candidates;
     }
 
     final stepMinutes = requiredMinutes % 60 == 0 ? 60 : 30;
@@ -726,7 +758,7 @@ class SchedulingService {
     required Session session,
     required Set<String> requestedSections,
   }) async {
-    final normalize = (String value) =>
+    String normalize(String value) =>
         value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     final requestedNormalized = requestedSections
         .map((s) => normalize(s))
@@ -736,14 +768,14 @@ class SchedulingService {
     final sectionRows = await Section.db.find(session);
     final candidateByKey = <String, _SectionCandidate>{};
 
-    bool _shouldInclude(String code) {
+    bool shouldInclude(String code) {
       if (requestedNormalized.isEmpty) return true;
       return requestedNormalized.contains(normalize(code));
     }
 
     for (final section in sectionRows) {
       if (!section.isActive) continue;
-      if (!_shouldInclude(section.sectionCode)) continue;
+      if (!shouldInclude(section.sectionCode)) continue;
       final key =
           '${section.program.name}|${section.yearLevel}|${normalize(section.sectionCode)}';
       candidateByKey[key] = _SectionCandidate(
@@ -761,7 +793,7 @@ class SchedulingService {
     for (final student in students) {
       final code = student.section?.trim();
       if (code == null || code.isEmpty) continue;
-      if (!_shouldInclude(code)) continue;
+      if (!shouldInclude(code)) continue;
       final program = _programFromStudentCourse(student.course);
       final yearLevel = student.yearLevel > 0
           ? student.yearLevel

@@ -1249,7 +1249,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
         Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: Colors.orange,
+          activeThumbColor: Colors.orange,
           activeTrackColor: Colors.orange.withOpacity(0.2),
           inactiveThumbColor: Colors.grey.shade400,
           inactiveTrackColor: Colors.grey.shade200,
@@ -1592,7 +1592,7 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
                       ),
                       const SizedBox(height: 14),
                       DropdownButtonFormField<String>(
-                        value: _selectedCourse,
+                        initialValue: _selectedCourse,
                         decoration: field('Course', Icons.school_rounded),
                         items: _allowedCourses
                             .map(

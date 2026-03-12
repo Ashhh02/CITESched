@@ -776,8 +776,8 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
   }
 
   bool _isLunchSlot(Schedule schedule, Timeslot timeslot) {
-    final code = schedule.subject?.code?.toLowerCase() ?? '';
-    final name = schedule.subject?.name?.toLowerCase() ?? '';
+    final code = schedule.subject?.code.toLowerCase() ?? '';
+    final name = schedule.subject?.name.toLowerCase() ?? '';
     if (code.contains('lunch') || name.contains('lunch')) return true;
 
     final start = _parseTime(timeslot.startTime);

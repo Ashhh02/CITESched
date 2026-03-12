@@ -67,7 +67,7 @@ class ScheduleDisplayWidget extends StatelessWidget {
                 _buildDataCell(schedule.section),
               ],
             );
-          }).toList(),
+          }),
         ],
       ),
     );

@@ -43,7 +43,6 @@ class AppTheme {
         primary: primaryColor,
         surface: surfaceColor,
         error: errorColor,
-        background: backgroundColor,
         onPrimary: Colors.white,
         onSurface: textPrimary,
       ),

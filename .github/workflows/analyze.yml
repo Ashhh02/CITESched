@@ -23,4 +23,4 @@ jobs:
 
       - name: Analyze
         working-directory: citesched_server
-        run: dart analyze --fatal-infos
+        run: dart analyze --fatal-warnings

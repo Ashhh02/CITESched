@@ -2299,7 +2299,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                   Switch(
                     value: _isActive,
                     onChanged: (value) => setState(() => _isActive = value),
-                    activeColor: primaryPurple,
+                    activeThumbColor: primaryPurple,
                   ),
                 ],
               ),
@@ -3421,7 +3421,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                   Switch(
                     value: _isActive,
                     onChanged: (value) => setState(() => _isActive = value),
-                    activeColor: primaryPurple,
+                    activeThumbColor: primaryPurple,
                   ),
                 ],
               ),

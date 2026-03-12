@@ -10,11 +10,11 @@ class FormSection extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
   const FormSection({
-    Key? key,
+    super.key,
     required this.title,
     required this.children,
     this.padding = const EdgeInsets.all(DesignSystem.spacing16),
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +48,7 @@ class FormSection extends StatelessWidget {
               ),
               child: widget,
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -64,12 +64,12 @@ class FormField extends StatelessWidget {
   final bool isRequired;
 
   const FormField({
-    Key? key,
+    super.key,
     required this.label,
     required this.child,
     this.helperText,
     this.isRequired = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -111,9 +111,9 @@ class FormDivider extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
   const FormDivider({
-    Key? key,
+    super.key,
     this.padding = const EdgeInsets.symmetric(vertical: DesignSystem.spacing16),
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

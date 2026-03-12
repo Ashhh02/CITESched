@@ -13,7 +13,7 @@ class PrimaryButton extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
   const PrimaryButton({
-    Key? key,
+    super.key,
     required this.label,
     required this.onPressed,
     this.isLoading = false,
@@ -23,7 +23,7 @@ class PrimaryButton extends StatelessWidget {
     this.padding = const EdgeInsets.symmetric(
       horizontal: DesignSystem.spacing24,
     ),
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +72,7 @@ class SecondaryButton extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
   const SecondaryButton({
-    Key? key,
+    super.key,
     required this.label,
     required this.onPressed,
     this.isEnabled = true,
@@ -81,7 +81,7 @@ class SecondaryButton extends StatelessWidget {
     this.padding = const EdgeInsets.symmetric(
       horizontal: DesignSystem.spacing24,
     ),
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -115,11 +115,11 @@ class ButtonGroup extends StatelessWidget {
   final double spacing;
 
   const ButtonGroup({
-    Key? key,
+    super.key,
     required this.buttons,
     this.alignment = MainAxisAlignment.center,
     this.spacing = DesignSystem.spacing12,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

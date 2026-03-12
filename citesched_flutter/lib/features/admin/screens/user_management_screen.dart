@@ -1145,7 +1145,7 @@ class _StudentModalState extends ConsumerState<_StudentModal> {
           ),
         ),
         DropdownButtonFormField<int?>(
-          value: sorted.any((s) => s.id == _selectedSectionId)
+          initialValue: sorted.any((s) => s.id == _selectedSectionId)
               ? _selectedSectionId
               : null,
           decoration: InputDecoration(

@@ -15,12 +15,12 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onBackPressed;
 
   const AppHeader({
-    Key? key,
+    super.key,
     required this.title,
     this.leading,
     this.actions,
     this.onBackPressed,
-  }) : super(key: key);
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(DesignSystem.headerHeight);

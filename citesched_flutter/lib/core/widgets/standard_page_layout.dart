@@ -20,7 +20,7 @@ class StandardPageLayout extends StatelessWidget {
   final VoidCallback? onBackPressed;
 
   const StandardPageLayout({
-    Key? key,
+    super.key,
     required this.headerTitle,
     required this.heroTitle,
     this.heroSubtitle,
@@ -29,7 +29,7 @@ class StandardPageLayout extends StatelessWidget {
     this.leading,
     this.headerActions,
     this.onBackPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -152,13 +152,13 @@ class SimplePageLayout extends StatelessWidget {
   final VoidCallback? onBackPressed;
 
   const SimplePageLayout({
-    Key? key,
+    super.key,
     required this.headerTitle,
     required this.body,
     this.leading,
     this.headerActions,
     this.onBackPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

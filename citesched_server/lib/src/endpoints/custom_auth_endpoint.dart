@@ -57,7 +57,7 @@ class CustomAuthEndpoint extends Endpoint {
     }
 
     // Ensure we have a usable email
-    if (email == null || email.isEmpty) {
+    if (email.isEmpty) {
       print('FAIL: Resolved email is null/empty for ID $id');
       return AuthenticationResponse(
         success: false,
@@ -76,7 +76,7 @@ class CustomAuthEndpoint extends Endpoint {
       // Create user if missing
       final user = await Emails.createUser(
         session,
-        (displayName != null && displayName.isNotEmpty) ? displayName : email,
+        (displayName.isNotEmpty) ? displayName : email,
         email,
         createPassword,
       );

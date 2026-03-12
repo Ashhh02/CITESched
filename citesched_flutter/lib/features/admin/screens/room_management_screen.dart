@@ -1409,7 +1409,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
                       const SizedBox(height: 16),
 
                       DropdownButtonFormField<Program>(
-                        value: _program,
+                        initialValue: _program,
                         decoration: _inputDecoration('Program', isDark),
                         dropdownColor: cardBg,
                         items: Program.values
@@ -1429,7 +1429,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<RoomType>(
-                        value: _type,
+                        initialValue: _type,
                         decoration: _inputDecoration('Room Type', isDark),
                         dropdownColor: cardBg,
                         items: RoomType.values
@@ -1473,7 +1473,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
                             ),
                           ),
                           value: _isActive,
-                          activeColor: widget.maroonColor,
+                          activeThumbColor: widget.maroonColor,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1643,10 +1643,11 @@ class _AddRoomModalState extends State<_AddRoomModal> {
       widget.onSuccess();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -1862,7 +1863,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
                       const SizedBox(height: 16),
 
                       DropdownButtonFormField<Program>(
-                        value: _program,
+                        initialValue: _program,
                         decoration: _inputDecoration('Program', isDark),
                         dropdownColor: cardBg,
                         items: Program.values
@@ -1882,7 +1883,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<RoomType>(
-                        value: _type,
+                        initialValue: _type,
                         decoration: _inputDecoration('Room Type', isDark),
                         dropdownColor: cardBg,
                         items: RoomType.values
@@ -1926,7 +1927,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
                             ),
                           ),
                           value: _isActive,
-                          activeColor: widget.maroonColor,
+                          activeThumbColor: widget.maroonColor,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -2095,10 +2096,11 @@ class _EditRoomModalState extends State<_EditRoomModal> {
       widget.onSuccess();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

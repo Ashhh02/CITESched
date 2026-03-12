@@ -1,4 +1,3 @@
-import 'package:citesched_flutter/features/nlp/models/chat_message.dart';
 import 'package:citesched_flutter/features/nlp/providers/nlp_chat_provider.dart';
 import 'package:citesched_flutter/features/nlp/utils/nlp_constants.dart';
 import 'package:citesched_flutter/features/nlp/widgets/message_bubble.dart';

@@ -19,7 +19,7 @@ class NLPEndpoint extends Endpoint {
   Future<NLPResponse> query(Session session, String text) async {
     try {
       // Serverpod automatically enforces authentication
-      final authInfo = await session.authenticated;
+      final authInfo = session.authenticated;
 
       if (authInfo == null) {
         return NLPResponse(

@@ -915,10 +915,10 @@ class _ScheduleSlot {
 extension _OverlapHelpers on ConflictService {
   bool _overlapsSlot(_ScheduleSlot a, _ScheduleSlot b) {
     if (a.timeslot.day != b.timeslot.day) return false;
-    final aStart = this._parseTimeToMinutes(a.timeslot.startTime);
-    final aEnd = this._parseTimeToMinutes(a.timeslot.endTime);
-    final bStart = this._parseTimeToMinutes(b.timeslot.startTime);
-    final bEnd = this._parseTimeToMinutes(b.timeslot.endTime);
+    final aStart = _parseTimeToMinutes(a.timeslot.startTime);
+    final aEnd = _parseTimeToMinutes(a.timeslot.endTime);
+    final bStart = _parseTimeToMinutes(b.timeslot.startTime);
+    final bEnd = _parseTimeToMinutes(b.timeslot.endTime);
     return aStart < bEnd && bStart < aEnd;
   }
 

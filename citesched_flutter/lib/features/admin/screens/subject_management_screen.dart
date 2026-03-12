@@ -1221,7 +1221,7 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
 
   int? _yearLevel;
   int? _term;
-  List<SubjectType> _selectedTypes = [];
+  final List<SubjectType> _selectedTypes = [];
   Program _program = Program.it;
   List<Faculty> _facultyList = [];
   int? _selectedFacultyId;
@@ -1406,7 +1406,7 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
                       const SizedBox(height: 16),
 
                       DropdownButtonFormField<Program>(
-                        value: _program,
+                        initialValue: _program,
                         decoration: _inputDecoration('Program', isDark),
                         dropdownColor: cardBg,
                         items: Program.values
@@ -1436,7 +1436,7 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<int?>(
-                        value: _selectedFacultyId,
+                        initialValue: _selectedFacultyId,
                         decoration: _inputDecoration(
                           'Assigned Faculty',
                           isDark,
@@ -1620,7 +1620,7 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<int>(
-                              value: _yearLevel,
+                              initialValue: _yearLevel,
                               decoration: _inputDecoration(
                                 'Year Level',
                                 isDark,
@@ -1644,7 +1644,7 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: DropdownButtonFormField<int>(
-                              value: _term,
+                              initialValue: _term,
                               decoration: _inputDecoration('Semester', isDark),
                               dropdownColor: cardBg,
                               items: [1, 2]
@@ -2127,7 +2127,7 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
                       const SizedBox(height: 16),
 
                       DropdownButtonFormField<Program>(
-                        value: _program,
+                        initialValue: _program,
                         decoration: _inputDecoration('Program', isDark),
                         dropdownColor: cardBg,
                         items: Program.values
@@ -2157,7 +2157,7 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<int?>(
-                        value: _selectedFacultyId,
+                        initialValue: _selectedFacultyId,
                         decoration: _inputDecoration(
                           'Assigned Faculty',
                           isDark,
@@ -2313,7 +2313,7 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<int>(
-                              value: _yearLevel,
+                              initialValue: _yearLevel,
                               decoration: _inputDecoration(
                                 'Year Level',
                                 isDark,
@@ -2337,7 +2337,7 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: DropdownButtonFormField<int>(
-                              value: _term,
+                              initialValue: _term,
                               decoration: _inputDecoration('Semester', isDark),
                               dropdownColor: cardBg,
                               items: [1, 2]

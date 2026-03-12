@@ -17,14 +17,14 @@ class ContentCard extends StatelessWidget {
   final Color? borderColorOverride;
 
   const ContentCard({
-    Key? key,
+    super.key,
     required this.child,
     this.padding = const EdgeInsets.all(DesignSystem.spacing16),
     this.borderRadius = DesignSystem.borderRadiusSmall,
     this.withShadow = false,
     this.backgroundColor,
     this.borderColorOverride,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

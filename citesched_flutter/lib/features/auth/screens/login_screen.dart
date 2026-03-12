@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:serverpod_auth_client/serverpod_auth_client.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
-import 'package:serverpod_client/serverpod_client.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -242,11 +241,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
     if (details == null) return false;
 
-    final name = details['name'] as String? ?? displayName ?? '';
-    final effectiveEmail = details['email'] as String? ?? email ?? '';
-    final studentId = details['studentId'] as String?;
-    final facultyId = details['facultyId'] as String?;
-    final section = details['section'] as String?;
+    final name = details['name'] ?? displayName ?? '';
+    final effectiveEmail = details['email'] ?? email ?? '';
+    final studentId = details['studentId'];
+    final facultyId = details['facultyId'];
+    final section = details['section'];
 
     if (name.trim().isEmpty || effectiveEmail.trim().isEmpty) {
       return false;

@@ -199,12 +199,8 @@ class TimetableService {
       if (s.timeslot == null && s.timeslotId != null) {
         s.timeslot = await Timeslot.db.findById(session, s.timeslotId!);
       }
-      if (s.subject == null) {
-        s.subject = await Subject.db.findById(session, s.subjectId);
-      }
-      if (s.faculty == null) {
-        s.faculty = await Faculty.db.findById(session, s.facultyId);
-      }
+      s.subject ??= await Subject.db.findById(session, s.subjectId);
+      s.faculty ??= await Faculty.db.findById(session, s.facultyId);
       if (s.room == null && s.roomId != null) {
         s.room = await Room.db.findById(session, s.roomId!);
       }

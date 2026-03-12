@@ -2361,8 +2361,9 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
     if (types == null || types.isEmpty) return Colors.grey;
     final expanded = _expandedSubjectTypes(types);
     if (expanded.contains(SubjectType.lecture) &&
-        expanded.contains(SubjectType.laboratory))
+        expanded.contains(SubjectType.laboratory)) {
       return Colors.orange;
+    }
     if (expanded.contains(SubjectType.lecture)) return Colors.purple;
     if (expanded.contains(SubjectType.laboratory)) return Colors.teal;
     return Colors.blue;

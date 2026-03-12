@@ -620,7 +620,7 @@ class StudentScheduleScreen extends ConsumerWidget {
                       ),
                     ],
                   );
-                }).toList(),
+                }),
                 DataRow(
                   cells: [
                     DataCell(

@@ -189,8 +189,9 @@ class _FacultyLoadTab extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (snapshot.hasError)
+        if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
+        }
 
         final data = snapshot.data ?? [];
         if (data.isEmpty) return const Center(child: Text('No data available'));
@@ -209,7 +210,7 @@ class _FacultyLoadTab extends StatelessWidget {
                   child: ConstrainedBox(
                     constraints: BoxConstraints(minWidth: constraints.maxWidth),
                     child: DataTable(
-                      headingRowColor: MaterialStateProperty.all(
+                      headingRowColor: WidgetStateProperty.all(
                         Theme.of(context).primaryColor.withOpacity(0.05),
                       ),
                       columns: const [
@@ -323,10 +324,12 @@ class _RoomUtilizationTab extends StatelessWidget {
     return FutureBuilder<List<RoomUtilizationReport>>(
       future: client.admin.getRoomUtilizationReport(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError)
+        }
+        if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
+        }
 
         final data = snapshot.data ?? [];
         return ListView.separated(
@@ -427,10 +430,12 @@ class _ConflictSummaryTab extends StatelessWidget {
     return FutureBuilder<ConflictSummaryReport>(
       future: client.admin.getConflictSummaryReport(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError)
+        }
+        if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
+        }
 
         final data = snapshot.data;
         if (data == null) return const Center(child: Text('No data'));
@@ -469,10 +474,12 @@ class _ScheduleOverviewTab extends StatelessWidget {
     return FutureBuilder<ScheduleOverviewReport>(
       future: client.admin.getScheduleOverviewReport(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError)
+        }
+        if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
+        }
 
         final data = snapshot.data;
         if (data == null) return const Center(child: Text('No data'));

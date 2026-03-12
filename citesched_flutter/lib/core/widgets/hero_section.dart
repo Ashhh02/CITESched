@@ -14,11 +14,11 @@ class HeroSection extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
 
   const HeroSection({
-    Key? key,
+    super.key,
     required this.title,
     this.subtitle,
     this.padding,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -129,7 +129,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
               ],
             ),
             content: Text(
-              precheckResult?.message ?? 'Missing required data.',
+              precheckResult.message ?? 'Missing required data.',
               style: GoogleFonts.poppins(fontSize: 14),
             ),
             actions: [
@@ -201,7 +201,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              precheckResult?.message ?? '',
+              precheckResult.message ?? '',
               style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
             ),
           ],
@@ -590,10 +590,11 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                       ),
                     ],
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isNarrow = constraints.maxWidth < 900;
+                      final titleBlock = Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
                             padding: const EdgeInsets.all(16),
@@ -635,8 +636,9 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                             ],
                           ),
                         ],
-                      ),
-                      ElevatedButton.icon(
+                      );
+
+                      final actionButton = ElevatedButton.icon(
                         onPressed: _generateSchedule,
                         icon: const Icon(Icons.auto_awesome_rounded, size: 24),
                         label: Text(
@@ -659,8 +661,27 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                           ),
                           elevation: 0,
                         ),
-                      ),
-                    ],
+                      );
+
+                      if (isNarrow) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            titleBlock,
+                            const SizedBox(height: 16),
+                            actionButton,
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          titleBlock,
+                          actionButton,
+                        ],
+                      );
+                    },
                   ),
                 ),
 

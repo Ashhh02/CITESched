@@ -16,13 +16,13 @@ class StandardTable extends StatelessWidget {
   final Color? hoverColor;
 
   const StandardTable({
-    Key? key,
+    super.key,
     required this.headers,
     required this.rows,
     this.actions,
     this.columnWidth = 150,
     this.hoverColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +118,7 @@ class StandardTable extends StatelessWidget {
                 ),
               );
             },
-          ).toList(),
+          ),
         ],
       ),
     );
@@ -145,11 +145,11 @@ class TableCell extends StatelessWidget {
   final int? maxLines;
 
   const TableCell({
-    Key? key,
+    super.key,
     required this.text,
     this.textAlign = TextAlign.left,
     this.maxLines,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -172,12 +172,12 @@ class TableActionButton extends StatelessWidget {
   final double? width;
 
   const TableActionButton({
-    Key? key,
+    super.key,
     required this.label,
     required this.onPressed,
     this.isPrimary = true,
     this.width = 80,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
