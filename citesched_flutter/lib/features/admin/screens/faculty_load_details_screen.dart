@@ -8,13 +8,14 @@ import 'package:citesched_flutter/core/providers/conflict_provider.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
 
-final facultyDetailsSchedulesProvider = FutureProvider.family<List<Schedule>, int>((
-  ref,
-  facultyId,
-) async {
-  ref.watch(scheduleSyncTriggerProvider);
-  return await client.admin.getFacultySchedule(facultyId);
-});
+final facultyDetailsSchedulesProvider =
+    FutureProvider.family<List<Schedule>, int>((
+      ref,
+      facultyId,
+    ) async {
+      ref.watch(scheduleSyncTriggerProvider);
+      return await client.admin.getFacultySchedule(facultyId);
+    });
 
 class FacultyLoadDetailsScreen extends ConsumerWidget {
   final Faculty faculty;

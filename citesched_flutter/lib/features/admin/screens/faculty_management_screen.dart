@@ -1634,7 +1634,6 @@ class _AddFacultyModal extends StatefulWidget {
 }
 
 class _AddFacultyModalState extends State<_AddFacultyModal> {
-
   void _showErrorDialog(BuildContext context, String message) {
     if (!context.mounted) return;
     String cleanMessage = message.replaceAll('Exception: ', '').trim();
@@ -1646,18 +1645,24 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
           children: [
             const Icon(Icons.error_outline, color: Colors.red, size: 28),
             const SizedBox(width: 12),
-            Text('Action Failed',
-                style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
+            Text(
+              'Action Failed',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.red,
+              ),
+            ),
           ],
         ),
-        content: Text(cleanMessage,
-            style: GoogleFonts.poppins(fontSize: 14)),
+        content: Text(cleanMessage, style: GoogleFonts.poppins(fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('OK',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            child: Text(
+              'OK',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -2655,7 +2660,10 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
               final sM = _startTime.hour * 60 + _startTime.minute;
               final eM = _endTime.hour * 60 + _endTime.minute;
               if (eM <= sM) {
-                AppErrorDialog.show(context, 'End time must be after start time.');
+                AppErrorDialog.show(
+                  context,
+                  'End time must be after start time.',
+                );
                 return;
               }
               for (final ex in _availabilities) {
@@ -2794,7 +2802,6 @@ class _EditFacultyModal extends StatefulWidget {
 }
 
 class _EditFacultyModalState extends State<_EditFacultyModal> {
-
   void _showErrorDialog(BuildContext context, String message) {
     if (!context.mounted) return;
     String cleanMessage = message.replaceAll('Exception: ', '').trim();
@@ -2806,18 +2813,24 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
           children: [
             const Icon(Icons.error_outline, color: Colors.red, size: 28),
             const SizedBox(width: 12),
-            Text('Action Failed',
-                style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
+            Text(
+              'Action Failed',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.red,
+              ),
+            ),
           ],
         ),
-        content: Text(cleanMessage,
-            style: GoogleFonts.poppins(fontSize: 14)),
+        content: Text(cleanMessage, style: GoogleFonts.poppins(fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('OK',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            child: Text(
+              'OK',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -3875,4 +3888,3 @@ class _AvailabilityEntry {
     required this.end,
   });
 }
-

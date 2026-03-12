@@ -3,16 +3,22 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppErrorDialog {
   /// Shows a standardized error dialog for any caught exceptions (including 500 server errors).
-  static void show(BuildContext context, dynamic error, {String title = 'Action Failed'}) {
+  static void show(
+    BuildContext context,
+    dynamic error, {
+    String title = 'Action Failed',
+  }) {
     if (!context.mounted) return;
-    
+
     String message = error.toString();
     // Clean up typical Serverpod or Exception prefixes
     message = message.replaceAll('Exception: ', '').trim();
     message = message.replaceAll('ServerpodClientException: ', '').trim();
     // Sometimes serverpod includes the status code in the string
-    message = message.replaceAll('Internal server error (500)', 'Internal Server Error').trim();
-    
+    message = message
+        .replaceAll('Internal server error (500)', 'Internal Server Error')
+        .trim();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -25,8 +31,8 @@ class AppErrorDialog {
               child: Text(
                 title,
                 style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold, 
-                  fontSize: 18, 
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
                   color: Colors.red,
                 ),
                 maxLines: 2,

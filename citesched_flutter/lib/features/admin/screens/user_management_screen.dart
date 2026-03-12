@@ -1079,9 +1079,9 @@ class _StudentModalState extends ConsumerState<_StudentModal> {
 
     final sorted = List<Section>.from(sections)
       ..sort(
-        (a, b) => _sectionDisplayLabel(a)
-            .toLowerCase()
-            .compareTo(_sectionDisplayLabel(b).toLowerCase()),
+        (a, b) => _sectionDisplayLabel(
+          a,
+        ).toLowerCase().compareTo(_sectionDisplayLabel(b).toLowerCase()),
       );
 
     Section? selectedSection;
@@ -1105,7 +1105,8 @@ class _StudentModalState extends ConsumerState<_StudentModal> {
     }
 
     if (selectedSection != null) {
-      if (_selectedSectionId == null || _selectedSectionId != selectedSection.id) {
+      if (_selectedSectionId == null ||
+          _selectedSectionId != selectedSection.id) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           setState(() {

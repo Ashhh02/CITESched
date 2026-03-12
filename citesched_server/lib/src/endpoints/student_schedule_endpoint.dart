@@ -2,7 +2,10 @@ import 'package:serverpod/serverpod.dart';
 import '../generated/protocol.dart';
 
 class StudentScheduleEndpoint extends Endpoint {
-  Future<Student?> _findCurrentStudent(Session session, dynamic authInfo) async {
+  Future<Student?> _findCurrentStudent(
+    Session session,
+    dynamic authInfo,
+  ) async {
     final userIdentifier = authInfo.userIdentifier.toString();
     final userInfoId = int.tryParse(userIdentifier);
 
@@ -61,8 +64,7 @@ class StudentScheduleEndpoint extends Endpoint {
 
     return await Schedule.db.find(
       session,
-      where: (s) =>
-          s.section.equals(student.section) & s.isActive.equals(true),
+      where: (s) => s.section.equals(student.section) & s.isActive.equals(true),
       include: Schedule.include(
         subject: Subject.include(),
         faculty: Faculty.include(),

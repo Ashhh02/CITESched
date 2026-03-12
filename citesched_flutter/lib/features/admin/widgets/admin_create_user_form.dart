@@ -88,10 +88,10 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
       return;
     }
 
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
       final isStudent = _selectedRole == 'student';
@@ -105,7 +105,9 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
         }
         _selectedCourse = selected;
         _courseController.text = selected;
-        final normalizedSection = _normalizeSectionCode(_sectionController.text);
+        final normalizedSection = _normalizeSectionCode(
+          _sectionController.text,
+        );
         if (_extractYearLevelFromSection(normalizedSection) == null) {
           setState(() {
             _errorMessage = 'Section must be like 3A, 3B, 2A, or 2B.';
@@ -452,77 +454,79 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                       const SizedBox(height: 20),
 
                       if (_selectedRole == 'student') ...[
-                      // Course
-                      _buildLabel(
-                        'Course',
-                        Icons.school_outlined,
-                        textPrimary,
-                      ),
-                      DropdownButtonFormField<String>(
-                        value: _allowedCourses.contains(_selectedCourse)
-                            ? _selectedCourse
-                            : null,
-                        decoration: _buildInputDecoration(
-                          'Select program',
-                          bgBody,
-                          primaryPurple,
-                          textMuted,
+                        // Course
+                        _buildLabel(
+                          'Course',
+                          Icons.school_outlined,
+                          textPrimary,
                         ),
-                        items: _allowedCourses
-                            .map(
-                              (program) => DropdownMenuItem<String>(
-                                value: program,
-                                child: Text(
-                                  program,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 15,
-                                    color: textPrimary,
+                        DropdownButtonFormField<String>(
+                          value: _allowedCourses.contains(_selectedCourse)
+                              ? _selectedCourse
+                              : null,
+                          decoration: _buildInputDecoration(
+                            'Select program',
+                            bgBody,
+                            primaryPurple,
+                            textMuted,
+                          ),
+                          items: _allowedCourses
+                              .map(
+                                (program) => DropdownMenuItem<String>(
+                                  value: program,
+                                  child: Text(
+                                    program,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 15,
+                                      color: textPrimary,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedCourse = value;
-                            _courseController.text = value ?? '';
-                          });
-                        },
-                        validator: (value) =>
-                            value == null || value.isEmpty ? 'Required' : null,
-                      ),
-                      const SizedBox(height: 20),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedCourse = value;
+                              _courseController.text = value ?? '';
+                            });
+                          },
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'Required'
+                              : null,
+                        ),
+                        const SizedBox(height: 20),
 
-                      // Year & Section
-                      _buildLabel(
-                        'Year & Section',
-                        Icons.group_rounded,
-                        textPrimary,
-                      ),
-                      TextFormField(
-                        controller: _sectionController,
-                        decoration: _buildInputDecoration(
-                          'e.g. 3A, 3B, 2A, 2B',
-                          bgBody,
-                          primaryPurple,
-                          textMuted,
+                        // Year & Section
+                        _buildLabel(
+                          'Year & Section',
+                          Icons.group_rounded,
+                          textPrimary,
                         ),
-                        style: GoogleFonts.poppins(
-                          fontSize: 15,
-                          color: textPrimary,
+                        TextFormField(
+                          controller: _sectionController,
+                          decoration: _buildInputDecoration(
+                            'e.g. 3A, 3B, 2A, 2B',
+                            bgBody,
+                            primaryPurple,
+                            textMuted,
+                          ),
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            color: textPrimary,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Required';
+                            }
+                            final normalized = _normalizeSectionCode(value);
+                            if (_extractYearLevelFromSection(normalized) ==
+                                null) {
+                              return 'Use format like 3A, 3B, 2A, 2B';
+                            }
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Required';
-                          }
-                          final normalized = _normalizeSectionCode(value);
-                          if (_extractYearLevelFromSection(normalized) == null) {
-                            return 'Use format like 3A, 3B, 2A, 2B';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
+                        const SizedBox(height: 20),
                       ],
 
                       // Initial Password
@@ -726,4 +730,3 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
     );
   }
 }
-

@@ -388,7 +388,10 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
       if (scopedSubjects.isEmpty || scopedSections.isEmpty) {
         if (mounted) Navigator.pop(context);
         if (mounted) {
-          AppErrorDialog.show(context, 'No available subjects or sections found for this program to generate a schedule.');
+          AppErrorDialog.show(
+            context,
+            'No available subjects or sections found for this program to generate a schedule.',
+          );
         }
         return;
       }
@@ -679,15 +682,15 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                               maroonColor: maroonColor,
                               availabilities: currentFilter.facultyId != null
                                   ? ref
-                                      .watch(
-                                        facultyAvailabilityProvider(
-                                          currentFilter.facultyId!,
-                                        ),
-                                      )
-                                      .maybeWhen(
-                                        data: (v) => v,
-                                        orElse: () => null,
-                                      )
+                                        .watch(
+                                          facultyAvailabilityProvider(
+                                            currentFilter.facultyId!,
+                                          ),
+                                        )
+                                        .maybeWhen(
+                                          data: (v) => v,
+                                          orElse: () => null,
+                                        )
                                   : null,
                               selectedFaculty: currentFilter.facultyId != null
                                   ? _facultyList.firstWhere(
@@ -798,7 +801,10 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                     'Total Hours',
                     '${totalHours.toStringAsFixed(1)}h',
                   ),
-                  _buildSummaryStat('Load', '${efficiency.toStringAsFixed(0)}%'),
+                  _buildSummaryStat(
+                    'Load',
+                    '${efficiency.toStringAsFixed(0)}%',
+                  ),
                   _buildSummaryStat('Subjects', '${schedules.length}'),
                 ],
               ),

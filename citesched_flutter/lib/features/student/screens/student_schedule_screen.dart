@@ -59,102 +59,112 @@ class StudentScheduleScreen extends ConsumerWidget {
             maxWidth: ResponsiveHelper.maxContentWidth(context),
           ),
           child: SingleChildScrollView(
-        padding: ResponsiveHelper.pagePadding(context),
-        child: Column(
-          children: [
-            // Banner Section
-            profileAsync.when(
-              data: (profile) => _buildBanner(profile, user?.userName),
-              loading: () => const LinearProgressIndicator(),
-              error: (err, _) => _buildBanner(null, user?.userName),
-            ),
-            const SizedBox(height: 24),
+            padding: ResponsiveHelper.pagePadding(context),
+            child: Column(
+              children: [
+                // Banner Section
+                profileAsync.when(
+                  data: (profile) => _buildBanner(profile, user?.userName),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (err, _) => _buildBanner(null, user?.userName),
+                ),
+                const SizedBox(height: 24),
 
-            // Weekly Calendar View (card boxes)
-            scheduleAsync.when(
-              data: (schedules) {
-                if (schedules.isEmpty) {
-                  return Container(
-                    padding: const EdgeInsets.all(40),
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+                // Weekly Calendar View (card boxes)
+                scheduleAsync.when(
+                  data: (schedules) {
+                    if (schedules.isEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.all(40),
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Text(
-                      'No schedules found for your section.',
-                      style: GoogleFonts.poppins(),
-                    ),
-                  );
-                }
+                        child: Text(
+                          'No schedules found for your section.',
+                          style: GoogleFonts.poppins(),
+                        ),
+                      );
+                    }
 
-                final scheduleInfos = schedules
-                    .where((s) => s.timeslot != null)
-                    .map((s) => ScheduleInfo(schedule: s, conflicts: const []))
-                    .toList()
-                  ..sort((a, b) {
-                    final ta = a.schedule.timeslot!;
-                    final tb = b.schedule.timeslot!;
-                    final dayOrder = ta.day.index.compareTo(tb.day.index);
-                    if (dayOrder != 0) return dayOrder;
-                    return ta.startTime.compareTo(tb.startTime);
-                  });
+                    final scheduleInfos =
+                        schedules
+                            .where((s) => s.timeslot != null)
+                            .map(
+                              (s) => ScheduleInfo(
+                                schedule: s,
+                                conflicts: const [],
+                              ),
+                            )
+                            .toList()
+                          ..sort((a, b) {
+                            final ta = a.schedule.timeslot!;
+                            final tb = b.schedule.timeslot!;
+                            final dayOrder = ta.day.index.compareTo(
+                              tb.day.index,
+                            );
+                            if (dayOrder != 0) return dayOrder;
+                            return ta.startTime.compareTo(tb.startTime);
+                          });
 
-                return Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                        border: Border.all(
+                          color: Colors.black.withOpacity(0.05),
+                        ),
                       ),
-                    ],
-                    border: Border.all(color: Colors.black.withOpacity(0.05)),
-                  ),
-                  child: SizedBox(
-                    height: ResponsiveHelper.calendarHeight(context),
-                    child: WeeklyCalendarView(
-                      schedules: scheduleInfos,
-                      maroonColor: maroonDark,
-                      isStudentView: true,
+                      child: SizedBox(
+                        height: ResponsiveHelper.calendarHeight(context),
+                        child: WeeklyCalendarView(
+                          schedules: scheduleInfos,
+                          maroonColor: maroonDark,
+                          isStudentView: true,
+                        ),
+                      ),
+                    );
+                  },
+                  loading: () => const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(100),
+                      child: CircularProgressIndicator(),
                     ),
                   ),
-                );
-              },
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(100),
-                  child: CircularProgressIndicator(),
+                  error: (err, _) => Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(100),
+                      child: Text('Error loading schedule: $err'),
+                    ),
+                  ),
                 ),
-              ),
-              error: (err, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(100),
-                  child: Text('Error loading schedule: $err'),
-                ),
-              ),
-            ),
 
-            const SizedBox(height: 32),
-            Text(
-              '© 2026 CITESched Academic Management System. All rights reserved.',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+                const SizedBox(height: 32),
+                Text(
+                  '© 2026 CITESched Academic Management System. All rights reserved.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
           ),
         ),
       ),

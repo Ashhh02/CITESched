@@ -6,7 +6,10 @@ import '../generated/protocol.dart';
 /// Student-only endpoint for viewing schedules and managing own profile.
 /// Only users with the 'student' scope can access these methods.
 class StudentEndpoint extends Endpoint {
-  Future<Student?> _findCurrentStudent(Session session, dynamic authInfo) async {
+  Future<Student?> _findCurrentStudent(
+    Session session,
+    dynamic authInfo,
+  ) async {
     final userIdentifier = authInfo.userIdentifier.toString();
     final userInfoId = int.tryParse(userIdentifier);
 

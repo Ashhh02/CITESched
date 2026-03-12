@@ -3,7 +3,10 @@ import '../generated/protocol.dart';
 import '../auth/scopes.dart';
 
 class FacultyEndpoint extends Endpoint {
-  Future<Faculty?> _findCurrentFaculty(Session session, dynamic authInfo) async {
+  Future<Faculty?> _findCurrentFaculty(
+    Session session,
+    dynamic authInfo,
+  ) async {
     final userIdentifier = authInfo.userIdentifier.toString();
     final userInfoId = int.tryParse(userIdentifier);
 

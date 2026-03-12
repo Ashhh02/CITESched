@@ -6,9 +6,7 @@ class TimetableService {
   final ConflictService _conflictService = ConflictService();
 
   String _normalizeSectionCode(String value) {
-    return value
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+    return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
 
   Future<int?> resolveSectionIdByCode(
@@ -141,10 +139,11 @@ class TimetableService {
     );
     mergeSchedules(bySectionId);
 
-    if (fallbackSectionCode != null &&
-        fallbackSectionCode.isNotEmpty) {
-      final resolvedSectionId =
-          await resolveSectionIdByCode(session, fallbackSectionCode);
+    if (fallbackSectionCode != null && fallbackSectionCode.isNotEmpty) {
+      final resolvedSectionId = await resolveSectionIdByCode(
+        session,
+        fallbackSectionCode,
+      );
       if (resolvedSectionId != null && resolvedSectionId != sectionId) {
         final resolvedSectionRows = await Schedule.db.find(
           session,
@@ -161,8 +160,7 @@ class TimetableService {
       }
     }
 
-    if (fallbackSectionCode != null &&
-        fallbackSectionCode.isNotEmpty) {
+    if (fallbackSectionCode != null && fallbackSectionCode.isNotEmpty) {
       final byExactSectionCode = await Schedule.db.find(
         session,
         where: (t) =>
@@ -177,12 +175,12 @@ class TimetableService {
       mergeSchedules(byExactSectionCode);
     }
 
-    if (fallbackSectionCode != null &&
-        fallbackSectionCode.isNotEmpty) {
-      final byNormalizedSectionCode = await _fetchScheduleRowsByNormalizedSection(
-        session,
-        fallbackSectionCode,
-      );
+    if (fallbackSectionCode != null && fallbackSectionCode.isNotEmpty) {
+      final byNormalizedSectionCode =
+          await _fetchScheduleRowsByNormalizedSection(
+            session,
+            fallbackSectionCode,
+          );
       mergeSchedules(byNormalizedSectionCode);
     }
 

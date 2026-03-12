@@ -238,472 +238,480 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
             maxWidth: ResponsiveHelper.maxContentWidth(context),
           ),
           child: SingleChildScrollView(
-        padding: ResponsiveHelper.pagePadding(context),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Welcome Banner ──────────────────────────────────────
-            Container(
-              padding: EdgeInsets.all(
-                ResponsiveHelper.isMobile(context) ? 16 : 28,
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    maroonColor,
-                    const Color(0xFF8e005b),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: maroonColor.withOpacity(0.35),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+            padding: ResponsiveHelper.pagePadding(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Welcome Banner ──────────────────────────────────────
+                Container(
+                  padding: EdgeInsets.all(
+                    ResponsiveHelper.isMobile(context) ? 16 : 28,
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 38,
-                    backgroundColor: Colors.white.withOpacity(0.18),
-                    child: Text(
-                      (user?.userName?[0] ?? 'F').toUpperCase(),
-                      style: GoogleFonts.poppins(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 24),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome, Professor',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          user?.userName ?? 'Faculty Member',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        maroonColor,
+                        const Color(0xFF8e005b),
                       ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ),
-                  // Action Buttons
-                  Row(
-                    children: [
-                      scheduleAsync.maybeWhen(
-                        data: (schedules) => schedules.isEmpty
-                            ? const SizedBox()
-                            : ElevatedButton.icon(
-                                onPressed: () async {
-                                  await ScheduleExportService.exportFacultySchedulePdf(
-                                    facultyName: user?.userName ?? 'Faculty',
-                                    schedules: schedules,
-                                  );
-                                },
-                                icon: const Icon(
-                                  Icons.picture_as_pdf_rounded,
-                                  size: 18,
-                                ),
-                                label: Text(
-                                  'Export PDF',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: maroonColor,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 18,
-                                    vertical: 14,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  elevation: 0,
-                                ),
-                              ),
-                        orElse: () => const SizedBox(),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: maroonColor.withOpacity(0.35),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
                       ),
-                      const SizedBox(width: 12),
-                      scheduleAsync.maybeWhen(
-                        data: (schedules) => schedules.isEmpty
-                            ? const SizedBox()
-                            : ElevatedButton.icon(
-                                onPressed: () async {
-                                  final result = await ScheduleExportService
-                                      .exportFacultyScheduleDocx(
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 38,
+                        backgroundColor: Colors.white.withOpacity(0.18),
+                        child: Text(
+                          (user?.userName?[0] ?? 'F').toUpperCase(),
+                          style: GoogleFonts.poppins(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Welcome, Professor',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white.withOpacity(0.8),
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              user?.userName ?? 'Faculty Member',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Action Buttons
+                      Row(
+                        children: [
+                          scheduleAsync.maybeWhen(
+                            data: (schedules) => schedules.isEmpty
+                                ? const SizedBox()
+                                : ElevatedButton.icon(
+                                    onPressed: () async {
+                                      await ScheduleExportService.exportFacultySchedulePdf(
                                         facultyName:
                                             user?.userName ?? 'Faculty',
                                         schedules: schedules,
                                       );
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        result != null
-                                            ? 'DOCX exported: $result'
-                                            : 'DOCX export canceled.',
+                                    },
+                                    icon: const Icon(
+                                      Icons.picture_as_pdf_rounded,
+                                      size: 18,
+                                    ),
+                                    label: Text(
+                                      'Export PDF',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
                                       ),
                                     ),
-                                  );
-                                },
-                                icon: const Icon(
-                                  Icons.description_rounded,
-                                  size: 18,
-                                ),
-                                label: Text(
-                                  'Export DOCX',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      foregroundColor: maroonColor,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 18,
+                                        vertical: 14,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      elevation: 0,
+                                    ),
                                   ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: const Color(0xFF37474F),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 18,
-                                    vertical: 14,
+                            orElse: () => const SizedBox(),
+                          ),
+                          const SizedBox(width: 12),
+                          scheduleAsync.maybeWhen(
+                            data: (schedules) => schedules.isEmpty
+                                ? const SizedBox()
+                                : ElevatedButton.icon(
+                                    onPressed: () async {
+                                      final result =
+                                          await ScheduleExportService.exportFacultyScheduleDocx(
+                                            facultyName:
+                                                user?.userName ?? 'Faculty',
+                                            schedules: schedules,
+                                          );
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            result != null
+                                                ? 'DOCX exported: $result'
+                                                : 'DOCX export canceled.',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.description_rounded,
+                                      size: 18,
+                                    ),
+                                    label: Text(
+                                      'Export DOCX',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      foregroundColor: const Color(0xFF37474F),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 18,
+                                        vertical: 14,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      elevation: 0,
+                                    ),
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  elevation: 0,
-                                ),
+                            orElse: () => const SizedBox(),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (context) =>
+                                    const LogoutConfirmationDialog(),
+                              );
+                              if (confirm == true) {
+                                ref.read(authProvider.notifier).signOut();
+                              }
+                            },
+                            icon: const Icon(Icons.logout_rounded, size: 18),
+                            label: Text(
+                              'Sign Out',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
-                        orElse: () => const SizedBox(),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (context) =>
-                                const LogoutConfirmationDialog(),
-                          );
-                          if (confirm == true) {
-                            ref.read(authProvider.notifier).signOut();
-                          }
-                        },
-                        icon: const Icon(Icons.logout_rounded, size: 18),
-                        label: Text(
-                          'Sign Out',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.2),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 14,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            side: const BorderSide(color: Colors.white30),
-                          ),
-                          elevation: 0,
-                                ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white.withOpacity(0.2),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 14,
                               ),
-                      const SizedBox(width: 12),
-                      const ThemeModeToggle(compact: true),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 28),
-
-            scheduleAsync.when(
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
-              data: (schedules) {
-                final availabilities = availabilityAsync.maybeWhen(
-                  data: (v) => v,
-                  orElse: () => <FacultyAvailability>[],
-                );
-                final totalUnits = schedules.fold<double>(
-                  0,
-                  (sum, s) =>
-                      sum +
-                      (s.schedule.units ??
-                          s.schedule.subject?.units.toDouble() ??
-                          0),
-                );
-                final maxLoad = schedules.isNotEmpty
-                    ? schedules.first.schedule.faculty?.maxLoad?.toDouble()
-                    : null;
-                final outsidePreferred = schedules
-                    .where(
-                      (s) => !_isWithinPreferredAvailability(
-                        s.schedule,
-                        availabilities,
-                      ),
-                    )
-                    .length;
-                final assignedHours = _computeAssignedHours(schedules);
-                final preferredHours = _computePreferredHours(availabilities);
-                final assignedWithinPreferred = _computeAssignedHoursWithinPreferred(
-                  schedules,
-                  availabilities,
-                );
-                final vacantHours = preferredHours > assignedWithinPreferred
-                    ? preferredHours - assignedWithinPreferred
-                    : 0.0;
-                final freeSlots = _computeFreeSlotLabels(
-                  schedules,
-                  availabilities,
-                );
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _metricCard(
-                            label: 'Assigned Units',
-                            value: totalUnits.toStringAsFixed(1),
-                            icon: Icons.stacked_bar_chart_rounded,
-                            color: Colors.blue,
-                            cardBg: cardBg,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                side: const BorderSide(color: Colors.white30),
+                              ),
+                              elevation: 0,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _metricCard(
-                            label: 'Max Load',
-                            value: maxLoad?.toStringAsFixed(1) ?? '--',
-                            icon: Icons.speed_rounded,
-                            color: Colors.green,
-                            cardBg: cardBg,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _metricCard(
-                            label: 'Outside Preferred',
-                            value: outsidePreferred.toString(),
-                            icon: Icons.warning_amber_rounded,
-                            color: outsidePreferred > 0
-                                ? Colors.red
-                                : Colors.orange,
-                            cardBg: cardBg,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (outsidePreferred > 0) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.red.withOpacity(0.28)),
-                        ),
-                        child: Text(
-                          '$outsidePreferred class(es) are outside your preferred availability window.',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.red[800],
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                          const SizedBox(width: 12),
+                          const ThemeModeToggle(compact: true),
+                        ],
                       ),
                     ],
-                    const SizedBox(height: 12),
-                    Row(
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                scheduleAsync.when(
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                  data: (schedules) {
+                    final availabilities = availabilityAsync.maybeWhen(
+                      data: (v) => v,
+                      orElse: () => <FacultyAvailability>[],
+                    );
+                    final totalUnits = schedules.fold<double>(
+                      0,
+                      (sum, s) =>
+                          sum +
+                          (s.schedule.units ??
+                              s.schedule.subject?.units.toDouble() ??
+                              0),
+                    );
+                    final maxLoad = schedules.isNotEmpty
+                        ? schedules.first.schedule.faculty?.maxLoad?.toDouble()
+                        : null;
+                    final outsidePreferred = schedules
+                        .where(
+                          (s) => !_isWithinPreferredAvailability(
+                            s.schedule,
+                            availabilities,
+                          ),
+                        )
+                        .length;
+                    final assignedHours = _computeAssignedHours(schedules);
+                    final preferredHours = _computePreferredHours(
+                      availabilities,
+                    );
+                    final assignedWithinPreferred =
+                        _computeAssignedHoursWithinPreferred(
+                          schedules,
+                          availabilities,
+                        );
+                    final vacantHours = preferredHours > assignedWithinPreferred
+                        ? preferredHours - assignedWithinPreferred
+                        : 0.0;
+                    final freeSlots = _computeFreeSlotLabels(
+                      schedules,
+                      availabilities,
+                    );
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: _metricCard(
-                            label: 'Assigned Hours',
-                            value: assignedHours.toStringAsFixed(1),
-                            icon: Icons.access_time_rounded,
-                            color: Colors.indigo,
-                            cardBg: cardBg,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _metricCard(
+                                label: 'Assigned Units',
+                                value: totalUnits.toStringAsFixed(1),
+                                icon: Icons.stacked_bar_chart_rounded,
+                                color: Colors.blue,
+                                cardBg: cardBg,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _metricCard(
+                                label: 'Max Load',
+                                value: maxLoad?.toStringAsFixed(1) ?? '--',
+                                icon: Icons.speed_rounded,
+                                color: Colors.green,
+                                cardBg: cardBg,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _metricCard(
+                                label: 'Outside Preferred',
+                                value: outsidePreferred.toString(),
+                                icon: Icons.warning_amber_rounded,
+                                color: outsidePreferred > 0
+                                    ? Colors.red
+                                    : Colors.orange,
+                                cardBg: cardBg,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _metricCard(
-                            label: 'Vacant Hours',
-                            value: vacantHours.toStringAsFixed(1),
-                            icon: Icons.hourglass_bottom_rounded,
-                            color: Colors.teal,
-                            cardBg: cardBg,
+                        if (outsidePreferred > 0) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.red.withOpacity(0.28),
+                              ),
+                            ),
+                            child: Text(
+                              '$outsidePreferred class(es) are outside your preferred availability window.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.red[800],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
+                        ],
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _metricCard(
+                                label: 'Assigned Hours',
+                                value: assignedHours.toStringAsFixed(1),
+                                icon: Icons.access_time_rounded,
+                                color: Colors.indigo,
+                                cardBg: cardBg,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _metricCard(
+                                label: 'Vacant Hours',
+                                value: vacantHours.toStringAsFixed(1),
+                                icon: Icons.hourglass_bottom_rounded,
+                                color: Colors.teal,
+                                cardBg: cardBg,
+                              ),
+                            ),
+                          ],
                         ),
+                        if (freeSlots.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.teal.withOpacity(0.28),
+                              ),
+                            ),
+                            child: Text(
+                              'Free Slots: ${freeSlots.take(6).join(' | ')}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.teal[900],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 20),
                       ],
-                    ),
-                    if (freeSlots.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.teal.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.teal.withOpacity(0.28),
-                          ),
-                        ),
-                        child: Text(
-                          'Free Slots: ${freeSlots.take(6).join(' | ')}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.teal[900],
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                    );
+                  },
+                ),
+
+                // ── Tab bar ─────────────────────────────────────────────
+                Container(
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 10,
                       ),
                     ],
-                    const SizedBox(height: 20),
-                  ],
-                );
-              },
-            ),
-
-            // ── Tab bar ─────────────────────────────────────────────
-            Container(
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 10,
                   ),
-                ],
-              ),
-              child: TabBar(
-                controller: _tabController,
-                indicator: BoxDecoration(
-                  color: maroonColor.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: maroonColor.withOpacity(0.2),
-                  ),
-                ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelColor: maroonColor,
-                unselectedLabelColor: Colors.grey[600],
-                labelStyle: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-                unselectedLabelStyle: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                ),
-                tabs: const [
-                  Tab(
-                    icon: Icon(Icons.view_week_rounded, size: 18),
-                    text: 'Weekly Calendar',
-                  ),
-                  Tab(
-                    icon: Icon(Icons.table_rows_rounded, size: 18),
-                    text: 'Schedule Table',
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // ── Tab views ────────────────────────────────────────────
-            scheduleAsync.when(
-              loading: () => const Center(
-                heightFactor: 5,
-                child: CircularProgressIndicator(),
-              ),
-              error: (err, _) => Center(
-                heightFactor: 4,
-                child: Text(
-                  'Error loading schedule: $err',
-                  style: GoogleFonts.poppins(color: Colors.red),
-                ),
-              ),
-              data: (schedules) {
-                if (schedules.isEmpty) {
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 60),
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.event_busy_rounded,
-                          size: 64,
-                          color: Colors.grey[300],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No schedules assigned yet.',
-                          style: GoogleFonts.poppins(
-                            color: Colors.grey,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return SizedBox(
-                  height: 640,
-                  child: TabBarView(
+                  child: TabBar(
                     controller: _tabController,
-                    children: [
-                      // ── Tab 1: Calendar ──────────────────────────
-                      availabilityAsync.when(
-                        data: (availabilities) => WeeklyCalendarView(
-                          schedules: schedules,
-                          availabilities: availabilities,
-                          maroonColor: maroonColor,
-                        ),
-                        loading: () => const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                        error: (err, _) => WeeklyCalendarView(
-                          schedules: schedules,
-                          maroonColor: maroonColor,
-                        ),
+                    indicator: BoxDecoration(
+                      color: maroonColor.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: maroonColor.withOpacity(0.2),
                       ),
-
-                      // ── Tab 2: Schedule Table ───────────────────
-                      _buildScheduleTable(schedules, cardBg, isDark),
+                    ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    labelColor: maroonColor,
+                    unselectedLabelColor: Colors.grey[600],
+                    labelStyle: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                    unselectedLabelStyle: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 13,
+                    ),
+                    tabs: const [
+                      Tab(
+                        icon: Icon(Icons.view_week_rounded, size: 18),
+                        text: 'Weekly Calendar',
+                      ),
+                      Tab(
+                        icon: Icon(Icons.table_rows_rounded, size: 18),
+                        text: 'Schedule Table',
+                      ),
                     ],
                   ),
-                );
-              },
+                ),
+
+                const SizedBox(height: 20),
+
+                // ── Tab views ────────────────────────────────────────────
+                scheduleAsync.when(
+                  loading: () => const Center(
+                    heightFactor: 5,
+                    child: CircularProgressIndicator(),
+                  ),
+                  error: (err, _) => Center(
+                    heightFactor: 4,
+                    child: Text(
+                      'Error loading schedule: $err',
+                      style: GoogleFonts.poppins(color: Colors.red),
+                    ),
+                  ),
+                  data: (schedules) {
+                    if (schedules.isEmpty) {
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 60),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.event_busy_rounded,
+                              size: 64,
+                              color: Colors.grey[300],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No schedules assigned yet.',
+                              style: GoogleFonts.poppins(
+                                color: Colors.grey,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return SizedBox(
+                      height: 640,
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          // ── Tab 1: Calendar ──────────────────────────
+                          availabilityAsync.when(
+                            data: (availabilities) => WeeklyCalendarView(
+                              schedules: schedules,
+                              availabilities: availabilities,
+                              maroonColor: maroonColor,
+                            ),
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            error: (err, _) => WeeklyCalendarView(
+                              schedules: schedules,
+                              maroonColor: maroonColor,
+                            ),
+                          ),
+
+                          // ── Tab 2: Schedule Table ───────────────────
+                          _buildScheduleTable(schedules, cardBg, isDark),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
           ),
         ),
       ),

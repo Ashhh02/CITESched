@@ -1372,7 +1372,8 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
     _emailCtrl = TextEditingController(text: widget.student.email);
     _sectionCtrl = TextEditingController(text: widget.student.section ?? '');
     _numberCtrl = TextEditingController(text: widget.student.studentNumber);
-    _selectedCourse = _allowedCourses.contains(widget.student.course.trim().toUpperCase())
+    _selectedCourse =
+        _allowedCourses.contains(widget.student.course.trim().toUpperCase())
         ? widget.student.course.trim().toUpperCase()
         : _allowedCourses.first;
   }
@@ -1416,7 +1417,7 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
         yearLevel: normalizedSection == null
             ? widget.student.yearLevel
             : (_extractYearLevelFromSection(normalizedSection) ??
-                widget.student.yearLevel),
+                  widget.student.yearLevel),
         section: normalizedSection,
         studentNumber: _numberCtrl.text.trim(),
         updatedAt: DateTime.now(),
@@ -1599,7 +1600,9 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
                                 value: course,
                                 child: Text(
                                   course,
-                                  style: GoogleFonts.poppins(color: textPrimary),
+                                  style: GoogleFonts.poppins(
+                                    color: textPrimary,
+                                  ),
                                 ),
                               ),
                             )
@@ -1624,7 +1627,8 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
                         validator: (v) {
                           if (v == null || v.trim().isEmpty) return 'Required';
                           final normalized = _normalizeSectionCode(v);
-                          if (_extractYearLevelFromSection(normalized) == null) {
+                          if (_extractYearLevelFromSection(normalized) ==
+                              null) {
                             return 'Use format like 3A, 3B, 2A, 2B';
                           }
                           return null;

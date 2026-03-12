@@ -280,13 +280,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text(
             role == 'student'
                 ? 'Student Details'
                 : role == 'faculty'
-                    ? 'Faculty Details'
-                    : 'Admin Details',
+                ? 'Faculty Details'
+                : 'Admin Details',
             style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
           ),
           content: SingleChildScrollView(
@@ -306,8 +308,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 TextField(
                   controller: idController,
                   decoration: InputDecoration(
-                    labelText:
-                        role == 'student' ? 'Student Number' : 'Faculty ID',
+                    labelText: role == 'student'
+                        ? 'Student Number'
+                        : 'Faculty ID',
                   ),
                 ),
                 if (role == 'student') ...[
@@ -354,7 +357,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text(
             'Select Role',
             style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
@@ -365,8 +370,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               final label = role == 'admin'
                   ? 'Administrator'
                   : role == 'faculty'
-                      ? 'Faculty'
-                      : 'Student';
+                  ? 'Faculty'
+                  : 'Student';
               return Container(
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 8),
@@ -434,9 +439,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final inputFillColor = isDark
         ? const Color(0xFF334155)
         : Colors.grey.shade200;
-    final inputBorderColor = isDark
-        ? Colors.transparent
-        : Colors.transparent;
+    final inputBorderColor = isDark ? Colors.transparent : Colors.transparent;
     final inputTextColor = isDark ? Colors.white : Colors.black87;
 
     // Active Brand Color (Purple/Pink)
@@ -767,24 +770,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 shape: GSIButtonShape.pill,
                                 logoAlignment: GSIButtonLogoAlignment.center,
                                 minimumWidth: 320,
-                                buttonWrapper: ({
-                                  required GoogleSignInStyle style,
-                                  required Widget child,
-                                  required VoidCallback? onPressed,
-                                }) {
-                                  return Container(
-                                    height: 50,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: googleBtnBg,
-                                      border: Border.all(
-                                        color: googleBtnBorder,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: child,
-                                  );
-                                },
+                                buttonWrapper:
+                                    ({
+                                      required GoogleSignInStyle style,
+                                      required Widget child,
+                                      required VoidCallback? onPressed,
+                                    }) {
+                                      return Container(
+                                        height: 50,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: googleBtnBg,
+                                          border: Border.all(
+                                            color: googleBtnBorder,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: child,
+                                      );
+                                    },
                               ),
                             ],
                           ),

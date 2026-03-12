@@ -143,7 +143,9 @@ class _ReportModalState extends State<ReportModal>
                   labelColor: Colors.white,
                   unselectedLabelColor: textMuted,
                   labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                  labelPadding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16),
+                  labelPadding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 12 : 16,
+                  ),
                   tabs: [
                     Tab(text: isMobile ? 'Faculty' : 'Faculty Load'),
                     Tab(text: isMobile ? 'Rooms' : 'Room Utilization'),
@@ -255,10 +257,16 @@ class _FacultyLoadTab extends StatelessWidget {
                         return DataRow(
                           cells: [
                             DataCell(
-                              Text(item.facultyName, style: GoogleFonts.poppins()),
+                              Text(
+                                item.facultyName,
+                                style: GoogleFonts.poppins(),
+                              ),
                             ),
                             DataCell(
-                              Text(item.program ?? '-', style: GoogleFonts.poppins()),
+                              Text(
+                                item.program ?? '-',
+                                style: GoogleFonts.poppins(),
+                              ),
                             ),
                             DataCell(
                               Text(

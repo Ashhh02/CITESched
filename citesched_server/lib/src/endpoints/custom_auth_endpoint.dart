@@ -76,17 +76,16 @@ class CustomAuthEndpoint extends Endpoint {
       // Create user if missing
       final user = await Emails.createUser(
         session,
-        (displayName != null && displayName.isNotEmpty)
-            ? displayName
-            : email,
+        (displayName != null && displayName.isNotEmpty) ? displayName : email,
         email,
         createPassword,
       );
 
       if (user != null && user.id != null) {
         // Upsert auth hash (reset password)
-        final newHash =
-            await email_auth.defaultGeneratePasswordHash(createPassword);
+        final newHash = await email_auth.defaultGeneratePasswordHash(
+          createPassword,
+        );
         // Try locate by userId first (safer than email casing), then by email.
         EmailAuth? existingAuth = await EmailAuth.db.findFirstRow(
           session,

@@ -6,7 +6,10 @@ import '../auth/scopes.dart';
 class TimetableEndpoint extends Endpoint {
   final TimetableService _timetableService = TimetableService();
 
-  Future<Student?> _findCurrentStudent(Session session, dynamic authInfo) async {
+  Future<Student?> _findCurrentStudent(
+    Session session,
+    dynamic authInfo,
+  ) async {
     final userIdentifier = authInfo.userIdentifier.toString();
     final userInfoId = int.tryParse(userIdentifier);
 
@@ -24,7 +27,10 @@ class TimetableEndpoint extends Endpoint {
     );
   }
 
-  Future<Faculty?> _findCurrentFaculty(Session session, dynamic authInfo) async {
+  Future<Faculty?> _findCurrentFaculty(
+    Session session,
+    dynamic authInfo,
+  ) async {
     final userIdentifier = authInfo.userIdentifier.toString();
     final userInfoId = int.tryParse(userIdentifier);
 
@@ -81,10 +87,11 @@ class TimetableEndpoint extends Endpoint {
       }
 
       if (student.section != null && student.section!.isNotEmpty) {
-        final resolvedSectionId = await _timetableService.resolveSectionIdByCode(
-          session,
-          student.section!,
-        );
+        final resolvedSectionId = await _timetableService
+            .resolveSectionIdByCode(
+              session,
+              student.section!,
+            );
         if (resolvedSectionId != null) {
           student.sectionId = resolvedSectionId;
           try {

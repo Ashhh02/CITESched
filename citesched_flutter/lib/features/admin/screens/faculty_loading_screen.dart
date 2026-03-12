@@ -588,7 +588,11 @@ void _showConflictErrorDialog(BuildContext context, String message) {
         ),
         child: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 26),
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -621,7 +625,11 @@ void _showConflictErrorDialog(BuildContext context, String message) {
                 children: [
                   const Padding(
                     padding: EdgeInsets.only(top: 2),
-                    child: Icon(Icons.cancel_rounded, size: 16, color: Color(0xFF8B0000)),
+                    child: Icon(
+                      Icons.cancel_rounded,
+                      size: 16,
+                      color: Color(0xFF8B0000),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -647,7 +655,9 @@ void _showConflictErrorDialog(BuildContext context, String message) {
           child: Text(
             'OK, Got It',
             style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold, color: const Color(0xFF8B0000)),
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF8B0000),
+            ),
           ),
         ),
       ],
@@ -1292,8 +1302,9 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                               ),
                                               child: SingleChildScrollView(
                                                 scrollDirection: Axis.vertical,
-                                                padding:
-                                                    const EdgeInsets.all(16),
+                                                padding: const EdgeInsets.all(
+                                                  16,
+                                                ),
                                                 child: DataTable(
                                                   headingRowColor:
                                                       WidgetStateProperty.all(
@@ -1647,9 +1658,9 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                                 (schedule.units !=
                                                                         null
                                                                     ? schedule
-                                                                        .units!
-                                                                        .round()
-                                                                        .toString()
+                                                                          .units!
+                                                                          .round()
+                                                                          .toString()
                                                                     : 'N/A'),
                                                             style:
                                                                 GoogleFonts.poppins(
@@ -1765,15 +1776,10 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                                 children: [
                                                                   Icon(
                                                                     _getLoadTypeIcon(
-                                                                      (schedule
-                                                                                  .loadTypes !=
-                                                                              null &&
-                                                                          schedule
-                                                                              .loadTypes!
-                                                                              .isNotEmpty)
-                                                                          ? schedule
-                                                                              .loadTypes!
-                                                                              .first
+                                                                      (schedule.loadTypes !=
+                                                                                  null &&
+                                                                              schedule.loadTypes!.isNotEmpty)
+                                                                          ? schedule.loadTypes!.first
                                                                           : null,
                                                                     ),
                                                                     size: 14,
@@ -2024,8 +2030,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
         ? maroonColor.withValues(alpha: 0.22)
         : maroonColor.withValues(alpha: 0.08);
     final rowBgA = isDark ? const Color(0xFF0F172A) : Colors.white;
-    final rowBgB =
-        isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB);
+    final rowBgB = isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB);
     final dividerColor = isDark
         ? Colors.white.withValues(alpha: 0.08)
         : Colors.black.withValues(alpha: 0.06);
@@ -2149,200 +2154,199 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                         child: SingleChildScrollView(
                           scrollDirection: Axis.vertical,
                           child: DataTable(
-                          columnSpacing: 28,
-                          horizontalMargin: 16,
-                          headingRowHeight: 44,
-                          dataRowMinHeight: 52,
-                          dataRowMaxHeight: 60,
-                          showCheckboxColumn: false,
-                          showBottomBorder: true,
-                          dividerThickness: 0.6,
-                          headingRowColor:
-                              WidgetStateProperty.all(headerBg),
-                          headingTextStyle: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.85)
-                                : Colors.grey[700],
-                            letterSpacing: 0.8,
-                          ),
-                          dataTextStyle: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.9)
-                                : Colors.black87,
-                          ),
-                          border: TableBorder(
-                            horizontalInside:
-                                BorderSide(color: dividerColor),
-                            bottom: BorderSide(color: dividerColor),
-                            top: BorderSide(color: dividerColor),
-                          ),
-                          columns: [
-                            DataColumn(
-                              label: Text(
-                                'FACULTY NAME',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                            columnSpacing: 28,
+                            horizontalMargin: 16,
+                            headingRowHeight: 44,
+                            dataRowMinHeight: 52,
+                            dataRowMaxHeight: 60,
+                            showCheckboxColumn: false,
+                            showBottomBorder: true,
+                            dividerThickness: 0.6,
+                            headingRowColor: WidgetStateProperty.all(headerBg),
+                            headingTextStyle: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.85)
+                                  : Colors.grey[700],
+                              letterSpacing: 0.8,
+                            ),
+                            dataTextStyle: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.9)
+                                  : Colors.black87,
+                            ),
+                            border: TableBorder(
+                              horizontalInside: BorderSide(color: dividerColor),
+                              bottom: BorderSide(color: dividerColor),
+                              top: BorderSide(color: dividerColor),
+                            ),
+                            columns: [
+                              DataColumn(
+                                label: Text(
+                                  'FACULTY NAME',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
-                            ),
-                            DataColumn(
-                              label: Text(
-                                'SUBJECTS',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                              DataColumn(
+                                label: Text(
+                                  'SUBJECTS',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
-                            ),
-                            DataColumn(
-                              label: Text(
-                                'UNITS',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                              DataColumn(
+                                label: Text(
+                                  'UNITS',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
-                            ),
-                            DataColumn(
-                              label: Text(
-                                'HOURS',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                              DataColumn(
+                                label: Text(
+                                  'HOURS',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
-                            ),
-                            DataColumn(
-                              label: Text(
-                                'REMAINING',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                              DataColumn(
+                                label: Text(
+                                  'REMAINING',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
-                            ),
-                            DataColumn(
-                              label: Text(
-                                'STATUS',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                              DataColumn(
+                                label: Text(
+                                  'STATUS',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                          rows: facultyStats.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final stats = entry.value;
-                            final f = stats['faculty'] as Faculty;
-                            final hasC = stats['hasConflicts'] as bool;
-                            final remLoad = stats['remainingLoad'] as double;
+                            ],
+                            rows: facultyStats.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final stats = entry.value;
+                              final f = stats['faculty'] as Faculty;
+                              final hasC = stats['hasConflicts'] as bool;
+                              final remLoad = stats['remainingLoad'] as double;
 
-                            return DataRow(
-                              color: WidgetStateProperty.all(
-                                index.isEven ? rowBgA : rowBgB,
-                              ),
-                              onSelectChanged: (_) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        FacultyLoadDetailsScreen(
-                                      faculty: f,
-                                      initialSchedules: schedules
-                                          .where((s) => s.facultyId == f.id)
-                                          .toList(),
+                              return DataRow(
+                                color: WidgetStateProperty.all(
+                                  index.isEven ? rowBgA : rowBgB,
+                                ),
+                                onSelectChanged: (_) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          FacultyLoadDetailsScreen(
+                                            faculty: f,
+                                            initialSchedules: schedules
+                                                .where(
+                                                  (s) => s.facultyId == f.id,
+                                                )
+                                                .toList(),
+                                          ),
+                                    ),
+                                  );
+                                },
+                                cells: [
+                                  DataCell(
+                                    Row(
+                                      children: [
+                                        if (hasC)
+                                          const Icon(
+                                            Icons.warning_rounded,
+                                            color: Colors.orange,
+                                            size: 16,
+                                          ),
+                                        if (hasC) const SizedBox(width: 4),
+                                        Text(
+                                          f.name,
+                                          style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                );
-                              },
-                              cells: [
-                                DataCell(
-                                  Row(
-                                    children: [
-                                      if (hasC)
-                                        const Icon(
-                                          Icons.warning_rounded,
-                                          color: Colors.orange,
-                                          size: 16,
-                                        ),
-                                      if (hasC) const SizedBox(width: 4),
-                                      Text(
-                                        f.name,
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                  DataCell(
+                                    Text(
+                                      stats['assignedSubjects'].toString(),
+                                      style: GoogleFonts.poppins(),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      stats['totalUnits'].toString(),
+                                      style: GoogleFonts.poppins(),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      '${(stats['totalHours'] as double).toStringAsFixed(1)}h',
+                                      style: GoogleFonts.poppins(),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                DataCell(
-                                  Text(
-                                    stats['assignedSubjects'].toString(),
-                                    style: GoogleFonts.poppins(),
-                                  ),
-                                ),
-                                DataCell(
-                                  Text(
-                                    stats['totalUnits'].toString(),
-                                    style: GoogleFonts.poppins(),
-                                  ),
-                                ),
-                                DataCell(
-                                  Text(
-                                    '${(stats['totalHours'] as double).toStringAsFixed(1)}h',
-                                    style: GoogleFonts.poppins(),
-                                  ),
-                                ),
-                                DataCell(
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: remLoad < 0
-                                          ? Colors.red.withValues(alpha: 0.1)
-                                          : Colors.green.withValues(
+                                      decoration: BoxDecoration(
+                                        color: remLoad < 0
+                                            ? Colors.red.withValues(alpha: 0.1)
+                                            : Colors.green.withValues(
                                                 alpha: 0.1,
                                               ),
-                                      borderRadius:
-                                          BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      remLoad.toStringAsFixed(1),
-                                      style: GoogleFonts.poppins(
-                                        color: remLoad < 0
-                                            ? Colors.red
-                                            : Colors.green,
-                                        fontWeight: FontWeight.bold,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        remLoad.toStringAsFixed(1),
+                                        style: GoogleFonts.poppins(
+                                          color: remLoad < 0
+                                              ? Colors.red
+                                              : Colors.green,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                DataCell(
-                                  hasC
-                                      ? const Icon(
-                                          Icons.error_outline,
-                                          color: Colors.red,
-                                        )
-                                      : const Icon(
-                                          Icons.check_circle_outline,
-                                          color: Colors.green,
-                                        ),
-                                ),
-                              ],
-                            );
-                          }).toList(),
+                                  DataCell(
+                                    hasC
+                                        ? const Icon(
+                                            Icons.error_outline,
+                                            color: Colors.red,
+                                          )
+                                        : const Icon(
+                                            Icons.check_circle_outline,
+                                            color: Colors.green,
+                                          ),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
                         ),
                       ),
                     ),
-                  ),
                   );
                 },
               ),
@@ -2622,12 +2626,17 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
       _selectedLoadType = null;
       return;
     }
-    _selectedLoadType = _isBlendedSubject(subject.types) ? _selectedLoadType : null;
-    final effectiveTypes =
-        _effectiveAssignmentTypes(subject.types, _selectedLoadType);
+    _selectedLoadType = _isBlendedSubject(subject.types)
+        ? _selectedLoadType
+        : null;
+    final effectiveTypes = _effectiveAssignmentTypes(
+      subject.types,
+      _selectedLoadType,
+    );
     _unitsController.text = _formatLoadValue(subject.units.toDouble());
-    _hoursController.text =
-        _formatLoadValue(_hoursForSubjectTypes(effectiveTypes));
+    _hoursController.text = _formatLoadValue(
+      _hoursForSubjectTypes(effectiveTypes),
+    );
   }
 
   @override
@@ -2736,10 +2745,14 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
 
       if (_isBlendedSubject(selectedSubject.types) &&
           _selectedLoadType == null) {
-        throw Exception('Please select whether this blended subject is Lecture or Lab.');
+        throw Exception(
+          'Please select whether this blended subject is Lecture or Lab.',
+        );
       }
-      final effectiveTypes =
-          _effectiveAssignmentTypes(selectedSubject.types, _selectedLoadType);
+      final effectiveTypes = _effectiveAssignmentTypes(
+        selectedSubject.types,
+        _selectedLoadType,
+      );
 
       if (!_isAutoAssign && _selectedRoomId != null) {
         Room? selectedRoom;
@@ -2998,10 +3011,12 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                               break;
                             }
                           }
-                          final canChooseLoadType = selectedSubject != null &&
+                          final canChooseLoadType =
+                              selectedSubject != null &&
                               _isBlendedSubject(selectedSubject.types);
                           return _buildSubjectTypeDisplay(
-                            types: selectedSubject?.types ?? const <SubjectType>[],
+                            types:
+                                selectedSubject?.types ?? const <SubjectType>[],
                             accentColor: widget.maroonColor,
                             isDark: isDark,
                           );
@@ -3023,7 +3038,8 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                               break;
                             }
                           }
-                          final canChooseLoadType = selectedSubject != null &&
+                          final canChooseLoadType =
+                              selectedSubject != null &&
                               _isBlendedSubject(selectedSubject.types);
                           return _buildLoadTypeSelector(
                             show: canChooseLoadType,
@@ -3541,13 +3557,17 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
 
   void _applySubjectDefaults(Subject? subject) {
     if (subject == null) return;
-    _selectedLoadType =
-        _isBlendedSubject(subject.types) ? _selectedLoadType : null;
-    final effectiveTypes =
-        _effectiveAssignmentTypes(subject.types, _selectedLoadType);
+    _selectedLoadType = _isBlendedSubject(subject.types)
+        ? _selectedLoadType
+        : null;
+    final effectiveTypes = _effectiveAssignmentTypes(
+      subject.types,
+      _selectedLoadType,
+    );
     _unitsController.text = _formatLoadValue(subject.units.toDouble());
-    _hoursController.text =
-        _formatLoadValue(_hoursForSubjectTypes(effectiveTypes));
+    _hoursController.text = _formatLoadValue(
+      _hoursForSubjectTypes(effectiveTypes),
+    );
   }
 
   @override
@@ -3667,10 +3687,14 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
 
       if (_isBlendedSubject(selectedSubject.types) &&
           _selectedLoadType == null) {
-        throw Exception('Please select whether this blended subject is Lecture or Lab.');
+        throw Exception(
+          'Please select whether this blended subject is Lecture or Lab.',
+        );
       }
-      final effectiveTypes =
-          _effectiveAssignmentTypes(selectedSubject.types, _selectedLoadType);
+      final effectiveTypes = _effectiveAssignmentTypes(
+        selectedSubject.types,
+        _selectedLoadType,
+      );
 
       if (!_isAutoAssign && _selectedRoomId != null) {
         Room? selectedRoom;
@@ -3941,7 +3965,8 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                             }
                           }
                           return _buildSubjectTypeDisplay(
-                            types: selectedSubject?.types ?? const <SubjectType>[],
+                            types:
+                                selectedSubject?.types ?? const <SubjectType>[],
                             accentColor: widget.maroonColor,
                             isDark: isDark,
                           );
@@ -3963,7 +3988,8 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                               break;
                             }
                           }
-                          final canChooseLoadType = selectedSubject != null &&
+                          final canChooseLoadType =
+                              selectedSubject != null &&
                               _isBlendedSubject(selectedSubject.types);
                           return _buildLoadTypeSelector(
                             show: canChooseLoadType,

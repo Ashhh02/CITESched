@@ -68,178 +68,180 @@ class _ReportScreenState extends State<ReportScreen>
     return Scaffold(
       backgroundColor: Colors.white,
       body: Padding(
-          padding: EdgeInsets.all(isMobile ? 16 : 32),
-          child: Column(
-        children: [
-          // Header (Standardized Maroon Gradient Banner)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [maroonColor, const Color(0xFF8e005b)],
-              ),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: maroonColor.withValues(alpha: 0.3),
-                  blurRadius: 25,
-                  offset: const Offset(0, 12),
+        padding: EdgeInsets.all(isMobile ? 16 : 32),
+        child: Column(
+          children: [
+            // Header (Standardized Maroon Gradient Banner)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [maroonColor, const Color(0xFF8e005b)],
                 ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Row(
-                  children: [
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: maroonColor.withValues(alpha: 0.3),
+                    blurRadius: 25,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.analytics_rounded,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                        ),
+                        SizedBox(width: isMobile ? 12 : 24),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Analytical Reports',
+                                style: GoogleFonts.poppins(
+                                  fontSize: isMobile ? 22 : 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: -1,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Comprehensive system metrics and utilization analysis',
+                                style: GoogleFonts.poppins(
+                                  fontSize: isMobile ? 12 : 16,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!isMobile)
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: Colors.white.withValues(alpha: 0.2),
                         ),
                       ),
-                      child: const Icon(
-                        Icons.analytics_rounded,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    ),
-                    SizedBox(width: isMobile ? 12 : 24),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          Text(
-                            'Analytical Reports',
-                            style: GoogleFonts.poppins(
-                              fontSize: isMobile ? 22 : 32,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: -1,
-                            ),
+                          const Icon(
+                            Icons.calendar_today_rounded,
+                            color: Colors.white,
+                            size: 20,
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(width: 12),
                           Text(
-                            'Comprehensive system metrics and utilization analysis',
+                            'AY 2025-2026',
                             style: GoogleFonts.poppins(
-                              fontSize: isMobile ? 12 : 16,
-                              color: Colors.white.withValues(alpha: 0.8),
-                              letterSpacing: 0.2,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-                ),
-                if (!isMobile)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'AY 2025-2026',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Tab Selector
-          Container(
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: isMobile,
-              labelColor: maroonColor,
-              unselectedLabelColor: Colors.grey,
-              indicator: BoxDecoration(
-                color: maroonColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: maroonColor.withValues(alpha: 0.2),
-                ),
-              ),
-              indicatorColor: maroonColor,
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelStyle: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-              unselectedLabelStyle: GoogleFonts.poppins(
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-              ),
-              labelPadding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16),
-              tabs: const [
-                Tab(text: 'Faculty Load'),
-                Tab(text: 'Room Usage'),
-                Tab(text: 'Conflicts'),
-                Tab(text: 'Schedule Stats'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Content
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.all(isMobile ? 16 : 32),
-              child: TabBarView(
-                controller: _tabController,
-                children: const [
-                  _FacultyLoadTab(),
-                  _RoomUtilizationTab(),
-                  _ConflictSummaryTab(),
-                  _ScheduleOverviewTab(),
                 ],
               ),
             ),
-          ),
-        ],
-      ),
+            const SizedBox(height: 32),
+
+            // Tab Selector
+            Container(
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TabBar(
+                controller: _tabController,
+                isScrollable: isMobile,
+                labelColor: maroonColor,
+                unselectedLabelColor: Colors.grey,
+                indicator: BoxDecoration(
+                  color: maroonColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: maroonColor.withValues(alpha: 0.2),
+                  ),
+                ),
+                indicatorColor: maroonColor,
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelStyle: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+                unselectedLabelStyle: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
+                ),
+                labelPadding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 12 : 16,
+                ),
+                tabs: const [
+                  Tab(text: 'Faculty Load'),
+                  Tab(text: 'Room Usage'),
+                  Tab(text: 'Conflicts'),
+                  Tab(text: 'Schedule Stats'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Content
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(isMobile ? 16 : 32),
+                child: TabBarView(
+                  controller: _tabController,
+                  children: const [
+                    _FacultyLoadTab(),
+                    _RoomUtilizationTab(),
+                    _ConflictSummaryTab(),
+                    _ScheduleOverviewTab(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -264,8 +266,9 @@ class _FacultyLoadTab extends ConsumerWidget {
             ? maroonColor.withOpacity(0.22)
             : maroonColor.withOpacity(0.08);
         final rowBgA = isDark ? const Color(0xFF0F172A) : Colors.white;
-        final rowBgB =
-            isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB);
+        final rowBgB = isDark
+            ? const Color(0xFF111827)
+            : const Color(0xFFF9FAFB);
         final dividerColor = isDark
             ? Colors.white.withOpacity(0.08)
             : Colors.black.withOpacity(0.06);
@@ -393,8 +396,9 @@ class _FacultyLoadTab extends ConsumerWidget {
                                 dataRowMaxHeight: 60,
                                 showBottomBorder: true,
                                 dividerThickness: 0.6,
-                                headingRowColor:
-                                    MaterialStateProperty.all(headerBg),
+                                headingRowColor: MaterialStateProperty.all(
+                                  headerBg,
+                                ),
                                 headingTextStyle: GoogleFonts.poppins(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 12,
@@ -411,159 +415,164 @@ class _FacultyLoadTab extends ConsumerWidget {
                                       : Colors.black87,
                                 ),
                                 border: TableBorder(
-                                  horizontalInside:
-                                      BorderSide(color: dividerColor),
+                                  horizontalInside: BorderSide(
+                                    color: dividerColor,
+                                  ),
                                   bottom: BorderSide(color: dividerColor),
                                   top: BorderSide(color: dividerColor),
                                 ),
                                 rows: data.asMap().entries.map((entry) {
                                   final index = entry.key;
                                   final item = entry.value;
-                                Color statusColor;
-                                if (item.loadStatus == 'Overloaded')
-                                  statusColor = Colors.red;
-                                else if (item.loadStatus == 'Underloaded')
-                                  statusColor = Colors.orange;
-                                else
-                                  statusColor = Colors.green;
+                                  Color statusColor;
+                                  if (item.loadStatus == 'Overloaded')
+                                    statusColor = Colors.red;
+                                  else if (item.loadStatus == 'Underloaded')
+                                    statusColor = Colors.orange;
+                                  else
+                                    statusColor = Colors.green;
 
-                                return DataRow(
-                                  color: MaterialStateProperty.all(
-                                    index.isEven ? rowBgA : rowBgB,
-                                  ),
-                                  cells: [
-                                    DataCell(
-                                      Text(
-                                        item.facultyName,
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
+                                  return DataRow(
+                                    color: MaterialStateProperty.all(
+                                      index.isEven ? rowBgA : rowBgB,
                                     ),
-                                    DataCell(
-                                      Text(
-                                        (item.program ?? '-').toUpperCase(),
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Text(
-                                        '${item.totalUnits.toStringAsFixed(0)}',
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                          color: maroonColor,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Text(
-                                        '${item.totalHours.toStringAsFixed(1)} hrs',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Text(
-                                        '${item.totalSubjects}',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: statusColor.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                          border: Border.all(
-                                            color: statusColor.withOpacity(0.5),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          item.loadStatus.toUpperCase(),
+                                    cells: [
+                                      DataCell(
+                                        Text(
+                                          item.facultyName,
                                           style: GoogleFonts.poppins(
-                                            color: statusColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Tooltip(
-                                            message: 'Export as PDF',
-                                            child: IconButton(
-                                              icon: const Icon(
-                                                Icons.picture_as_pdf_rounded,
-                                                size: 18,
-                                                color: Colors.red,
-                                              ),
-                                              onPressed: () {
-                                                final schedules =
-                                                    schedulesAsync.value ?? [];
-                                                PdfGenerator.printFacultySummaryAsPdf(
-                                                  item,
-                                                  schedules,
-                                                );
-                                              },
-                                            ),
+                                      DataCell(
+                                        Text(
+                                          (item.program ?? '-').toUpperCase(),
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
                                           ),
-                                          const SizedBox(width: 4),
-                                          Tooltip(
-                                            message: 'Export as Word (.docx)',
-                                            child: IconButton(
-                                              icon: const Icon(
-                                                Icons.description_rounded,
-                                                size: 18,
-                                                color: Colors.blue,
-                                              ),
-                                              onPressed: () async {
-                                                final schedules =
-                                                    schedulesAsync.value ?? [];
-                                                final path =
-                                                    await PdfGenerator.exportFacultySummaryAsDocx(
-                                                      item,
-                                                      schedules,
-                                                    );
-                                                if (context.mounted) {
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(
-                                                        path != null
-                                                            ? 'Saved to: $path'
-                                                            : 'Export not supported on this platform.',
-                                                      ),
-                                                      backgroundColor:
-                                                          Colors.green,
-                                                    ),
-                                                  );
-                                                }
-                                              },
-                                            ),
-                                          ),
-                                        ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
+                                      DataCell(
+                                        Text(
+                                          '${item.totalUnits.toStringAsFixed(0)}',
+                                          style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: maroonColor,
+                                          ),
+                                        ),
+                                      ),
+                                      DataCell(
+                                        Text(
+                                          '${item.totalHours.toStringAsFixed(1)} hrs',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      DataCell(
+                                        Text(
+                                          '${item.totalSubjects}',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      DataCell(
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: statusColor.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                            border: Border.all(
+                                              color: statusColor.withOpacity(
+                                                0.5,
+                                              ),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            item.loadStatus.toUpperCase(),
+                                            style: GoogleFonts.poppins(
+                                              color: statusColor,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      DataCell(
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Tooltip(
+                                              message: 'Export as PDF',
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                  Icons.picture_as_pdf_rounded,
+                                                  size: 18,
+                                                  color: Colors.red,
+                                                ),
+                                                onPressed: () {
+                                                  final schedules =
+                                                      schedulesAsync.value ??
+                                                      [];
+                                                  PdfGenerator.printFacultySummaryAsPdf(
+                                                    item,
+                                                    schedules,
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Tooltip(
+                                              message: 'Export as Word (.docx)',
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                  Icons.description_rounded,
+                                                  size: 18,
+                                                  color: Colors.blue,
+                                                ),
+                                                onPressed: () async {
+                                                  final schedules =
+                                                      schedulesAsync.value ??
+                                                      [];
+                                                  final path =
+                                                      await PdfGenerator.exportFacultySummaryAsDocx(
+                                                        item,
+                                                        schedules,
+                                                      );
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                          path != null
+                                                              ? 'Saved to: $path'
+                                                              : 'Export not supported on this platform.',
+                                                        ),
+                                                        backgroundColor:
+                                                            Colors.green,
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }).toList(),
                                 columns: const [
                                   DataColumn(label: Text('FACULTY')),
                                   DataColumn(label: Text('PROGRAM')),
@@ -819,28 +828,28 @@ class _ConflictSummaryTab extends ConsumerWidget {
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Conflict Summary',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Conflict Summary',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          conflicts.isEmpty
-                              ? 'No conflicts detected — system is clean'
-                              : '${conflicts.length} conflict${conflicts.length == 1 ? '' : 's'} require attention',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: conflicts.isEmpty
-                                ? Colors.green
-                                : Colors.red[700],
+                          Text(
+                            conflicts.isEmpty
+                                ? 'No conflicts detected — system is clean'
+                                : '${conflicts.length} conflict${conflicts.length == 1 ? '' : 's'} require attention',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: conflicts.isEmpty
+                                  ? Colors.green
+                                  : Colors.red[700],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                     ),
                     if (conflicts.isNotEmpty)
                       Wrap(

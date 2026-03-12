@@ -1178,7 +1178,6 @@ class _AddSubjectModal extends StatefulWidget {
 }
 
 class _AddSubjectModalState extends State<_AddSubjectModal> {
-
   void _showErrorDialog(BuildContext context, String message) {
     if (!context.mounted) return;
     String cleanMessage = message.replaceAll('Exception: ', '').trim();
@@ -1190,18 +1189,24 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
           children: [
             const Icon(Icons.error_outline, color: Colors.red, size: 28),
             const SizedBox(width: 12),
-            Text('Action Failed',
-                style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
+            Text(
+              'Action Failed',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.red,
+              ),
+            ),
           ],
         ),
-        content: Text(cleanMessage,
-            style: GoogleFonts.poppins(fontSize: 14)),
+        content: Text(cleanMessage, style: GoogleFonts.poppins(fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('OK',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            child: Text(
+              'OK',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -1432,7 +1437,10 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
                       const SizedBox(height: 16),
                       DropdownButtonFormField<int?>(
                         value: _selectedFacultyId,
-                        decoration: _inputDecoration('Assigned Faculty', isDark),
+                        decoration: _inputDecoration(
+                          'Assigned Faculty',
+                          isDark,
+                        ),
                         dropdownColor: cardBg,
                         items: [
                           DropdownMenuItem<int?>(
@@ -1875,7 +1883,6 @@ class _EditSubjectModal extends StatefulWidget {
 }
 
 class _EditSubjectModalState extends State<_EditSubjectModal> {
-
   void _showErrorDialog(BuildContext context, String message) {
     if (!context.mounted) return;
     String cleanMessage = message.replaceAll('Exception: ', '').trim();
@@ -1887,18 +1894,24 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
           children: [
             const Icon(Icons.error_outline, color: Colors.red, size: 28),
             const SizedBox(width: 12),
-            Text('Action Failed',
-                style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
+            Text(
+              'Action Failed',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.red,
+              ),
+            ),
           ],
         ),
-        content: Text(cleanMessage,
-            style: GoogleFonts.poppins(fontSize: 14)),
+        content: Text(cleanMessage, style: GoogleFonts.poppins(fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('OK',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            child: Text(
+              'OK',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -1954,7 +1967,8 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
       if (!mounted) return;
       setState(() {
         _facultyList = list;
-        final hasSelected = _selectedFacultyId != null &&
+        final hasSelected =
+            _selectedFacultyId != null &&
             _facultyList.any((f) => f.id == _selectedFacultyId);
         if (!hasSelected) _selectedFacultyId = null;
         _facultyLoadError = null;
@@ -2144,7 +2158,10 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
                       const SizedBox(height: 16),
                       DropdownButtonFormField<int?>(
                         value: _selectedFacultyId,
-                        decoration: _inputDecoration('Assigned Faculty', isDark),
+                        decoration: _inputDecoration(
+                          'Assigned Faculty',
+                          isDark,
+                        ),
                         dropdownColor: cardBg,
                         items: [
                           DropdownMenuItem<int?>(
@@ -2213,8 +2230,7 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
                                 } else {
                                   _selectedTypes.remove(type);
                                 }
-                                if (!selected &&
-                                    type == SubjectType.blended) {
+                                if (!selected && type == SubjectType.blended) {
                                   _selectedTypes.remove(SubjectType.lecture);
                                   _selectedTypes.remove(
                                     SubjectType.laboratory,

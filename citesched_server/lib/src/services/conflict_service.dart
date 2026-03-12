@@ -136,7 +136,8 @@ class ConflictService {
 
     var conflicts = await Schedule.db.find(
       session,
-      where: (t) => t.facultyId.equals(facultyId) & t.timeslotId.notEquals(null),
+      where: (t) =>
+          t.facultyId.equals(facultyId) & t.timeslotId.notEquals(null),
       include: Schedule.include(timeslot: Timeslot.include()),
     );
 
@@ -170,9 +171,9 @@ class ConflictService {
 
     final whereClause = sectionId != null
         ? (Schedule.t.sectionId.equals(sectionId) &
-            Schedule.t.timeslotId.notEquals(null))
+              Schedule.t.timeslotId.notEquals(null))
         : (Schedule.t.section.equals(section) &
-            Schedule.t.timeslotId.notEquals(null));
+              Schedule.t.timeslotId.notEquals(null));
 
     var conflicts = await Schedule.db.find(
       session,
@@ -815,7 +816,8 @@ class ConflictService {
       if (s.timeslotId == null) continue;
       final subject = subjectMap[s.subjectId];
       if (subject == null) continue;
-      final requiredHours = s.hours ?? subject.hours ?? subject.units.toDouble();
+      final requiredHours =
+          s.hours ?? subject.hours ?? subject.units.toDouble();
       if (requiredHours <= 0) continue;
       final ts = timeslotMap[s.timeslotId!];
       if (ts == null) continue;
@@ -871,7 +873,7 @@ extension _OverlapHelpers on ConflictService {
     required String type,
     required String resourceLabel,
     required String Function(Schedule a, Schedule b, String slotLabel)
-        buildMessage,
+    buildMessage,
     required String Function(Schedule a, Schedule b) buildDetails,
     int? roomId,
     int? facultyId,

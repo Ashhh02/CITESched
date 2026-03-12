@@ -16,8 +16,7 @@ class ThemeModeToggle extends StatelessWidget {
         return InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () {
-            themeModeNotifier.value =
-                isDark ? ThemeMode.light : ThemeMode.dark;
+            themeModeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
           },
           child: Container(
             padding: EdgeInsets.symmetric(

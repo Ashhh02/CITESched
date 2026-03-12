@@ -78,10 +78,14 @@ class SchedulingService {
         .whereType<Faculty>()
         .where((f) => f.isActive)
         .toList();
-    final validRooms = rooms.whereType<Room>().where((r) => r.isActive).toList();
+    final validRooms = rooms
+        .whereType<Room>()
+        .where((r) => r.isActive)
+        .toList();
     final validTimeslots = timeslots.whereType<Timeslot>().toList();
     final timeslotCache = <String, Timeslot>{
-      for (final t in validTimeslots) _timeslotKey(t.day, t.startTime, t.endTime): t,
+      for (final t in validTimeslots)
+        _timeslotKey(t.day, t.startTime, t.endTime): t,
     };
 
     final requestedSections = request.sections
@@ -132,7 +136,8 @@ class SchedulingService {
     for (final subject in validSubjects) {
       final matchingSections = candidateSections.where((section) {
         if (section.program != subject.program) return false;
-        if (subject.yearLevel != null && section.yearLevel != subject.yearLevel) {
+        if (subject.yearLevel != null &&
+            section.yearLevel != subject.yearLevel) {
           return false;
         }
         return true;
@@ -226,21 +231,23 @@ class SchedulingService {
               break;
             }
 
-            final rankedFaculties = [...validFaculties]..sort((a, b) {
-              final aLoad = facultyAssignments[a.id!] ?? 0;
-              final bLoad = facultyAssignments[b.id!] ?? 0;
-              final aMax = (a.maxLoad ?? 1).toDouble();
-              final bMax = (b.maxLoad ?? 1).toDouble();
-              final aRatio = aMax <= 0 ? 1.0 : aLoad / aMax;
-              final bRatio = bMax <= 0 ? 1.0 : bLoad / bMax;
-              return aRatio.compareTo(bRatio);
-            });
+            final rankedFaculties = [...validFaculties]
+              ..sort((a, b) {
+                final aLoad = facultyAssignments[a.id!] ?? 0;
+                final bLoad = facultyAssignments[b.id!] ?? 0;
+                final aMax = (a.maxLoad ?? 1).toDouble();
+                final bMax = (b.maxLoad ?? 1).toDouble();
+                final aRatio = aMax <= 0 ? 1.0 : aLoad / aMax;
+                final bRatio = bMax <= 0 ? 1.0 : bLoad / bMax;
+                return aRatio.compareTo(bRatio);
+              });
 
             for (final faculty in rankedFaculties) {
               if (assigned) break;
 
               // If a subject is explicitly assigned to an instructor, enforce it.
-              if (subject.facultyId != null && faculty.id != subject.facultyId) {
+              if (subject.facultyId != null &&
+                  faculty.id != subject.facultyId) {
                 continue;
               }
 
@@ -250,7 +257,8 @@ class SchedulingService {
 
               final currentLoad = facultyAssignments[faculty.id!] ?? 0;
               final subjectUnits = component.units;
-              if ((currentLoad + subjectUnits) > (faculty.maxLoad ?? 0)) continue;
+              if ((currentLoad + subjectUnits) > (faculty.maxLoad ?? 0))
+                continue;
 
               final candidateTimeslots = await _candidateTimeslotsForFaculty(
                 session: session,
@@ -258,8 +266,9 @@ class SchedulingService {
                 availability: facultyAvailMap[faculty.id!] ?? const [],
                 requiredHours: requiredHours,
                 cache: timeslotCache,
-                requireLabStartAfterNine:
-                    component.types.contains(SubjectType.laboratory),
+                requireLabStartAfterNine: component.types.contains(
+                  SubjectType.laboratory,
+                ),
               );
               final rankedTimeslots = _rankTimeslotsForFaculty(
                 timeslots: candidateTimeslots,
@@ -289,11 +298,11 @@ class SchedulingService {
                     updatedAt: DateTime.now(),
                   );
 
-                  final validationConflicts =
-                      await _conflictService.validateSchedule(
-                    session,
-                    candidate,
-                  );
+                  final validationConflicts = await _conflictService
+                      .validateSchedule(
+                        session,
+                        candidate,
+                      );
 
                   if (validationConflicts.isEmpty) {
                     final inserted = await _tryInsertSchedule(
@@ -334,8 +343,12 @@ class SchedulingService {
               'No valid faculty/room/timeslot combination satisfies all constraints.';
 
           if (subject.facultyId != null) {
-            final lockedFaculty = await Faculty.db.findById(session, subject.facultyId!);
-            final lockedName = lockedFaculty?.name ?? 'Faculty ID ${subject.facultyId}';
+            final lockedFaculty = await Faculty.db.findById(
+              session,
+              subject.facultyId!,
+            );
+            final lockedName =
+                lockedFaculty?.name ?? 'Faculty ID ${subject.facultyId}';
 
             if (lockedFaculty == null || !lockedFaculty.isActive) {
               details =
@@ -349,7 +362,8 @@ class SchedulingService {
                   'Subject ${subject.code} is locked to $lockedName, but program does not match (${lockedFaculty.program} vs ${subject.program}).';
             } else {
               final lockedId = lockedFaculty.id!;
-              final lockedCurrentLoad = facultyAssignments[lockedId] ??
+              final lockedCurrentLoad =
+                  facultyAssignments[lockedId] ??
                   existingSchedules
                       .where((s) => s.facultyId == lockedId)
                       .fold<double>(0, (sum, s) => sum + (s.units ?? 0));
@@ -360,12 +374,14 @@ class SchedulingService {
                 details =
                     'Subject ${subject.code} is locked to $lockedName, but assigning it would exceed max load (${lockedCurrentLoad.toStringAsFixed(1)} + ${subjectUnits.toStringAsFixed(1)} > ${(lockedFaculty.maxLoad ?? 0).toDouble().toStringAsFixed(1)}).';
               } else {
-                final lockedAvailability = facultyAvailMap[lockedId] ??
+                final lockedAvailability =
+                    facultyAvailMap[lockedId] ??
                     await FacultyAvailability.db.find(
                       session,
                       where: (t) => t.facultyId.equals(lockedId),
                     );
-                final lockedUsage = facultyTimeslotUsage[lockedId] ??
+                final lockedUsage =
+                    facultyTimeslotUsage[lockedId] ??
                     <int, int>{
                       for (final s in existingSchedules.where(
                         (s) => s.facultyId == lockedId && s.timeslotId != null,
@@ -505,8 +521,7 @@ class SchedulingService {
     if (hasBlended || (hasLecture && hasLab)) {
       final totalHours = _lectureHours + _labHours;
       final totalUnits = subject.units.toDouble();
-      final lectureUnits =
-          totalUnits * (_lectureHours / totalHours);
+      final lectureUnits = totalUnits * (_lectureHours / totalHours);
       final labUnits = (totalUnits - lectureUnits);
       return [
         _LoadComponent(
@@ -547,7 +562,8 @@ class SchedulingService {
 
   double _timeslotHours(Timeslot timeslot) {
     final durationMinutes =
-        _parseTimeToMinutes(timeslot.endTime) - _parseTimeToMinutes(timeslot.startTime);
+        _parseTimeToMinutes(timeslot.endTime) -
+        _parseTimeToMinutes(timeslot.startTime);
     return durationMinutes / 60.0;
   }
 
@@ -592,8 +608,9 @@ class SchedulingService {
     candidates.sort((a, b) {
       final dayCompare = _dayRank(a.day).compareTo(_dayRank(b.day));
       if (dayCompare != 0) return dayCompare;
-      final timeCompare = _parseTimeToMinutes(a.startTime)
-          .compareTo(_parseTimeToMinutes(b.startTime));
+      final timeCompare = _parseTimeToMinutes(
+        a.startTime,
+      ).compareTo(_parseTimeToMinutes(b.startTime));
       if (timeCompare != 0) return timeCompare;
       final aUse = timeslotUsage[a.id!] ?? 0;
       final bUse = timeslotUsage[b.id!] ?? 0;
@@ -616,18 +633,15 @@ class SchedulingService {
 
     // If no availability set, fall back to existing timeslots that fit.
     if (availability.isEmpty) {
-      return allTimeslots
-          .where((t) {
-            if (((_timeslotHours(t) * 60).round() - requiredMinutes).abs() > 1) {
-              return false;
-            }
-            if (requireLabStartAfterNine) {
-              return _parseTimeToMinutes(t.startTime) >=
-                  _labEarliestStartMinutes;
-            }
-            return true;
-          })
-          .toList();
+      return allTimeslots.where((t) {
+        if (((_timeslotHours(t) * 60).round() - requiredMinutes).abs() > 1) {
+          return false;
+        }
+        if (requireLabStartAfterNine) {
+          return _parseTimeToMinutes(t.startTime) >= _labEarliestStartMinutes;
+        }
+        return true;
+      }).toList();
     }
 
     final stepMinutes = requiredMinutes % 60 == 0 ? 60 : 30;
@@ -691,7 +705,8 @@ class SchedulingService {
     required List<Room> rooms,
     required Subject subject,
   }) {
-    final requiresLabRoom = subject.types.contains(SubjectType.laboratory) ||
+    final requiresLabRoom =
+        subject.types.contains(SubjectType.laboratory) ||
         subject.types.contains(SubjectType.blended);
 
     return rooms.where((room) {
@@ -843,15 +858,16 @@ class SchedulingService {
       return false;
     }
 
-    final rankedFaculties = [...validFaculties]..sort((a, b) {
-      final aLoad = facultyAssignments[a.id!] ?? 0;
-      final bLoad = facultyAssignments[b.id!] ?? 0;
-      final aMax = (a.maxLoad ?? 1).toDouble();
-      final bMax = (b.maxLoad ?? 1).toDouble();
-      final aRatio = aMax <= 0 ? 1.0 : aLoad / aMax;
-      final bRatio = bMax <= 0 ? 1.0 : bLoad / bMax;
-      return aRatio.compareTo(bRatio);
-    });
+    final rankedFaculties = [...validFaculties]
+      ..sort((a, b) {
+        final aLoad = facultyAssignments[a.id!] ?? 0;
+        final bLoad = facultyAssignments[b.id!] ?? 0;
+        final aMax = (a.maxLoad ?? 1).toDouble();
+        final bMax = (b.maxLoad ?? 1).toDouble();
+        final aRatio = aMax <= 0 ? 1.0 : aLoad / aMax;
+        final bRatio = bMax <= 0 ? 1.0 : bLoad / bMax;
+        return aRatio.compareTo(bRatio);
+      });
 
     final lectureKey = _componentKey(
       subject.id!,
@@ -927,13 +943,17 @@ class SchedulingService {
               updatedAt: DateTime.now(),
             );
 
-            final lectureConflicts =
-                await _conflictService.validateSchedule(session, lectureSchedule);
+            final lectureConflicts = await _conflictService.validateSchedule(
+              session,
+              lectureSchedule,
+            );
             if (lectureConflicts.isNotEmpty) {
               continue;
             }
-            final labConflicts =
-                await _conflictService.validateSchedule(session, labSchedule);
+            final labConflicts = await _conflictService.validateSchedule(
+              session,
+              labSchedule,
+            );
             if (labConflicts.isNotEmpty) {
               continue;
             }
@@ -1079,15 +1099,20 @@ class SchedulingService {
     if (pairs.isEmpty) return const [];
     final candidates = [...pairs];
     candidates.sort((a, b) {
-      final dayCompare = _dayRank(a.lecture.day).compareTo(_dayRank(b.lecture.day));
+      final dayCompare = _dayRank(
+        a.lecture.day,
+      ).compareTo(_dayRank(b.lecture.day));
       if (dayCompare != 0) return dayCompare;
-      final timeCompare = _parseTimeToMinutes(a.lecture.startTime)
-          .compareTo(_parseTimeToMinutes(b.lecture.startTime));
+      final timeCompare = _parseTimeToMinutes(
+        a.lecture.startTime,
+      ).compareTo(_parseTimeToMinutes(b.lecture.startTime));
       if (timeCompare != 0) return timeCompare;
       final aUse =
-          (timeslotUsage[a.lecture.id!] ?? 0) + (timeslotUsage[a.laboratory.id!] ?? 0);
+          (timeslotUsage[a.lecture.id!] ?? 0) +
+          (timeslotUsage[a.laboratory.id!] ?? 0);
       final bUse =
-          (timeslotUsage[b.lecture.id!] ?? 0) + (timeslotUsage[b.laboratory.id!] ?? 0);
+          (timeslotUsage[b.lecture.id!] ?? 0) +
+          (timeslotUsage[b.laboratory.id!] ?? 0);
       return aUse.compareTo(bUse);
     });
     return candidates;

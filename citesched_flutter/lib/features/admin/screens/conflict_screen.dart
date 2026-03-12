@@ -200,8 +200,8 @@ class _ConflictScreenState extends State<ConflictScreen> {
                             _isLoading
                                 ? 'Scanning all modules for conflicts...'
                                 : _conflicts.isEmpty
-                                    ? 'No scheduling conflicts detected'
-                                    : '${_conflicts.length} conflict${_conflicts.length == 1 ? '' : 's'} detected across modules',
+                                ? 'No scheduling conflicts detected'
+                                : '${_conflicts.length} conflict${_conflicts.length == 1 ? '' : 's'} detected across modules',
                             style: GoogleFonts.poppins(
                               fontSize: isMobile ? 12 : 16,
                               color: Colors.white.withValues(alpha: 0.8),
@@ -265,8 +265,8 @@ class _ConflictScreenState extends State<ConflictScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _conflicts.isEmpty
-                      ? _buildEmptyState()
-                      : _buildConflictList(isDark, cardBg, maroonColor),
+                  ? _buildEmptyState()
+                  : _buildConflictList(isDark, cardBg, maroonColor),
             ),
           ],
         ),
@@ -397,8 +397,10 @@ class _ConflictScreenState extends State<ConflictScreen> {
                 ),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: maroonColor,
                     borderRadius: BorderRadius.circular(999),

@@ -624,9 +624,9 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
         (startTime.hour - startHour + startTime.minute / 60.0) * hourHeight;
     final double height =
         (endTime.hour -
-                startTime.hour +
-                (endTime.minute - startTime.minute) / 60.0) *
-            hourHeight;
+            startTime.hour +
+            (endTime.minute - startTime.minute) / 60.0) *
+        hourHeight;
     final double left = 80 + (dayIndex * dayWidth);
 
     final bool hasAvailabilityViolation = _isOutsidePreferredAvailability(
@@ -879,16 +879,14 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 'Section: ${schedule.section}',
                 style: GoogleFonts.poppins(
                   fontSize: 9,
-                  color:
-                      isStudentView ? Colors.black87 : Colors.white70,
+                  color: isStudentView ? Colors.black87 : Colors.white70,
                 ),
               ),
               Text(
                 'Room: $room',
                 style: GoogleFonts.poppins(
                   fontSize: 9,
-                  color:
-                      isStudentView ? Colors.black87 : Colors.white70,
+                  color: isStudentView ? Colors.black87 : Colors.white70,
                 ),
               ),
             ],

@@ -101,7 +101,8 @@ class ScheduleExportService {
         .build();
 
     final bytes = await DocxExporter().exportToBytes(doc);
-    final fileName = 'Student_Schedule_${student?.studentNumber ?? "student"}.docx';
+    final fileName =
+        'Student_Schedule_${student?.studentNumber ?? "student"}.docx';
     final path = await FilePicker.platform.saveFile(
       dialogTitle: 'Save Student Schedule DOCX',
       fileName: fileName,
@@ -196,7 +197,8 @@ class ScheduleExportService {
         .build();
 
     final bytes = await DocxExporter().exportToBytes(doc);
-    final fileName = 'Faculty_Schedule_${facultyName.replaceAll(" ", "_")}.docx';
+    final fileName =
+        'Faculty_Schedule_${facultyName.replaceAll(" ", "_")}.docx';
     final path = await FilePicker.platform.saveFile(
       dialogTitle: 'Save Faculty Schedule DOCX',
       fileName: fileName,
