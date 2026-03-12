@@ -16,6 +16,7 @@ import '../generated/protocol.dart';
 class ConflictService {
   static const Set<String> _labRoomNames = {'IT LAB', 'EMC LAB'};
   static const String _lectureRoomName = 'ROOM 1';
+  static const int _labEarliestStartMinutes = 9 * 60;
 
   String _normalizeRoomName(String name) => name.trim().toUpperCase();
 
@@ -42,6 +43,24 @@ class ConflictService {
       if (hasLab && !hasLecture) return true;
       if (hasLecture && !hasLab) return false;
       // Blended or unspecified mix: fall back to subject type rules.
+    }
+
+    return _requiresLaboratoryRoom(subject);
+  }
+
+  bool _isLabSchedule(Subject subject, Schedule schedule, Room? room) {
+    final loadTypes = schedule.loadTypes;
+    if (loadTypes != null && loadTypes.isNotEmpty) {
+      final hasLab = loadTypes.contains(SubjectType.laboratory);
+      final hasLecture = loadTypes.contains(SubjectType.lecture);
+      if (hasLab && !hasLecture) return true;
+      if (hasLecture && !hasLab) return false;
+    }
+
+    if (room != null) {
+      final normalized = _normalizeRoomName(room.name);
+      if (_labRoomNames.contains(normalized)) return true;
+      if (normalized == _lectureRoomName) return false;
     }
 
     return _requiresLaboratoryRoom(subject);
@@ -395,16 +414,16 @@ class ConflictService {
           );
         }
 
-        // 5. Lab/Lecture Room Rule
-        final roomTypeConflict = _buildRoomTypeConflict(
-          schedule: schedule,
-          subject: subject,
-          room: room,
-        );
-        if (roomTypeConflict != null) {
-          conflicts.add(roomTypeConflict);
-        }
+      // 5. Lab/Lecture Room Rule
+      final roomTypeConflict = _buildRoomTypeConflict(
+        schedule: schedule,
+        subject: subject,
+        room: room,
+      );
+      if (roomTypeConflict != null) {
+        conflicts.add(roomTypeConflict);
       }
+    }
     }
 
     // 6. Faculty Time Conflict
@@ -533,6 +552,27 @@ class ConflictService {
                     'Required continuous hours: ${requiredHours.toStringAsFixed(1)}, available: ${tsHours.toStringAsFixed(1)}',
               ),
             );
+          }
+
+          final room = schedule.roomId != null
+              ? await Room.db.findById(session, schedule.roomId!)
+              : null;
+          if (_isLabSchedule(subject, schedule, room)) {
+            final startMinutes = _parseTimeToMinutes(timeslot.startTime);
+            if (startMinutes < _labEarliestStartMinutes) {
+              conflicts.add(
+                ScheduleConflict(
+                  type: 'lab_start_time',
+                  message: 'Laboratory classes must start at 9:00 AM or later',
+                  scheduleId: schedule.id,
+                  facultyId: schedule.facultyId,
+                  subjectId: schedule.subjectId,
+                  roomId: schedule.roomId,
+                  details:
+                      'Lab starts at ${timeslot.startTime} on ${timeslot.day.name}',
+                ),
+              );
+            }
           }
         }
       }
@@ -839,6 +879,25 @@ class ConflictService {
                 'Continuous block required. Faculty: ${faculty?.name ?? s.facultyId}, Section: ${s.section}, Room: ${roomMap[s.roomId ?? -1]?.name ?? 'N/A'}',
           ),
         );
+      }
+
+      final room = s.roomId != null ? roomMap[s.roomId!] : null;
+      if (_isLabSchedule(subject, s, room)) {
+        final startMinutes = _parseTimeToMinutes(ts.startTime);
+        if (startMinutes < _labEarliestStartMinutes) {
+          conflicts.add(
+            ScheduleConflict(
+              type: 'lab_start_time',
+              message: 'Laboratory classes must start at 9:00 AM or later',
+              scheduleId: s.id,
+              facultyId: s.facultyId,
+              subjectId: s.subjectId,
+              roomId: s.roomId,
+              details:
+                  'Lab starts at ${ts.startTime} on ${ts.day.name}',
+            ),
+          );
+        }
       }
     }
 

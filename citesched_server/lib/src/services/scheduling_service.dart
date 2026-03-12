@@ -166,169 +166,132 @@ class SchedulingService {
         }
         final insertedForPair = <Schedule>[];
         var allAssigned = true;
-
-        _LoadComponent? lectureComponent;
-        _LoadComponent? labComponent;
         for (final component in components) {
-          if (component.tag == 'lecture') {
-            lectureComponent = component;
-          } else if (component.tag == 'laboratory') {
-            labComponent = component;
-          }
-        }
-
-        if (lectureComponent != null && labComponent != null) {
-          final assigned = await _assignBlendedPair(
-            session: session,
-            subject: subject,
-            section: section,
-            lectureComponent: lectureComponent,
-            labComponent: labComponent,
-            validFaculties: validFaculties,
-            validRooms: validRooms,
-            validTimeslots: validTimeslots,
-            facultyAvailMap: facultyAvailMap,
-            facultyAssignments: facultyAssignments,
-            facultyTimeslotUsage: facultyTimeslotUsage,
-            timeslotCache: timeslotCache,
-            assignedSubjectSectionKeys: assignedSubjectSectionKeys,
-            generatedSchedules: generatedSchedules,
-            insertedForPair: insertedForPair,
+          final pairKey = _componentKey(
+            subject.id!,
+            section.id,
+            section.sectionCode,
+            component.tag,
           );
-
-          if (!assigned) {
-            allAssigned = false;
+          if (assignedSubjectSectionKeys.contains(pairKey)) {
+            continue;
           }
-        } else {
-          for (final component in components) {
-            final pairKey = _componentKey(
-              subject.id!,
-              section.id,
-              section.sectionCode,
-              component.tag,
+
+          var assigned = false;
+          final requiredHours = component.hours;
+          final eligibleRooms = _eligibleRoomsForComponent(
+            rooms: validRooms,
+            subject: subject,
+            componentTypes: component.types,
+          );
+          if (eligibleRooms.isEmpty) {
+            conflicts.add(
+              ScheduleConflict(
+                type: 'generation_failed',
+                message:
+                    'No eligible room for ${subject.name} (${subject.code})',
+                details: 'No room matches subject type/program constraints.',
+              ),
             );
-            if (assignedSubjectSectionKeys.contains(pairKey)) {
+            allAssigned = false;
+            break;
+          }
+
+          final rankedFaculties = [...validFaculties]
+            ..sort((a, b) {
+              final aLoad = facultyAssignments[a.id!] ?? 0;
+              final bLoad = facultyAssignments[b.id!] ?? 0;
+              final aMax = (a.maxLoad ?? 1).toDouble();
+              final bMax = (b.maxLoad ?? 1).toDouble();
+              final aRatio = aMax <= 0 ? 1.0 : aLoad / aMax;
+              final bRatio = bMax <= 0 ? 1.0 : bLoad / bMax;
+              return aRatio.compareTo(bRatio);
+            });
+
+          for (final faculty in rankedFaculties) {
+            if (assigned) break;
+
+            // If a subject is explicitly assigned to an instructor, enforce it.
+            if (subject.facultyId != null &&
+                faculty.id != subject.facultyId) {
               continue;
             }
 
-            var assigned = false;
-            final requiredHours = component.hours;
-            final eligibleRooms = _eligibleRoomsForComponent(
-              rooms: validRooms,
-              subject: subject,
-              componentTypes: component.types,
-            );
-            if (eligibleRooms.isEmpty) {
-              conflicts.add(
-                ScheduleConflict(
-                  type: 'generation_failed',
-                  message:
-                      'No eligible room for ${subject.name} (${subject.code})',
-                  details: 'No room matches subject type/program constraints.',
-                ),
-              );
-              allAssigned = false;
-              break;
+            if (!_canTeachProgram(faculty, subject)) {
+              continue;
             }
 
-            final rankedFaculties = [...validFaculties]
-              ..sort((a, b) {
-                final aLoad = facultyAssignments[a.id!] ?? 0;
-                final bLoad = facultyAssignments[b.id!] ?? 0;
-                final aMax = (a.maxLoad ?? 1).toDouble();
-                final bMax = (b.maxLoad ?? 1).toDouble();
-                final aRatio = aMax <= 0 ? 1.0 : aLoad / aMax;
-                final bRatio = bMax <= 0 ? 1.0 : bLoad / bMax;
-                return aRatio.compareTo(bRatio);
-              });
+            final currentLoad = facultyAssignments[faculty.id!] ?? 0;
+            final subjectUnits = component.units;
+            if ((currentLoad + subjectUnits) > (faculty.maxLoad ?? 0)) continue;
 
-            for (final faculty in rankedFaculties) {
+            final candidateTimeslots = await _candidateTimeslotsForFaculty(
+              session: session,
+              allTimeslots: validTimeslots,
+              availability: facultyAvailMap[faculty.id!] ?? const [],
+              requiredHours: requiredHours,
+              cache: timeslotCache,
+              requireLabStartAfterNine:
+                  component.types.contains(SubjectType.laboratory),
+            );
+            final rankedTimeslots = _rankTimeslotsForFaculty(
+              timeslots: candidateTimeslots,
+              timeslotUsage: facultyTimeslotUsage[faculty.id!] ?? const {},
+            );
+            if (rankedTimeslots.isEmpty) {
+              continue;
+            }
+
+            for (final timeslot in rankedTimeslots) {
               if (assigned) break;
 
-              // If a subject is explicitly assigned to an instructor, enforce it.
-              if (subject.facultyId != null &&
-                  faculty.id != subject.facultyId) {
-                continue;
-              }
-
-              if (!_canTeachProgram(faculty, subject)) {
-                continue;
-              }
-
-              final currentLoad = facultyAssignments[faculty.id!] ?? 0;
-              final subjectUnits = component.units;
-              if ((currentLoad + subjectUnits) > (faculty.maxLoad ?? 0))
-                continue;
-
-              final candidateTimeslots = await _candidateTimeslotsForFaculty(
-                session: session,
-                allTimeslots: validTimeslots,
-                availability: facultyAvailMap[faculty.id!] ?? const [],
-                requiredHours: requiredHours,
-                cache: timeslotCache,
-                requireLabStartAfterNine: component.types.contains(
-                  SubjectType.laboratory,
-                ),
-              );
-              final rankedTimeslots = _rankTimeslotsForFaculty(
-                timeslots: candidateTimeslots,
-                timeslotUsage: facultyTimeslotUsage[faculty.id!] ?? const {},
-              );
-              if (rankedTimeslots.isEmpty) {
-                continue;
-              }
-
-              for (final timeslot in rankedTimeslots) {
+              for (final room in eligibleRooms) {
                 if (assigned) break;
 
-                for (final room in eligibleRooms) {
-                  if (assigned) break;
+                final candidate = Schedule(
+                  subjectId: subject.id!,
+                  facultyId: faculty.id!,
+                  roomId: room.id!,
+                  timeslotId: timeslot.id!,
+                  section: section.sectionCode,
+                  sectionId: section.id,
+                  loadTypes: component.types,
+                  units: component.units,
+                  hours: component.hours,
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                );
 
-                  final candidate = Schedule(
-                    subjectId: subject.id!,
-                    facultyId: faculty.id!,
-                    roomId: room.id!,
-                    timeslotId: timeslot.id!,
-                    section: section.sectionCode,
-                    sectionId: section.id,
-                    loadTypes: component.types,
-                    units: component.units,
-                    hours: component.hours,
-                    createdAt: DateTime.now(),
-                    updatedAt: DateTime.now(),
-                  );
-
-                  final validationConflicts = await _conflictService
-                      .validateSchedule(
-                        session,
-                        candidate,
-                      );
-
-                  if (validationConflicts.isEmpty) {
-                    final inserted = await _tryInsertSchedule(
+                final validationConflicts = await _conflictService
+                    .validateSchedule(
                       session,
                       candidate,
                     );
-                    if (inserted == null) {
-                      continue;
-                    }
-                    generatedSchedules.add(inserted);
-                    insertedForPair.add(inserted);
-                    facultyAssignments[faculty.id!] =
-                        (facultyAssignments[faculty.id!] ?? 0) + subjectUnits;
-                    final usage = facultyTimeslotUsage[faculty.id!]!;
-                    usage[timeslot.id!] = (usage[timeslot.id!] ?? 0) + 1;
-                    assignedSubjectSectionKeys.add(pairKey);
-                    assigned = true;
+
+                if (validationConflicts.isEmpty) {
+                  final inserted = await _tryInsertSchedule(
+                    session,
+                    candidate,
+                  );
+                  if (inserted == null) {
+                    continue;
                   }
+                  generatedSchedules.add(inserted);
+                  insertedForPair.add(inserted);
+                  facultyAssignments[faculty.id!] =
+                      (facultyAssignments[faculty.id!] ?? 0) + subjectUnits;
+                  final usage = facultyTimeslotUsage[faculty.id!]!;
+                  usage[timeslot.id!] = (usage[timeslot.id!] ?? 0) + 1;
+                  assignedSubjectSectionKeys.add(pairKey);
+                  assigned = true;
                 }
               }
             }
+          }
 
-            if (!assigned) {
-              allAssigned = false;
-              break;
-            }
+          if (!assigned) {
+            allAssigned = false;
+            break;
           }
         }
 
@@ -826,297 +789,6 @@ class SchedulingService {
     if (hasLecture && !hasLab) return 'lecture';
     return 'blended';
   }
-
-  Future<bool> _assignBlendedPair({
-    required Session session,
-    required Subject subject,
-    required _SectionCandidate section,
-    required _LoadComponent lectureComponent,
-    required _LoadComponent labComponent,
-    required List<Faculty> validFaculties,
-    required List<Room> validRooms,
-    required List<Timeslot> validTimeslots,
-    required Map<int, List<FacultyAvailability>> facultyAvailMap,
-    required Map<int, double> facultyAssignments,
-    required Map<int, Map<int, int>> facultyTimeslotUsage,
-    required Map<String, Timeslot> timeslotCache,
-    required Set<String> assignedSubjectSectionKeys,
-    required List<Schedule> generatedSchedules,
-    required List<Schedule> insertedForPair,
-  }) async {
-    final lectureRooms = _eligibleRoomsForComponent(
-      rooms: validRooms,
-      subject: subject,
-      componentTypes: lectureComponent.types,
-    );
-    final labRooms = _eligibleRoomsForComponent(
-      rooms: validRooms,
-      subject: subject,
-      componentTypes: labComponent.types,
-    );
-    if (lectureRooms.isEmpty || labRooms.isEmpty) {
-      return false;
-    }
-
-    final rankedFaculties = [...validFaculties]
-      ..sort((a, b) {
-        final aLoad = facultyAssignments[a.id!] ?? 0;
-        final bLoad = facultyAssignments[b.id!] ?? 0;
-        final aMax = (a.maxLoad ?? 1).toDouble();
-        final bMax = (b.maxLoad ?? 1).toDouble();
-        final aRatio = aMax <= 0 ? 1.0 : aLoad / aMax;
-        final bRatio = bMax <= 0 ? 1.0 : bLoad / bMax;
-        return aRatio.compareTo(bRatio);
-      });
-
-    final lectureKey = _componentKey(
-      subject.id!,
-      section.id,
-      section.sectionCode,
-      lectureComponent.tag,
-    );
-    final labKey = _componentKey(
-      subject.id!,
-      section.id,
-      section.sectionCode,
-      labComponent.tag,
-    );
-    if (assignedSubjectSectionKeys.contains(lectureKey) &&
-        assignedSubjectSectionKeys.contains(labKey)) {
-      return true;
-    }
-
-    for (final faculty in rankedFaculties) {
-      // If a subject is explicitly assigned to an instructor, enforce it.
-      if (subject.facultyId != null && faculty.id != subject.facultyId) {
-        continue;
-      }
-      if (!_canTeachProgram(faculty, subject)) {
-        continue;
-      }
-
-      final currentLoad = facultyAssignments[faculty.id!] ?? 0;
-      final totalUnits = lectureComponent.units + labComponent.units;
-      if ((currentLoad + totalUnits) > (faculty.maxLoad ?? 0)) continue;
-
-      final availability = facultyAvailMap[faculty.id!] ?? const [];
-      final pairTimeslots = await _candidatePairedTimeslotsForFaculty(
-        session: session,
-        availability: availability,
-        lectureHours: lectureComponent.hours,
-        labHours: labComponent.hours,
-        cache: timeslotCache,
-      );
-      final rankedPairs = _rankPairedTimeslots(
-        pairs: pairTimeslots,
-        timeslotUsage: facultyTimeslotUsage[faculty.id!] ?? const {},
-      );
-      if (rankedPairs.isEmpty) continue;
-
-      for (final pair in rankedPairs) {
-        for (final lectureRoom in lectureRooms) {
-          for (final labRoom in labRooms) {
-            final lectureSchedule = Schedule(
-              subjectId: subject.id!,
-              facultyId: faculty.id!,
-              roomId: lectureRoom.id!,
-              timeslotId: pair.lecture.id!,
-              section: section.sectionCode,
-              sectionId: section.id,
-              loadTypes: lectureComponent.types,
-              units: lectureComponent.units,
-              hours: lectureComponent.hours,
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-            );
-            final labSchedule = Schedule(
-              subjectId: subject.id!,
-              facultyId: faculty.id!,
-              roomId: labRoom.id!,
-              timeslotId: pair.laboratory.id!,
-              section: section.sectionCode,
-              sectionId: section.id,
-              loadTypes: labComponent.types,
-              units: labComponent.units,
-              hours: labComponent.hours,
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-            );
-
-            final lectureConflicts = await _conflictService.validateSchedule(
-              session,
-              lectureSchedule,
-            );
-            if (lectureConflicts.isNotEmpty) {
-              continue;
-            }
-            final labConflicts = await _conflictService.validateSchedule(
-              session,
-              labSchedule,
-            );
-            if (labConflicts.isNotEmpty) {
-              continue;
-            }
-
-            final lectureInserted = await _tryInsertSchedule(
-              session,
-              lectureSchedule,
-            );
-            if (lectureInserted == null) {
-              continue;
-            }
-
-            final labInserted = await _tryInsertSchedule(
-              session,
-              labSchedule,
-            );
-            if (labInserted == null) {
-              await Schedule.db.deleteRow(session, lectureInserted);
-              continue;
-            }
-
-            generatedSchedules.add(lectureInserted);
-            generatedSchedules.add(labInserted);
-            insertedForPair.add(lectureInserted);
-            insertedForPair.add(labInserted);
-            facultyAssignments[faculty.id!] =
-                (facultyAssignments[faculty.id!] ?? 0) + totalUnits;
-            final usage = facultyTimeslotUsage[faculty.id!]!;
-            usage[pair.lecture.id!] = (usage[pair.lecture.id!] ?? 0) + 1;
-            usage[pair.laboratory.id!] = (usage[pair.laboratory.id!] ?? 0) + 1;
-            assignedSubjectSectionKeys.add(lectureKey);
-            assignedSubjectSectionKeys.add(labKey);
-            return true;
-          }
-        }
-      }
-    }
-
-    return false;
-  }
-
-  Future<List<_TimeslotPair>> _candidatePairedTimeslotsForFaculty({
-    required Session session,
-    required List<FacultyAvailability> availability,
-    required double lectureHours,
-    required double labHours,
-    required Map<String, Timeslot> cache,
-  }) async {
-    final lectureMinutes = (lectureHours * 60).round();
-    final labMinutes = (labHours * 60).round();
-    final totalMinutes = lectureMinutes + labMinutes;
-    if (totalMinutes <= 0) return const [];
-
-    if (availability.isEmpty) {
-      return const [];
-    }
-
-    const stepMinutes = 60;
-    final pairs = <_TimeslotPair>[];
-    final seen = <String>{};
-
-    for (final avail in availability) {
-      final start = _parseTimeToMinutes(avail.startTime);
-      final end = _parseTimeToMinutes(avail.endTime);
-      if (end - start < totalMinutes) continue;
-
-      for (var s = start; s + totalMinutes <= end; s += stepMinutes) {
-        // Lecture then lab
-        final lectureStart = s;
-        final lectureEnd = s + lectureMinutes;
-        final labStart = lectureEnd;
-        final labEnd = labStart + labMinutes;
-
-        if (labStart >= _labEarliestStartMinutes) {
-          final lectureStartTime = _formatMinutes(lectureStart);
-          final lectureEndTime = _formatMinutes(lectureEnd);
-          final labStartTime = _formatMinutes(labStart);
-          final labEndTime = _formatMinutes(labEnd);
-
-          final key =
-              '${avail.dayOfWeek.name}|$lectureStartTime-$lectureEndTime|$labStartTime-$labEndTime';
-          if (seen.add(key)) {
-            final lectureSlot = await _getOrCreateTimeslot(
-              session: session,
-              day: avail.dayOfWeek,
-              startTime: lectureStartTime,
-              endTime: lectureEndTime,
-              cache: cache,
-            );
-            final labSlot = await _getOrCreateTimeslot(
-              session: session,
-              day: avail.dayOfWeek,
-              startTime: labStartTime,
-              endTime: labEndTime,
-              cache: cache,
-            );
-            pairs.add(_TimeslotPair(lecture: lectureSlot, laboratory: labSlot));
-          }
-        }
-
-        // Lab then lecture
-        final altLabStart = s;
-        final altLabEnd = s + labMinutes;
-        final altLectureStart = altLabEnd;
-        final altLectureEnd = altLectureStart + lectureMinutes;
-
-        if (altLabStart >= _labEarliestStartMinutes) {
-          final altLabStartTime = _formatMinutes(altLabStart);
-          final altLabEndTime = _formatMinutes(altLabEnd);
-          final altLectureStartTime = _formatMinutes(altLectureStart);
-          final altLectureEndTime = _formatMinutes(altLectureEnd);
-
-          final altKey =
-              '${avail.dayOfWeek.name}|$altLectureStartTime-$altLectureEndTime|$altLabStartTime-$altLabEndTime';
-          if (seen.add(altKey)) {
-            final lectureSlot = await _getOrCreateTimeslot(
-              session: session,
-              day: avail.dayOfWeek,
-              startTime: altLectureStartTime,
-              endTime: altLectureEndTime,
-              cache: cache,
-            );
-            final labSlot = await _getOrCreateTimeslot(
-              session: session,
-              day: avail.dayOfWeek,
-              startTime: altLabStartTime,
-              endTime: altLabEndTime,
-              cache: cache,
-            );
-            pairs.add(_TimeslotPair(lecture: lectureSlot, laboratory: labSlot));
-          }
-        }
-      }
-    }
-
-    return pairs;
-  }
-
-  List<_TimeslotPair> _rankPairedTimeslots({
-    required List<_TimeslotPair> pairs,
-    required Map<int, int> timeslotUsage,
-  }) {
-    if (pairs.isEmpty) return const [];
-    final candidates = [...pairs];
-    candidates.sort((a, b) {
-      final dayCompare = _dayRank(
-        a.lecture.day,
-      ).compareTo(_dayRank(b.lecture.day));
-      if (dayCompare != 0) return dayCompare;
-      final timeCompare = _parseTimeToMinutes(
-        a.lecture.startTime,
-      ).compareTo(_parseTimeToMinutes(b.lecture.startTime));
-      if (timeCompare != 0) return timeCompare;
-      final aUse =
-          (timeslotUsage[a.lecture.id!] ?? 0) +
-          (timeslotUsage[a.laboratory.id!] ?? 0);
-      final bUse =
-          (timeslotUsage[b.lecture.id!] ?? 0) +
-          (timeslotUsage[b.laboratory.id!] ?? 0);
-      return aUse.compareTo(bUse);
-    });
-    return candidates;
-  }
 }
 
 class _LoadComponent {
@@ -1131,13 +803,6 @@ class _LoadComponent {
     required this.hours,
     required this.units,
   });
-}
-
-class _TimeslotPair {
-  final Timeslot lecture;
-  final Timeslot laboratory;
-
-  const _TimeslotPair({required this.lecture, required this.laboratory});
 }
 
 class _SectionCandidate {
