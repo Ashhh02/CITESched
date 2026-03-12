@@ -1,47 +1,26 @@
 name: Tests
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+on: [push, pull_request]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      VERSION: '3.2.3'
-      SERVERPOD_PASSWORD_database: 'C6goI_s96raJrkAVbE44QMi56F_nFT7t'
-      SERVERPOD_PASSWORD_redis: 'poC9ehBbcl5WIVa2LtSHl4zdnFc33DvB'
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.8'
+          channel: "stable"
 
-      - name: Start containers
-        working-directory: citesched_server
-        run: docker compose up --build -d
+      - name: Install Dependencies
+        run: |
+          cd citesched_flutter && flutter pub get
+          cd ../citesched_server && dart pub get
 
-      - name: Install dependencies
-        working-directory: citesched_server
-        run: dart pub get
+      - name: Run Flutter Tests
+        working-directory: citesched_flutter
+        run: flutter test
 
-      - name: Install Serverpod CLI
-        working-directory: citesched_server
-        run: dart pub global activate serverpod_cli $VERSION
-
-      - name: Run Serverpod generator
-        working-directory: citesched_server
-        run: serverpod generate
-
-      - name: Run tests
+      - name: Run Server Tests
         working-directory: citesched_server
         run: dart test
-
-      - name: Stop containers
-        if: always()
-        working-directory: citesched_server
-        run: docker compose down -v
