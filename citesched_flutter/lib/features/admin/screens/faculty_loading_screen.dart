@@ -666,7 +666,9 @@ void _showConflictErrorDialog(BuildContext context, String message) {
 }
 
 class FacultyLoadingScreen extends ConsumerStatefulWidget {
-  const FacultyLoadingScreen({super.key});
+  final Schedule? initialEditSchedule;
+
+  const FacultyLoadingScreen({super.key, this.initialEditSchedule});
 
   @override
   ConsumerState<FacultyLoadingScreen> createState() =>
@@ -674,6 +676,7 @@ class FacultyLoadingScreen extends ConsumerStatefulWidget {
 }
 
 class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
+  bool _openedInitialEdit = false;
   String _searchQuery = '';
   String? _selectedFaculty;
   bool _showConflictDetails = false;
@@ -687,6 +690,19 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_openedInitialEdit) return;
+    final initialSchedule = widget.initialEditSchedule;
+    if (initialSchedule == null) return;
+    _openedInitialEdit = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showEditAssignmentModal(initialSchedule);
+    });
   }
 
   void _showNewAssignmentModal() {

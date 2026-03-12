@@ -4,6 +4,7 @@ import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
 import 'package:citesched_flutter/features/admin/widgets/timetable_filter_panel.dart';
 import 'package:citesched_flutter/features/admin/widgets/timetable_summary_panel.dart';
+import 'package:citesched_flutter/features/admin/screens/faculty_loading_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
@@ -720,7 +721,13 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                                   : null,
                               isInstructorView: currentFilter.facultyId != null,
                               onEdit: (s) {
-                                // TODO: Open edit modal
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => FacultyLoadingScreen(
+                                      initialEditSchedule: s,
+                                    ),
+                                  ),
+                                );
                               },
                             ),
                           ),
