@@ -5,21 +5,36 @@ on:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+
 jobs:
   sonarqube:
     name: SonarQube
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - name: Set up Dart
-        uses: dart-lang/setup-dart@v1
-      - name: Build
-        working-directory: citesched_server
+          fetch-depth: 0 
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install Dependencies
         run: |
-          dart pub get
+          cd citesched_flutter && flutter pub get
+          cd ../citesched_server && dart pub get
+
+      - name: Generate Reports
+        run: |
+          # Generate analysis report for SonarCloud
+          flutter analyze --write=analysis_report.txt || true
+          
+          # Generate coverage files (Optional, but fixes the 0.0% coverage)
+          cd citesched_flutter && flutter test --coverage || true
+          cd ../citesched_server && dart test --coverage || true
+
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@v4
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
