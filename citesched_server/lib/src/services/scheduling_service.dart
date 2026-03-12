@@ -212,8 +212,7 @@ class SchedulingService {
             if (assigned) break;
 
             // If a subject is explicitly assigned to an instructor, enforce it.
-            if (subject.facultyId != null &&
-                faculty.id != subject.facultyId) {
+            if (subject.facultyId != null && faculty.id != subject.facultyId) {
               continue;
             }
 
@@ -231,8 +230,9 @@ class SchedulingService {
               availability: facultyAvailMap[faculty.id!] ?? const [],
               requiredHours: requiredHours,
               cache: timeslotCache,
-              requireLabStartAfterNine:
-                  component.types.contains(SubjectType.laboratory),
+              requireLabStartAfterNine: component.types.contains(
+                SubjectType.laboratory,
+              ),
             );
             final rankedTimeslots = _rankTimeslotsForFaculty(
               timeslots: candidateTimeslots,

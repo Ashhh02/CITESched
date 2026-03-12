@@ -13,14 +13,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dart-lang/setup-dart@v1
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.8.0
+          sdk: stable # Using 'stable' ensures compatibility with your current project
 
-      - name: Install dependencies
+      - name: Install Dependencies (Server)
         working-directory: citesched_server
         run: dart pub get
 
-      - name: Check formatting
-        working-directory: citesched_server
+      - name: Install Dependencies (Flutter)
+        working-directory: citesched_flutter
+        run: dart pub get
+
+      - name: Check All Formatting
+        # We run this from the root (.) so it checks both folders at once
         run: dart format --set-exit-if-changed .

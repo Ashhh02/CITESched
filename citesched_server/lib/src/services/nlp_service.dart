@@ -487,7 +487,7 @@ class NLPService {
             facultyLoad[facultyId]!['hours'] += 3.0;
           }
         }
-            }
+      }
 
       final overloadedFaculty = facultyLoad.entries
           .where(

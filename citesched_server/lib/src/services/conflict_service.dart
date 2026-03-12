@@ -414,16 +414,16 @@ class ConflictService {
           );
         }
 
-      // 5. Lab/Lecture Room Rule
-      final roomTypeConflict = _buildRoomTypeConflict(
-        schedule: schedule,
-        subject: subject,
-        room: room,
-      );
-      if (roomTypeConflict != null) {
-        conflicts.add(roomTypeConflict);
+        // 5. Lab/Lecture Room Rule
+        final roomTypeConflict = _buildRoomTypeConflict(
+          schedule: schedule,
+          subject: subject,
+          room: room,
+        );
+        if (roomTypeConflict != null) {
+          conflicts.add(roomTypeConflict);
+        }
       }
-    }
     }
 
     // 6. Faculty Time Conflict
@@ -893,8 +893,7 @@ class ConflictService {
               facultyId: s.facultyId,
               subjectId: s.subjectId,
               roomId: s.roomId,
-              details:
-                  'Lab starts at ${ts.startTime} on ${ts.day.name}',
+              details: 'Lab starts at ${ts.startTime} on ${ts.day.name}',
             ),
           );
         }

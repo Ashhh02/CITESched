@@ -1327,42 +1327,40 @@ class _ScheduleOverviewTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          ...data.entries
-              .map(
-                (e) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: Column(
+          ...data.entries.map(
+            (e) => Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            e.key.toUpperCase(),
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            '${e.value} Classes',
-                            style: GoogleFonts.poppins(color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: 0.7, // Placeholder ratio
-                          backgroundColor: Colors.grey.withOpacity(0.1),
-                          color: const Color(0xFF720045),
-                          minHeight: 6,
+                      Text(
+                        e.key.toUpperCase(),
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
                         ),
+                      ),
+                      Text(
+                        '${e.value} Classes',
+                        style: GoogleFonts.poppins(color: Colors.grey),
                       ),
                     ],
                   ),
-                ),
-              )
-              ,
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: 0.7, // Placeholder ratio
+                      backgroundColor: Colors.grey.withOpacity(0.1),
+                      color: const Color(0xFF720045),
+                      minHeight: 6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1386,28 +1384,26 @@ class _ScheduleOverviewTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          ...data.entries
-              .map(
-                (e) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const CircleAvatar(
-                    backgroundColor: Color(0xFF720045),
-                    child: Icon(Icons.flash_on, color: Colors.white, size: 16),
-                  ),
-                  title: Text(
-                    'Term ${e.key}',
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-                  ),
-                  trailing: Text(
-                    '${e.value} Subjects',
-                    style: GoogleFonts.poppins(
-                      color: const Color(0xFF720045),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+          ...data.entries.map(
+            (e) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFF720045),
+                child: Icon(Icons.flash_on, color: Colors.white, size: 16),
+              ),
+              title: Text(
+                'Term ${e.key}',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+              ),
+              trailing: Text(
+                '${e.value} Subjects',
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFF720045),
+                  fontWeight: FontWeight.bold,
                 ),
-              )
-              ,
+              ),
+            ),
+          ),
         ],
       ),
     );

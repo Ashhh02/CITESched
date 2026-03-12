@@ -461,7 +461,8 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                           textPrimary,
                         ),
                         DropdownButtonFormField<String>(
-                          initialValue: _allowedCourses.contains(_selectedCourse)
+                          initialValue:
+                              _allowedCourses.contains(_selectedCourse)
                               ? _selectedCourse
                               : null,
                           decoration: _buildInputDecoration(
