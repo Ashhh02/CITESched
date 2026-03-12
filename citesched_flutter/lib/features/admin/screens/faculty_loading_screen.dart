@@ -3028,9 +3028,6 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                               break;
                             }
                           }
-                          final canChooseLoadType =
-                              selectedSubject != null &&
-                              _isBlendedSubject(selectedSubject.types);
                           return _buildSubjectTypeDisplay(
                             types:
                                 selectedSubject?.types ?? const <SubjectType>[],
