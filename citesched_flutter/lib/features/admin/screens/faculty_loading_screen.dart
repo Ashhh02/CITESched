@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:citesched_flutter/core/providers/conflict_provider.dart';
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
+import 'package:citesched_flutter/core/utils/error_handler.dart';
 
 String _programDisplayLabel(Program program) {
   switch (program) {
@@ -55,6 +56,12 @@ bool _requiresLaboratoryRoom(List<SubjectType> types) {
       types.contains(SubjectType.blended);
 }
 
+bool _isBlendedSubject(List<SubjectType> types) {
+  return types.contains(SubjectType.blended) ||
+      (types.contains(SubjectType.lecture) &&
+          types.contains(SubjectType.laboratory));
+}
+
 double _hoursForSubjectTypes(List<SubjectType> types) {
   final hasLecture = types.contains(SubjectType.lecture);
   final hasLaboratory = types.contains(SubjectType.laboratory);
@@ -63,6 +70,163 @@ double _hoursForSubjectTypes(List<SubjectType> types) {
   if (hasBlended || (hasLecture && hasLaboratory)) return 5.0;
   if (hasLaboratory) return 3.0;
   return 2.0;
+}
+
+List<SubjectType> _expandedSubjectTypes(List<SubjectType> types) {
+  final expanded = <SubjectType>{};
+  if (types.contains(SubjectType.blended)) {
+    expanded.add(SubjectType.lecture);
+    expanded.add(SubjectType.laboratory);
+  }
+  for (final t in types) {
+    if (t == SubjectType.blended) continue;
+    expanded.add(t);
+  }
+  return expanded.toList();
+}
+
+List<String> _displaySubjectTypeLabels(List<SubjectType> types) {
+  final expanded = _expandedSubjectTypes(types);
+  if (expanded.isEmpty) return const [];
+  return expanded.map((t) {
+    switch (t) {
+      case SubjectType.lecture:
+        return 'LECTURE';
+      case SubjectType.laboratory:
+        return 'LAB';
+      case SubjectType.blended:
+        return 'BLENDED';
+    }
+  }).toList();
+}
+
+List<SubjectType> _effectiveAssignmentTypes(
+  List<SubjectType> subjectTypes,
+  SubjectType? overrideType,
+) {
+  if (_isBlendedSubject(subjectTypes)) {
+    if (overrideType == SubjectType.lecture) {
+      return const [SubjectType.lecture];
+    }
+    if (overrideType == SubjectType.laboratory) {
+      return const [SubjectType.laboratory];
+    }
+  }
+  return subjectTypes;
+}
+
+Widget _buildSubjectTypeDisplay({
+  required List<SubjectType> types,
+  required Color accentColor,
+  required bool isDark,
+}) {
+  final labels = _displaySubjectTypeLabels(types);
+  if (labels.isEmpty) return const SizedBox.shrink();
+
+  final textColor = isDark ? Colors.grey[300] : Colors.grey[700];
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Subject Type',
+        style: GoogleFonts.poppins(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: textColor,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: labels
+            .map(
+              (label) => Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: accentColor.withOpacity(0.3)),
+                ),
+                child: Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: accentColor,
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    ],
+  );
+}
+
+Widget _buildLoadTypeSelector({
+  required bool show,
+  required SubjectType? selected,
+  required ValueChanged<SubjectType?> onChanged,
+  required Color accentColor,
+  required bool isDark,
+}) {
+  if (!show) return const SizedBox.shrink();
+  final textColor = isDark ? Colors.grey[300] : Colors.grey[700];
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Assign As',
+        style: GoogleFonts.poppins(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: textColor,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          ChoiceChip(
+            label: Text('LECTURE', style: GoogleFonts.poppins(fontSize: 12)),
+            selected: selected == SubjectType.lecture,
+            onSelected: (value) =>
+                onChanged(value ? SubjectType.lecture : null),
+            selectedColor: accentColor.withOpacity(0.2),
+            labelStyle: GoogleFonts.poppins(
+              color: selected == SubjectType.lecture
+                  ? accentColor
+                  : (isDark ? Colors.white : Colors.black87),
+              fontWeight: selected == SubjectType.lecture
+                  ? FontWeight.bold
+                  : FontWeight.w500,
+            ),
+          ),
+          ChoiceChip(
+            label: Text('LAB', style: GoogleFonts.poppins(fontSize: 12)),
+            selected: selected == SubjectType.laboratory,
+            onSelected: (value) =>
+                onChanged(value ? SubjectType.laboratory : null),
+            selectedColor: accentColor.withOpacity(0.2),
+            labelStyle: GoogleFonts.poppins(
+              color: selected == SubjectType.laboratory
+                  ? accentColor
+                  : (isDark ? Colors.white : Colors.black87),
+              fontWeight: selected == SubjectType.laboratory
+                  ? FontWeight.bold
+                  : FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
 }
 
 String _formatLoadValue(double value) {
@@ -248,12 +412,7 @@ Future<void> _createTimeslotsFromAvailability({
   required List<FacultyAvailability> availabilityList,
 }) async {
   if (availabilityList.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('No availability to generate timeslots from.'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    AppErrorDialog.show(context, 'No availability data provided.');
     return;
   }
 
@@ -297,12 +456,7 @@ Future<void> _createTimeslotsFromAvailability({
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to create timeslots: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppErrorDialog.show(context, e);
     }
   }
 }
@@ -385,9 +539,120 @@ String? _detectAssignmentConflict({
         schedule.timeslotId == timeslotId) {
       return 'Room $roomLabel is already booked at $timeslotLabel.';
     }
+
+    // Section conflict: same section already has a class at this timeslot
+    if (!isAutoAssign &&
+        timeslotId != null &&
+        schedule.timeslotId == timeslotId &&
+        _matchesSection(schedule, sectionId, sectionCodeFallback)) {
+      return 'Section $sectionLabel already has a class at $timeslotLabel. '
+          'A section cannot be scheduled in two places at the same time.';
+    }
   }
 
   return null;
+}
+
+// ─── Error Helper Functions ────────────────────────────────────────────
+
+/// Strips boilerplate prefixes from server-side exception messages.
+/// e.g. "Exception: Schedule validation failed: Faculty is already assigned..."
+///  -> "Faculty is already assigned..."
+String _parseServerError(Object error) {
+  var msg = error.toString();
+  if (msg.startsWith('Exception: ')) msg = msg.substring('Exception: '.length);
+  if (msg.startsWith('Schedule validation failed: ')) {
+    msg = msg.substring('Schedule validation failed: '.length);
+  }
+  return msg.trim().isNotEmpty ? msg.trim() : 'An unexpected error occurred.';
+}
+
+/// Shows a styled conflict / validation error dialog.
+/// Splits on '; ' so each conflict is shown as a separate bullet.
+void _showConflictErrorDialog(BuildContext context, String message) {
+  final parts = message.split('; ').where((p) => p.trim().isNotEmpty).toList();
+
+  showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      titlePadding: EdgeInsets.zero,
+      title: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: const BoxDecoration(
+          color: Color(0xFF8B0000),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 26),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Scheduling Conflict',
+                style: GoogleFonts.poppins(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'The assignment could not be saved due to the following conflict(s):',
+            style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87),
+          ),
+          const SizedBox(height: 12),
+          ...parts.map(
+            (part) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Icon(Icons.cancel_rounded, size: 16, color: Color(0xFF8B0000)),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      part.trim(),
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: Colors.black87,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: Text(
+            'OK, Got It',
+            style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold, color: const Color(0xFF8B0000)),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class FacultyLoadingScreen extends ConsumerStatefulWidget {
@@ -486,12 +751,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting assignment: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorDialog.show(context, e);
         }
       }
     }
@@ -1380,9 +1640,17 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                         ),
                                                         DataCell(
                                                           Text(
-                                                            schedule.units
-                                                                    ?.toString() ??
-                                                                'N/A',
+                                                            subjectMap[schedule
+                                                                        .subjectId]
+                                                                    ?.units
+                                                                    .toString() ??
+                                                                (schedule.units !=
+                                                                        null
+                                                                    ? schedule
+                                                                        .units!
+                                                                        .round()
+                                                                        .toString()
+                                                                    : 'N/A'),
                                                             style:
                                                                 GoogleFonts.poppins(
                                                                   fontSize: 13,
@@ -1486,6 +1754,52 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                                           isAutoAssign
                                                                           ? FontStyle.italic
                                                                           : null,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 4,
+                                                              ),
+                                                              Row(
+                                                                children: [
+                                                                  Icon(
+                                                                    _getLoadTypeIcon(
+                                                                      (schedule
+                                                                                  .loadTypes !=
+                                                                              null &&
+                                                                          schedule
+                                                                              .loadTypes!
+                                                                              .isNotEmpty)
+                                                                          ? schedule
+                                                                              .loadTypes!
+                                                                              .first
+                                                                          : null,
+                                                                    ),
+                                                                    size: 14,
+                                                                    color: _getLoadTypeColor(
+                                                                      schedule
+                                                                          .loadTypes,
+                                                                    ),
+                                                                  ),
+                                                                  const SizedBox(
+                                                                    width: 6,
+                                                                  ),
+                                                                  Text(
+                                                                    _getLoadTypeText(
+                                                                      schedule
+                                                                          .loadTypes,
+                                                                    ),
+                                                                    style: GoogleFonts.poppins(
+                                                                      fontSize:
+                                                                          11,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                      color: _getLoadTypeColor(
+                                                                        schedule
+                                                                            .loadTypes,
+                                                                      ),
                                                                     ),
                                                                   ),
                                                                 ],
@@ -2041,17 +2355,18 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
 
   Color _getLoadTypeColor(List<SubjectType>? types) {
     if (types == null || types.isEmpty) return Colors.grey;
-    if (types.contains(SubjectType.lecture) &&
-        types.contains(SubjectType.laboratory))
+    final expanded = _expandedSubjectTypes(types);
+    if (expanded.contains(SubjectType.lecture) &&
+        expanded.contains(SubjectType.laboratory))
       return Colors.orange;
-    if (types.contains(SubjectType.lecture)) return Colors.purple;
-    if (types.contains(SubjectType.laboratory)) return Colors.teal;
+    if (expanded.contains(SubjectType.lecture)) return Colors.purple;
+    if (expanded.contains(SubjectType.laboratory)) return Colors.teal;
     return Colors.blue;
   }
 
   String _getLoadTypeText(List<SubjectType>? types) {
     if (types == null || types.isEmpty) return 'N/A';
-    return types.map((t) => t.name.toUpperCase()).join(' / ');
+    return _displaySubjectTypeLabels(types).join(' / ');
   }
 
   IconData _getLoadTypeIcon(SubjectType? type) {
@@ -2298,17 +2613,21 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
   int? _selectedTimeslotId;
   bool _isAutoAssign = false;
   bool _isLoading = false;
+  SubjectType? _selectedLoadType;
 
   void _applySubjectDefaults(Subject? subject) {
     if (subject == null) {
       _unitsController.clear();
       _hoursController.clear();
+      _selectedLoadType = null;
       return;
     }
+    _selectedLoadType = _isBlendedSubject(subject.types) ? _selectedLoadType : null;
+    final effectiveTypes =
+        _effectiveAssignmentTypes(subject.types, _selectedLoadType);
     _unitsController.text = _formatLoadValue(subject.units.toDouble());
-    _hoursController.text = _formatLoadValue(
-      _hoursForSubjectTypes(subject.types),
-    );
+    _hoursController.text =
+        _formatLoadValue(_hoursForSubjectTypes(effectiveTypes));
   }
 
   @override
@@ -2394,14 +2713,20 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
           'Please select a valid subject assigned to this faculty.',
         );
       }
+
       if (selectedFaculty == null) {
         throw Exception('Please select a valid faculty member.');
       }
       if (selectedFaculty.program != null &&
           selectedFaculty.program != section.program) {
-        throw Exception(
-          'Faculty program must match the selected section program.',
-        );
+        final isEmcTeachingIt =
+            selectedFaculty.program == Program.emc &&
+            section.program == Program.it;
+        if (!isEmcTeachingIt) {
+          throw Exception(
+            'Faculty program must match the selected section program.',
+          );
+        }
       }
       if (selectedSubject.program != section.program) {
         throw Exception(
@@ -2409,7 +2734,12 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
         );
       }
 
-      final effectiveTypes = selectedSubject.types;
+      if (_isBlendedSubject(selectedSubject.types) &&
+          _selectedLoadType == null) {
+        throw Exception('Please select whether this blended subject is Lecture or Lab.');
+      }
+      final effectiveTypes =
+          _effectiveAssignmentTypes(selectedSubject.types, _selectedLoadType);
 
       if (!_isAutoAssign && _selectedRoomId != null) {
         Room? selectedRoom;
@@ -2457,12 +2787,7 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
 
       if (conflictMessage != null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(conflictMessage),
-              backgroundColor: Colors.red,
-            ),
-          );
+          _showConflictErrorDialog(context, conflictMessage);
         }
         return;
       }
@@ -2474,9 +2799,9 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
         timeslotId: _isAutoAssign ? null : _selectedTimeslotId,
         section: section.sectionCode,
         sectionId: _selectedSectionId,
-        loadTypes: selectedSubject.types,
+        loadTypes: effectiveTypes,
         units: selectedSubject.units.toDouble(),
-        hours: _hoursForSubjectTypes(selectedSubject.types),
+        hours: _hoursForSubjectTypes(effectiveTypes),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -2496,12 +2821,7 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showConflictErrorDialog(context, _parseServerError(e));
       }
     } finally {
       if (mounted) {
@@ -2512,6 +2832,7 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final facultyAsync = ref.watch(facultyListProvider);
     final subjectsAsync = ref.watch(subjectsProvider);
     final roomsAsync = ref.watch(roomsProvider);
@@ -2661,6 +2982,65 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                           );
                         },
                       ),
+                      const SizedBox(height: 12),
+                      Builder(
+                        builder: (context) {
+                          final subjectList = ref
+                              .watch(subjectsProvider)
+                              .maybeWhen(
+                                data: (s) => s,
+                                orElse: () => <Subject>[],
+                              );
+                          Subject? selectedSubject;
+                          for (final subject in subjectList) {
+                            if (subject.id == _selectedSubjectId) {
+                              selectedSubject = subject;
+                              break;
+                            }
+                          }
+                          final canChooseLoadType = selectedSubject != null &&
+                              _isBlendedSubject(selectedSubject.types);
+                          return _buildSubjectTypeDisplay(
+                            types: selectedSubject?.types ?? const <SubjectType>[],
+                            accentColor: widget.maroonColor,
+                            isDark: isDark,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      Builder(
+                        builder: (context) {
+                          final subjectList = ref
+                              .watch(subjectsProvider)
+                              .maybeWhen(
+                                data: (s) => s,
+                                orElse: () => <Subject>[],
+                              );
+                          Subject? selectedSubject;
+                          for (final subject in subjectList) {
+                            if (subject.id == _selectedSubjectId) {
+                              selectedSubject = subject;
+                              break;
+                            }
+                          }
+                          final canChooseLoadType = selectedSubject != null &&
+                              _isBlendedSubject(selectedSubject.types);
+                          return _buildLoadTypeSelector(
+                            show: canChooseLoadType,
+                            selected: _selectedLoadType,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedLoadType = value;
+                                if (selectedSubject != null) {
+                                  _applySubjectDefaults(selectedSubject);
+                                }
+                              });
+                            },
+                            accentColor: widget.maroonColor,
+                            isDark: isDark,
+                          );
+                        },
+                      ),
                       const SizedBox(height: 16),
 
                       // Section (only sections that still have active students)
@@ -2691,9 +3071,11 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                                   ),
                               _selectedSubjectId,
                             );
-                            final targetProgram =
-                                selectedFacultyProgram ??
-                                selectedSubjectProgram;
+                            Program? targetProgram = selectedSubjectProgram;
+                            if (selectedFacultyProgram != null &&
+                                selectedFacultyProgram != Program.emc) {
+                              targetProgram = selectedFacultyProgram;
+                            }
 
                             final eligibleStudents = targetProgram == null
                                 ? students
@@ -2837,8 +3219,12 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                                 break;
                               }
                             }
-                            final effectiveTypes =
-                                selectedSubject?.types ?? const <SubjectType>[];
+                            final effectiveTypes = selectedSubject == null
+                                ? const <SubjectType>[]
+                                : _effectiveAssignmentTypes(
+                                    selectedSubject.types,
+                                    _selectedLoadType,
+                                  );
                             final filteredRooms = effectiveTypes.isEmpty
                                 ? roomList
                                       .where(_isSupportedSchedulingRoom)
@@ -3151,13 +3537,17 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
   int? _selectedTimeslotId;
   bool _isAutoAssign = false;
   bool _isLoading = false;
+  SubjectType? _selectedLoadType;
 
   void _applySubjectDefaults(Subject? subject) {
     if (subject == null) return;
+    _selectedLoadType =
+        _isBlendedSubject(subject.types) ? _selectedLoadType : null;
+    final effectiveTypes =
+        _effectiveAssignmentTypes(subject.types, _selectedLoadType);
     _unitsController.text = _formatLoadValue(subject.units.toDouble());
-    _hoursController.text = _formatLoadValue(
-      _hoursForSubjectTypes(subject.types),
-    );
+    _hoursController.text =
+        _formatLoadValue(_hoursForSubjectTypes(effectiveTypes));
   }
 
   @override
@@ -3275,7 +3665,12 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
         );
       }
 
-      final effectiveTypes = selectedSubject.types;
+      if (_isBlendedSubject(selectedSubject.types) &&
+          _selectedLoadType == null) {
+        throw Exception('Please select whether this blended subject is Lecture or Lab.');
+      }
+      final effectiveTypes =
+          _effectiveAssignmentTypes(selectedSubject.types, _selectedLoadType);
 
       if (!_isAutoAssign && _selectedRoomId != null) {
         Room? selectedRoom;
@@ -3323,12 +3718,7 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
 
       if (conflictMessage != null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(conflictMessage),
-              backgroundColor: Colors.red,
-            ),
-          );
+          _showConflictErrorDialog(context, conflictMessage);
         }
         return;
       }
@@ -3341,9 +3731,9 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
         timeslotId: _isAutoAssign ? null : _selectedTimeslotId,
         section: section.sectionCode,
         sectionId: _selectedSectionId ?? widget.schedule.sectionId,
-        loadTypes: selectedSubject.types,
+        loadTypes: effectiveTypes,
         units: selectedSubject.units.toDouble(),
-        hours: _hoursForSubjectTypes(selectedSubject.types),
+        hours: _hoursForSubjectTypes(effectiveTypes),
         createdAt: widget.schedule.createdAt,
         updatedAt: DateTime.now(),
       );
@@ -3363,12 +3753,7 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showConflictErrorDialog(context, _parseServerError(e));
       }
     } finally {
       if (mounted) {
@@ -3379,6 +3764,7 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final facultyAsync = ref.watch(facultyListProvider);
     final subjectsAsync = ref.watch(subjectsProvider);
     final roomsAsync = ref.watch(roomsProvider);
@@ -3538,6 +3924,63 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                           );
                         },
                       ),
+                      const SizedBox(height: 12),
+                      Builder(
+                        builder: (context) {
+                          final subjectList = ref
+                              .watch(subjectsProvider)
+                              .maybeWhen(
+                                data: (s) => s,
+                                orElse: () => <Subject>[],
+                              );
+                          Subject? selectedSubject;
+                          for (final subject in subjectList) {
+                            if (subject.id == _selectedSubjectId) {
+                              selectedSubject = subject;
+                              break;
+                            }
+                          }
+                          return _buildSubjectTypeDisplay(
+                            types: selectedSubject?.types ?? const <SubjectType>[],
+                            accentColor: widget.maroonColor,
+                            isDark: isDark,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      Builder(
+                        builder: (context) {
+                          final subjectList = ref
+                              .watch(subjectsProvider)
+                              .maybeWhen(
+                                data: (s) => s,
+                                orElse: () => <Subject>[],
+                              );
+                          Subject? selectedSubject;
+                          for (final subject in subjectList) {
+                            if (subject.id == _selectedSubjectId) {
+                              selectedSubject = subject;
+                              break;
+                            }
+                          }
+                          final canChooseLoadType = selectedSubject != null &&
+                              _isBlendedSubject(selectedSubject.types);
+                          return _buildLoadTypeSelector(
+                            show: canChooseLoadType,
+                            selected: _selectedLoadType,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedLoadType = value;
+                                if (selectedSubject != null) {
+                                  _applySubjectDefaults(selectedSubject);
+                                }
+                              });
+                            },
+                            accentColor: widget.maroonColor,
+                            isDark: isDark,
+                          );
+                        },
+                      ),
                       const SizedBox(height: 16),
 
                       // Section (only sections that still have active students)
@@ -3568,9 +4011,11 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                                   ),
                               _selectedSubjectId,
                             );
-                            final targetProgram =
-                                selectedFacultyProgram ??
-                                selectedSubjectProgram;
+                            Program? targetProgram = selectedSubjectProgram;
+                            if (selectedFacultyProgram != null &&
+                                selectedFacultyProgram != Program.emc) {
+                              targetProgram = selectedFacultyProgram;
+                            }
 
                             final eligibleStudents = targetProgram == null
                                 ? students
@@ -3720,8 +4165,12 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                                 break;
                               }
                             }
-                            final effectiveTypes =
-                                selectedSubject?.types ?? const <SubjectType>[];
+                            final effectiveTypes = selectedSubject == null
+                                ? const <SubjectType>[]
+                                : _effectiveAssignmentTypes(
+                                    selectedSubject.types,
+                                    _selectedLoadType,
+                                  );
                             final filteredRooms = effectiveTypes.isEmpty
                                 ? roomList
                                       .where(_isSupportedSchedulingRoom)

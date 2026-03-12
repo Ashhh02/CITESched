@@ -9,6 +9,7 @@ import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
+import 'package:citesched_flutter/core/utils/error_handler.dart';
 
 // Helper extension for conflicts (already in core/providers/conflict_provider.dart)
 
@@ -114,12 +115,7 @@ class _FacultyManagementScreenState
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error archiving faculty: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorDialog.show(context, e);
         }
       }
     }
@@ -171,12 +167,7 @@ class _FacultyManagementScreenState
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error restoring faculty: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorDialog.show(context, e);
         }
       }
     }
@@ -236,12 +227,7 @@ class _FacultyManagementScreenState
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting faculty: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorDialog.show(context, e);
         }
       }
     }
@@ -1648,6 +1634,36 @@ class _AddFacultyModal extends StatefulWidget {
 }
 
 class _AddFacultyModalState extends State<_AddFacultyModal> {
+
+  void _showErrorDialog(BuildContext context, String message) {
+    if (!context.mounted) return;
+    String cleanMessage = message.replaceAll('Exception: ', '').trim();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 28),
+            const SizedBox(width: 12),
+            Text('Action Failed',
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
+          ],
+        ),
+        content: Text(cleanMessage,
+            style: GoogleFonts.poppins(fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -1690,22 +1706,12 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
     }
     // Validate nullable dropdowns
     if (_employmentStatus == null || _program == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select Employment Status and Program'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorDialog(context, 'Employment status and program are required.');
       return;
     }
 
     if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Passwords do not match'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorDialog(context, 'Passwords do not match.');
       return;
     }
     setState(() => _isLoading = true);
@@ -1816,12 +1822,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorDialog.show(context, e);
       }
     } finally {
       if (mounted) {
@@ -1856,12 +1857,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
 
     if (endMinutes <= startMinutes) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('End time must be later than start time'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorDialog(context, 'End time must be after start time.');
       }
       return;
     }
@@ -2659,12 +2655,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
               final sM = _startTime.hour * 60 + _startTime.minute;
               final eM = _endTime.hour * 60 + _endTime.minute;
               if (eM <= sM) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('End time must be after start time'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                AppErrorDialog.show(context, 'End time must be after start time.');
                 return;
               }
               for (final ex in _availabilities) {
@@ -2803,6 +2794,36 @@ class _EditFacultyModal extends StatefulWidget {
 }
 
 class _EditFacultyModalState extends State<_EditFacultyModal> {
+
+  void _showErrorDialog(BuildContext context, String message) {
+    if (!context.mounted) return;
+    String cleanMessage = message.replaceAll('Exception: ', '').trim();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 28),
+            const SizedBox(width: 12),
+            Text('Action Failed',
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
+          ],
+        ),
+        content: Text(cleanMessage,
+            style: GoogleFonts.poppins(fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _emailController;
@@ -2877,12 +2898,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading availability: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorDialog.show(context, e);
       }
     } finally {
       if (mounted) setState(() => _isLoadingAvailability = false);
@@ -2957,9 +2973,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        _showErrorDialog(context, e.toString());
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -2992,12 +3006,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
 
     if (endMinutes <= startMinutes) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('End time must be later than start time'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorDialog(context, 'End time must be after start time.');
       }
       return;
     }
@@ -3720,12 +3729,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
               final startMins = _startTime.hour * 60 + _startTime.minute;
               final endMins = _endTime.hour * 60 + _endTime.minute;
               if (endMins <= startMins) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('End time must be after start time'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                _showErrorDialog(context, 'End time must be after start time.');
                 return;
               }
               // Check duplicate day/time overlap
@@ -3871,3 +3875,4 @@ class _AvailabilityEntry {
     required this.end,
   });
 }
+

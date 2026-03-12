@@ -41,8 +41,6 @@ void run(List<String> args) async {
     tokenManagerBuilders: [
       // Use ServerSideSessions for authentication keys towards the server.
       ServerSideSessionsConfigFromPasswords(),
-      // Use JWT for authentication keys towards the server.
-      JwtConfigFromPasswords(),
     ],
     identityProviderBuilders: identityProviders,
   );

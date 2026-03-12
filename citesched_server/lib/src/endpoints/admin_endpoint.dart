@@ -643,6 +643,9 @@ class AdminEndpoint extends Endpoint {
       throw Exception('Student count cannot be negative');
     }
 
+    // Subject code uniqueness is intentionally not enforced
+    // to allow the same subject code for multiple sections.
+
     // Validate selected faculty (optional)
     if (subject.facultyId != null) {
       final faculty = await Faculty.db.findById(session, subject.facultyId!);
@@ -650,9 +653,13 @@ class AdminEndpoint extends Endpoint {
         throw Exception('Selected faculty is invalid or inactive');
       }
       if (faculty.program != null && faculty.program != subject.program) {
-        throw Exception(
-          'Selected faculty program does not match the subject program.',
-        );
+        final isEmcTeachingIt =
+            faculty.program == Program.emc && subject.program == Program.it;
+        if (!isEmcTeachingIt) {
+          throw Exception(
+            'Selected faculty program does not match the subject program.',
+          );
+        }
       }
     }
 
@@ -697,6 +704,9 @@ class AdminEndpoint extends Endpoint {
       throw Exception('Student count cannot be negative');
     }
 
+    // Subject code uniqueness is intentionally not enforced
+    // to allow the same subject code for multiple sections.
+
     // Validate selected faculty (optional)
     if (subject.facultyId != null) {
       final faculty = await Faculty.db.findById(session, subject.facultyId!);
@@ -704,9 +714,13 @@ class AdminEndpoint extends Endpoint {
         throw Exception('Selected faculty is invalid or inactive');
       }
       if (faculty.program != null && faculty.program != subject.program) {
-        throw Exception(
-          'Selected faculty program does not match the subject program.',
-        );
+        final isEmcTeachingIt =
+            faculty.program == Program.emc && subject.program == Program.it;
+        if (!isEmcTeachingIt) {
+          throw Exception(
+            'Selected faculty program does not match the subject program.',
+          );
+        }
       }
     }
 
@@ -874,7 +888,21 @@ class AdminEndpoint extends Endpoint {
     schedule.createdAt = DateTime.now();
     schedule.updatedAt = DateTime.now();
 
-    return await Schedule.db.insertRow(session, schedule);
+    try {
+      return await Schedule.db.insertRow(session, schedule);
+    } catch (e) {
+      final message = e.toString().toLowerCase();
+      if (message.contains('schedule_instructor_no_overlap')) {
+        throw Exception('Instructor already has a class during this time.');
+      }
+      if (message.contains('schedule_room_no_overlap')) {
+        throw Exception('Room is already booked during this time.');
+      }
+      if (message.contains('schedule_section_no_overlap')) {
+        throw Exception('Section already has a class during this time.');
+      }
+      rethrow;
+    }
   }
 
   // TEST ENDPOINT to bypass auth and trigger checkFacultyMaxLoad
@@ -1014,7 +1042,21 @@ class AdminEndpoint extends Endpoint {
     // Update timestamp
     schedule.updatedAt = DateTime.now();
 
-    return await Schedule.db.updateRow(session, schedule);
+    try {
+      return await Schedule.db.updateRow(session, schedule);
+    } catch (e) {
+      final message = e.toString().toLowerCase();
+      if (message.contains('schedule_instructor_no_overlap')) {
+        throw Exception('Instructor already has a class during this time.');
+      }
+      if (message.contains('schedule_room_no_overlap')) {
+        throw Exception('Room is already booked during this time.');
+      }
+      if (message.contains('schedule_section_no_overlap')) {
+        throw Exception('Section already has a class during this time.');
+      }
+      rethrow;
+    }
   }
 
   /// Delete a schedule entry by ID.
@@ -1049,9 +1091,14 @@ class AdminEndpoint extends Endpoint {
       );
     }
 
+    final studentSections = await getDistinctStudentSections(session);
+    final mergedSections = <String>{
+      ...request.sections.map((s) => s.trim()).where((s) => s.isNotEmpty),
+      ...studentSections,
+    };
     final sanitizedRequest = request.copyWith(
       facultyIds: filteredFacultyIds,
-      sections: request.sections.map((s) => s.trim()).where((s) => s.isNotEmpty).toSet().toList(),
+      sections: mergedSections.toList(),
     );
     var schedulingService = SchedulingService();
     return await schedulingService.generateSchedule(session, sanitizedRequest);
@@ -1559,9 +1606,6 @@ class AdminEndpoint extends Endpoint {
     var sectionCount = await Section.db.count(session);
     if (sectionCount == 0) missing.add('No sections defined');
 
-    var timeslotCount = await Timeslot.db.count(session);
-    if (timeslotCount == 0) missing.add('No timeslots defined');
-
     var availabilityCount = await FacultyAvailability.db.count(session);
     if (availabilityCount == 0) {
       missing.add('No faculty availability defined');
@@ -1582,7 +1626,7 @@ class AdminEndpoint extends Endpoint {
       message:
           'Ready to generate. Faculty: $facultyCount, '
           'Subjects: $subjectCount, Rooms: $roomCount, '
-          'Sections: $sectionCount, Timeslots: $timeslotCount, '
+          'Sections: $sectionCount, '
           'Availabilities: $availabilityCount',
       totalAssigned: 0,
       conflictsDetected: 0,
@@ -1613,6 +1657,18 @@ class AdminEndpoint extends Endpoint {
     var allRooms = await Room.db.find(session);
     var allTimeslots = await Timeslot.db.find(session);
     var allSections = await Section.db.find(session);
+    var allStudents = await Student.db.find(
+      session,
+      where: (t) => t.isActive.equals(true) & t.section.notEquals(null),
+    );
+    final studentSections = allStudents
+        .map((s) => s.section?.trim() ?? '')
+        .where((s) => s.isNotEmpty)
+        .toSet();
+    final sectionCodes = <String>{
+      ...allSections.map((s) => s.sectionCode),
+      ...studentSections,
+    };
     var allAvailabilities = await FacultyAvailability.db.find(session);
 
     // Build availability lookup: facultyId -> list of availability windows
@@ -1628,7 +1684,7 @@ class AdminEndpoint extends Endpoint {
       facultyIds: allFaculty.map((f) => f.id!).toList(),
       roomIds: allRooms.map((r) => r.id!).toList(),
       timeslotIds: allTimeslots.map((t) => t.id!).toList(),
-      sections: allSections.map((s) => s.sectionCode).toList(),
+      sections: sectionCodes.toList(),
     );
 
     var result = await SchedulingService().generateSchedule(session, request);

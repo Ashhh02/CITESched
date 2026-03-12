@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'subject_details_screen.dart';
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/core/providers/conflict_provider.dart';
+import 'package:citesched_flutter/core/utils/error_handler.dart';
 
 // Local provider removed in favor of shared subjectsProvider
 
@@ -105,12 +106,7 @@ class _SubjectManagementScreenState
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error archiving subject: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorDialog.show(context, e);
         }
       }
     }
@@ -162,12 +158,7 @@ class _SubjectManagementScreenState
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error restoring subject: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorDialog.show(context, e);
         }
       }
     }
@@ -227,12 +218,7 @@ class _SubjectManagementScreenState
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting subject: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorDialog.show(context, e);
         }
       }
     }
@@ -1192,6 +1178,36 @@ class _AddSubjectModal extends StatefulWidget {
 }
 
 class _AddSubjectModalState extends State<_AddSubjectModal> {
+
+  void _showErrorDialog(BuildContext context, String message) {
+    if (!context.mounted) return;
+    String cleanMessage = message.replaceAll('Exception: ', '').trim();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 28),
+            const SizedBox(width: 12),
+            Text('Action Failed',
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
+          ],
+        ),
+        content: Text(cleanMessage,
+            style: GoogleFonts.poppins(fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
   final _nameController = TextEditingController();
@@ -1429,7 +1445,10 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
                           ..._facultyList
                               .where(
                                 (f) =>
-                                    f.program == null || f.program == _program,
+                                    f.program == null ||
+                                    f.program == _program ||
+                                    (_program == Program.it &&
+                                        f.program == Program.emc),
                               )
                               .map(
                                 (f) => DropdownMenuItem<int?>(
@@ -1490,6 +1509,65 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
                                             _selectedTypes.add(type);
                                           } else {
                                             _selectedTypes.remove(type);
+                                          }
+                                          if (!selected &&
+                                              type == SubjectType.blended) {
+                                            _selectedTypes.remove(
+                                              SubjectType.lecture,
+                                            );
+                                            _selectedTypes.remove(
+                                              SubjectType.laboratory,
+                                            );
+                                            return;
+                                          }
+                                          if (selected &&
+                                              (type == SubjectType.lecture ||
+                                                  type ==
+                                                      SubjectType.laboratory) &&
+                                              _selectedTypes.contains(
+                                                SubjectType.blended,
+                                              )) {
+                                            _selectedTypes.remove(
+                                              SubjectType.blended,
+                                            );
+                                            return;
+                                          }
+                                          if (_selectedTypes.contains(
+                                            SubjectType.blended,
+                                          )) {
+                                            if (!_selectedTypes.contains(
+                                              SubjectType.lecture,
+                                            )) {
+                                              _selectedTypes.add(
+                                                SubjectType.lecture,
+                                              );
+                                            }
+                                            if (!_selectedTypes.contains(
+                                              SubjectType.laboratory,
+                                            )) {
+                                              _selectedTypes.add(
+                                                SubjectType.laboratory,
+                                              );
+                                            }
+                                          }
+                                          final hasLecture = _selectedTypes
+                                              .contains(SubjectType.lecture);
+                                          final hasLab = _selectedTypes
+                                              .contains(
+                                                SubjectType.laboratory,
+                                              );
+                                          if (hasLecture && hasLab) {
+                                            if (!_selectedTypes.contains(
+                                              SubjectType.blended,
+                                            )) {
+                                              _selectedTypes.add(
+                                                SubjectType.blended,
+                                              );
+                                            }
+                                          } else {
+                                            _selectedTypes.remove(
+                                              SubjectType.blended,
+                                            );
                                           }
                                         });
                                       },
@@ -1730,32 +1808,17 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedTypes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one subject type.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorDialog(context, 'Select at least one subject type.');
       return;
     }
     final parsedUnits = int.tryParse(_unitsController.text.trim());
     if (parsedUnits == null || parsedUnits <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Units must be a valid number greater than 0.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorDialog(context, 'Units must be a positive number.');
       return;
     }
     final parsedStudents = int.tryParse(_studentsCountController.text.trim());
     if (parsedStudents == null || parsedStudents < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Student count must be a valid non-negative number.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorDialog(context, 'Student count must be 0 or greater.');
       return;
     }
 
@@ -1788,14 +1851,7 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create subject: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorDialog(context, e.toString());
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -1819,6 +1875,36 @@ class _EditSubjectModal extends StatefulWidget {
 }
 
 class _EditSubjectModalState extends State<_EditSubjectModal> {
+
+  void _showErrorDialog(BuildContext context, String message) {
+    if (!context.mounted) return;
+    String cleanMessage = message.replaceAll('Exception: ', '').trim();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 28),
+            const SizedBox(width: 12),
+            Text('Action Failed',
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
+          ],
+        ),
+        content: Text(cleanMessage,
+            style: GoogleFonts.poppins(fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _codeController;
   late TextEditingController _nameController;
@@ -2071,7 +2157,10 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
                           ..._facultyList
                               .where(
                                 (f) =>
-                                    f.program == null || f.program == _program,
+                                    f.program == null ||
+                                    f.program == _program ||
+                                    (_program == Program.it &&
+                                        f.program == Program.emc),
                               )
                               .map(
                                 (f) => DropdownMenuItem<int?>(
@@ -2123,6 +2212,54 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
                                   _selectedTypes.add(type);
                                 } else {
                                   _selectedTypes.remove(type);
+                                }
+                                if (!selected &&
+                                    type == SubjectType.blended) {
+                                  _selectedTypes.remove(SubjectType.lecture);
+                                  _selectedTypes.remove(
+                                    SubjectType.laboratory,
+                                  );
+                                  return;
+                                }
+                                if (selected &&
+                                    (type == SubjectType.lecture ||
+                                        type == SubjectType.laboratory) &&
+                                    _selectedTypes.contains(
+                                      SubjectType.blended,
+                                    )) {
+                                  _selectedTypes.remove(SubjectType.blended);
+                                  return;
+                                }
+                                if (_selectedTypes.contains(
+                                  SubjectType.blended,
+                                )) {
+                                  if (!_selectedTypes.contains(
+                                    SubjectType.lecture,
+                                  )) {
+                                    _selectedTypes.add(SubjectType.lecture);
+                                  }
+                                  if (!_selectedTypes.contains(
+                                    SubjectType.laboratory,
+                                  )) {
+                                    _selectedTypes.add(
+                                      SubjectType.laboratory,
+                                    );
+                                  }
+                                }
+                                final hasLecture = _selectedTypes.contains(
+                                  SubjectType.lecture,
+                                );
+                                final hasLab = _selectedTypes.contains(
+                                  SubjectType.laboratory,
+                                );
+                                if (hasLecture && hasLab) {
+                                  if (!_selectedTypes.contains(
+                                    SubjectType.blended,
+                                  )) {
+                                    _selectedTypes.add(SubjectType.blended);
+                                  }
+                                } else {
+                                  _selectedTypes.remove(SubjectType.blended);
                                 }
                               });
                             },
@@ -2356,32 +2493,17 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedTypes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one subject type.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorDialog(context, 'Select at least one subject type.');
       return;
     }
     final parsedUnits = int.tryParse(_unitsController.text.trim());
     if (parsedUnits == null || parsedUnits <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Units must be a valid number greater than 0.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorDialog(context, 'Units must be a positive number.');
       return;
     }
     final parsedStudents = int.tryParse(_studentsCountController.text.trim());
     if (parsedStudents == null || parsedStudents < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Student count must be a valid non-negative number.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorDialog(context, 'Student count must be 0 or greater.');
       return;
     }
 
@@ -2412,14 +2534,7 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update subject: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorDialog(context, e.toString());
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

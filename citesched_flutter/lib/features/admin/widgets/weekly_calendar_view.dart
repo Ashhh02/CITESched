@@ -615,15 +615,18 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
     if (dayIndex == -1) return const SizedBox.shrink();
 
     final startTime = _parseTime(timeslot.startTime);
-    final endTime = _parseTime(timeslot.endTime);
+    final hoursOverride = schedule.hours;
+    final endTime = hoursOverride != null && hoursOverride > 0
+        ? _addHours(startTime, hoursOverride)
+        : _parseTime(timeslot.endTime);
 
     final double top =
         (startTime.hour - startHour + startTime.minute / 60.0) * hourHeight;
     final double height =
         (endTime.hour -
-            startTime.hour +
-            (endTime.minute - startTime.minute) / 60.0) *
-        hourHeight;
+                startTime.hour +
+                (endTime.minute - startTime.minute) / 60.0) *
+            hourHeight;
     final double left = 80 + (dayIndex * dayWidth);
 
     final bool hasAvailabilityViolation = _isOutsidePreferredAvailability(
@@ -632,19 +635,31 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
     final bool hasConflict =
         info.conflicts.isNotEmpty || hasAvailabilityViolation;
     final bool isLunchSlot = _isLunchSlot(schedule, timeslot);
+    final loadTypes = schedule.loadTypes ?? schedule.subject?.types ?? const [];
+    final classType = _classTypeLabel(
+      loadTypes,
+      schedule.room?.name,
+    );
 
     // Styles
+    final Color typeFillColor = classType == 'LAB'
+        ? const Color(0xFF0B3A82) // blue fill for lab
+        : const Color(0xFF0B5D2A); // green fill for lecture
     final Color blockColor = isStudentView
         ? Colors.white
         : hasConflict
         ? const Color(0xFF2D0000)
-        : Colors.black;
+        : typeFillColor;
+
+    final Color typeOutlineColor = classType == 'LAB'
+        ? const Color(0xFF2563EB) // blue for lab
+        : const Color(0xFF16A34A); // green for lecture
 
     final Color borderColor = hasConflict
         ? Colors.red.shade400
         : isStudentView
         ? Colors.black87
-        : Colors.grey[800]!;
+        : typeOutlineColor;
 
     return Positioned(
       top: top + 2,
@@ -676,15 +691,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (isStudentView)
-                  Expanded(
-                    child: _buildStudentCardContent(
-                      schedule: schedule,
-                      timeslot: timeslot,
-                      hasConflict: hasConflict,
-                    ),
-                  )
-                else if (isLunchSlot) ...[
+                if (isLunchSlot) ...[
                   Expanded(
                     child: Center(
                       child: Text(
@@ -700,118 +707,14 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                     ),
                   ),
                 ] else ...[
-                  // Existing instructor/admin style
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: maroonColor.withOpacity(0.25),
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.15),
-                      ),
-                    ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        (schedule.faculty?.name ?? 'UNASSIGNED').toUpperCase(),
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 9,
-                          color: Colors.white,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Flexible(
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  schedule.subject?.code ?? 'TBA',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
-                                    height: 1.0,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Expanded(
-                              child: Text(
-                                schedule.subject?.name ?? 'No Subject Title',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.normal,
-                                  color: Colors.white.withOpacity(0.8),
-                                  height: 1.1,
-                                ),
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Text(
-                              'SEC ${schedule.section} | Y${schedule.subject?.yearLevel?.toString() ?? '-'}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 8,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white.withOpacity(0.75),
-                                height: 1.0,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
+                    child: _buildStandardCardContent(
+                      schedule: schedule,
+                      timeRange:
+                          '${_formatTimeOfDay(startTime)} - ${_formatTimeOfDay(endTime)}',
+                      classType: classType,
+                      hasConflict: hasConflict,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              '${timeslot.startTime} - ${timeslot.endTime}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (hasConflict)
-                        Icon(
-                          Icons.warning_amber_rounded,
-                          size: 14,
-                          color: Colors.red[300],
-                        ),
-                    ],
                   ),
                 ],
               ],
@@ -885,31 +788,70 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
         end.minute == 0;
   }
 
-  Widget _buildStudentCardContent({
+  TimeOfDay _addHours(TimeOfDay start, double hours) {
+    final totalMinutes =
+        (start.hour * 60 + start.minute) + (hours * 60).round();
+    final clamped = totalMinutes.clamp(0, 24 * 60 - 1);
+    final h = clamped ~/ 60;
+    final m = clamped % 60;
+    return TimeOfDay(hour: h, minute: m);
+  }
+
+  String _classTypeLabel(List<SubjectType> types, String? roomName) {
+    final hasLecture = types.contains(SubjectType.lecture);
+    final hasLab = types.contains(SubjectType.laboratory);
+    if (roomName != null) {
+      final normalized = roomName.trim().toUpperCase();
+      if (normalized.contains('LAB')) return 'LAB';
+    }
+    if (hasLab && !hasLecture) return 'LAB';
+    if (hasLecture && !hasLab) return 'LECTURE';
+    // If mixed or blended, choose a single label (default to Lecture).
+    return 'LECTURE';
+  }
+
+  Widget _buildStandardCardContent({
     required Schedule schedule,
-    required Timeslot timeslot,
+    required String timeRange,
+    required String classType,
     required bool hasConflict,
   }) {
     final subj = schedule.subject;
     final faculty = schedule.faculty?.name ?? 'TBA';
     final room = (schedule.room?.name ?? 'Room TBA').toUpperCase();
-    final day = _getDayName(timeslot.day);
-    final start = _parseTime(timeslot.startTime);
-    final end = _parseTime(timeslot.endTime);
-    final timeRange =
-        '$day ${_formatTimeOfDay(start)} - ${_formatTimeOfDay(end)}';
+    final subjectLine = [
+      if (subj?.code != null && subj!.code.isNotEmpty) subj.code,
+      if (subj?.name != null && subj!.name.isNotEmpty) subj.name,
+    ].join(' - ');
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Top section: instructor / program / room
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.black54),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            timeRange,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w800,
+              fontSize: 11,
+              color: isStudentView ? Colors.black : Colors.white,
+            ),
           ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          classType,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w700,
+            fontSize: 10,
+            color: isStudentView ? Colors.black87 : Colors.white70,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -918,76 +860,49 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w700,
                   fontSize: 11,
-                  color: Colors.black,
+                  color: isStudentView ? Colors.black : Colors.white,
+                ),
+              ),
+              Text(
+                subjectLine.isEmpty ? 'Subject TBA' : subjectLine,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: isStudentView
+                      ? Colors.black87
+                      : Colors.white.withOpacity(0.85),
                 ),
               ),
               Text(
                 'Section: ${schedule.section}',
-                style: GoogleFonts.poppins(fontSize: 10, color: Colors.black87),
+                style: GoogleFonts.poppins(
+                  fontSize: 9,
+                  color:
+                      isStudentView ? Colors.black87 : Colors.white70,
+                ),
               ),
               Text(
                 'Room: $room',
-                style: GoogleFonts.poppins(fontSize: 10, color: Colors.black87),
+                style: GoogleFonts.poppins(
+                  fontSize: 9,
+                  color:
+                      isStudentView ? Colors.black87 : Colors.white70,
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 6),
-        // Bottom white content area
-        Expanded(
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Colors.black45),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  timeRange,
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subj?.code ?? 'TBA',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                    color: Colors.black,
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    subj?.name ?? 'No Subject Title',
-                    maxLines: hasConflict ? 1 : 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                if (hasConflict)
-                  Align(
-                    alignment: Alignment.bottomRight,
-                    child: Icon(
-                      Icons.warning_amber_rounded,
-                      size: 14,
-                      color: Colors.red[700],
-                    ),
-                  ),
-              ],
+        if (hasConflict)
+          Align(
+            alignment: Alignment.bottomRight,
+            child: Icon(
+              Icons.warning_amber_rounded,
+              size: 14,
+              color: isStudentView ? Colors.red[700] : Colors.red[300],
             ),
           ),
-        ),
       ],
     );
   }
@@ -1169,7 +1084,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
     final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
     final minute = time.minute.toString().padLeft(2, '0');
     final suffix = time.hour >= 12 ? 'PM' : 'AM';
-    return '$hour:$minute$suffix';
+    return '$hour:$minute $suffix';
   }
 
   String _buildAssignedSlotLabel(

@@ -29,9 +29,9 @@ webServer:
 
 # This is the database setup for your server.
 database:
-  host: 127.0.0.1
+  host: localhost
   port: 8090
-  name: citesched
+  name: temp
   user: postgres
   #requireSsl: true # defaults to false
   #isUnixSocket: true # defaults to false

@@ -1,4 +1,4 @@
-﻿import 'package:citesched_client/citesched_client.dart';
+import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:citesched_flutter/core/utils/error_handler.dart';
 
 class TimetableFilterNotifier extends Notifier<TimetableFilterRequest> {
   @override
@@ -98,12 +99,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     } catch (e) {
       if (mounted) Navigator.pop(context);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Pre-check failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorDialog.show(context, e);
       }
       return;
     }
@@ -278,9 +274,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     } catch (e) {
       if (mounted) Navigator.pop(context);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        AppErrorDialog.show(context, e);
       }
     }
   }
@@ -288,12 +282,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
   Future<void> _generateScheduleForFaculty(int facultyId) async {
     final selected = _facultyList.where((f) => f.id == facultyId).toList();
     if (selected.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Selected faculty is not schedulable.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppErrorDialog.show(context, 'Faculty not found.');
       return;
     }
 
@@ -382,11 +371,13 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
       final sections = await client.admin.getAllSections();
       final selectedFaculty = selected.first;
 
-      final scopedSubjects = selectedFaculty.program == null
-          ? subjects
-          : subjects
-                .where((s) => s.program == selectedFaculty.program)
-                .toList();
+      final scopedSubjects = subjects
+          .where((s) => s.facultyId == facultyId)
+          .where((s) {
+            if (selectedFaculty.program == null) return true;
+            return s.program == selectedFaculty.program;
+          })
+          .toList();
       final scopedSections = selectedFaculty.program == null
           ? sections
           : sections
@@ -397,14 +388,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
       if (scopedSubjects.isEmpty || scopedSections.isEmpty) {
         if (mounted) Navigator.pop(context);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'No matching active subjects or sections for selected faculty program.',
-              ),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorDialog.show(context, 'No available subjects or sections found for this program to generate a schedule.');
         }
         return;
       }
@@ -429,9 +413,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     } catch (e) {
       if (mounted) Navigator.pop(context);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        AppErrorDialog.show(context, e);
       }
     }
   }
@@ -804,38 +786,50 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
               ],
             ),
           ),
-          _buildSummaryStat('Total Hours', '${totalHours.toStringAsFixed(1)}h'),
-          _buildSummaryStat('Load', '${efficiency.toStringAsFixed(0)}%'),
-          _buildSummaryStat('Subjects', '${schedules.length}'),
+          Flexible(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                spacing: 16,
+                runSpacing: 8,
+                alignment: WrapAlignment.end,
+                children: [
+                  _buildSummaryStat(
+                    'Total Hours',
+                    '${totalHours.toStringAsFixed(1)}h',
+                  ),
+                  _buildSummaryStat('Load', '${efficiency.toStringAsFixed(0)}%'),
+                  _buildSummaryStat('Subjects', '${schedules.length}'),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildSummaryStat(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: Colors.grey,
-              fontWeight: FontWeight.w500,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            color: Colors.grey,
+            fontWeight: FontWeight.w500,
           ),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: maroonColor,
-            ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: maroonColor,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

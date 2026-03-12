@@ -3,6 +3,7 @@ import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:citesched_flutter/core/utils/error_handler.dart';
 
 class ConflictScreen extends StatefulWidget {
   const ConflictScreen({super.key});
@@ -34,12 +35,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading conflicts: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorDialog.show(context, e);
       }
     }
   }

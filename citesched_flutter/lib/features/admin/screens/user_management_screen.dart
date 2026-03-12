@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
+import 'package:citesched_flutter/core/utils/error_handler.dart';
 
 String _programDisplayLabel(Program program) {
   switch (program) {
@@ -488,9 +489,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-          );
+          AppErrorDialog.show(context, e);
         }
       }
     }
@@ -541,9 +540,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-          );
+          AppErrorDialog.show(context, e);
         }
       }
     }
@@ -706,9 +703,7 @@ class _StudentModalState extends ConsumerState<_StudentModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        AppErrorDialog.show(context, e);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
