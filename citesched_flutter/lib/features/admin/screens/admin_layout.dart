@@ -3,6 +3,7 @@ import 'package:citesched_flutter/core/theme/design_system.dart';
 import 'package:citesched_flutter/features/admin/screens/admin_dashboard_screen.dart';
 import 'package:citesched_flutter/features/admin/screens/faculty_management_screen.dart';
 import 'package:citesched_flutter/features/admin/screens/faculty_loading_screen.dart';
+import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/features/admin/screens/subject_management_screen.dart';
 import 'package:citesched_flutter/features/admin/screens/room_management_screen.dart';
 import 'package:citesched_flutter/features/admin/screens/timetable_screen.dart';
@@ -15,25 +16,21 @@ import 'package:citesched_flutter/core/widgets/nlp_query_dialog.dart';
 import 'package:flutter/material.dart';
 
 class AdminLayout extends StatefulWidget {
-  const AdminLayout({super.key});
+  final int initialIndex;
+  final Schedule? initialEditSchedule;
+
+  const AdminLayout({
+    super.key,
+    this.initialIndex = 0,
+    this.initialEditSchedule,
+  });
 
   @override
   State<AdminLayout> createState() => _AdminLayoutState();
 }
 
 class _AdminLayoutState extends State<AdminLayout> {
-  int _selectedIndex = 0;
-
-  final List<Widget> _screens = [
-    const AdminDashboardScreen(),
-    const FacultyManagementScreen(),
-    const FacultyLoadingScreen(),
-    const SubjectManagementScreen(),
-    const RoomManagementScreen(),
-    const TimetableScreen(),
-    const ConflictScreen(),
-    const ReportScreen(),
-  ];
+  late int _selectedIndex;
 
   final List<String> _titles = [
     'Dashboard',
@@ -47,8 +44,26 @@ class _AdminLayoutState extends State<AdminLayout> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveHelper.isDesktop(context);
+    final screens = [
+      const AdminDashboardScreen(),
+      const FacultyManagementScreen(),
+      FacultyLoadingScreen(
+        initialEditSchedule: widget.initialEditSchedule,
+      ),
+      const SubjectManagementScreen(),
+      const RoomManagementScreen(),
+      const TimetableScreen(),
+      const ConflictScreen(),
+      const ReportScreen(),
+    ];
 
     final scaffold = Scaffold(
       backgroundColor: DesignSystem.backgroundColor,
@@ -90,9 +105,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                 });
               },
             ),
-          Expanded(
-            child: _screens[_selectedIndex],
-          ),
+          Expanded(child: screens[_selectedIndex]),
         ],
       ),
     );

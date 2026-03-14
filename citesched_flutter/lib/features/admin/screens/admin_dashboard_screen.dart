@@ -24,15 +24,22 @@ class AdminDashboardScreen extends ConsumerWidget {
     final userInfo = ref.watch(authProvider);
     final statsAsync = ref.watch(dashboardStatsProvider);
 
-    // Colors — Professional white theme
+    // Colors — adapt to theme
     const primaryPurple = Color(0xFF720045);
-    const cardBg = Colors.white;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageBg = Theme.of(context).scaffoldBackgroundColor;
+    final cardBg = Theme.of(context).cardColor;
+    final textPrimary = Theme.of(context).textTheme.bodyLarge?.color ??
+        (isDark ? const Color(0xFFE2E8F0) : Colors.black);
+    final textMuted = isDark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF666666);
 
     final isDesktop = ResponsiveHelper.isDesktop(context);
     final isMobile = ResponsiveHelper.isMobile(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: pageBg,
       body: statsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
@@ -118,50 +125,97 @@ class AdminDashboardScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2),
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.dashboard_rounded,
-                              color: Colors.white,
-                              size: 40,
-                            ),
-                          ),
-                          const SizedBox(width: 28),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'CITESched — Admin Dashboard',
-                                style: GoogleFonts.poppins(
-                                  fontSize: isMobile ? 24 : 36,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: -1,
+
+                      if (isMobile)
+                        Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Welcome back, ${userInfo?.userName ?? "Administrator"}',
-                                style: GoogleFonts.poppins(
-                                  fontSize: isMobile ? 14 : 18,
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  letterSpacing: 0.5,
+                              child: const Icon(
+                                Icons.dashboard_rounded,
+                                color: Colors.white,
+                                size: 34,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'CITESched • Admin Dashboard',
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Welcome back, ${userInfo?.userName ?? "Administrator"}',
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                color: Colors.white.withValues(alpha: 0.85),
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
                                 ),
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
+                              child: const Icon(
+                                Icons.dashboard_rounded,
+                                color: Colors.white,
+                                size: 40,
+                              ),
+                            ),
+                            const SizedBox(width: 28),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'CITESched • Admin Dashboard',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -1,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Welcome back, ${userInfo?.userName ?? "Administrator"}',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       const SizedBox(height: 32),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -174,16 +228,14 @@ class AdminDashboardScreen extends ConsumerWidget {
                               );
                             },
                             icon: const Icon(Icons.analytics_rounded, size: 24),
-                            label: Text(
-                              'View Detailed Reports',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
+                            label: const Text('View Detailed Reports'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
                               foregroundColor: primaryPurple,
+                              textStyle: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 32,
                                 vertical: 20,
@@ -204,15 +256,13 @@ class AdminDashboardScreen extends ConsumerWidget {
                                 );
                               },
                               icon: const Icon(Icons.people_rounded, size: 24),
-                              label: Text(
-                                'Manage Users',
-                                style: GoogleFonts.poppins(
+                              label: const Text('Manage Users'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                textStyle: GoogleFonts.poppins(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
                                 ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
                                 side: const BorderSide(
                                   color: Colors.white,
                                   width: 2,
@@ -513,13 +563,21 @@ class AdminDashboardScreen extends ConsumerWidget {
     // based on "card-header { background: var(--inner-menu-bg); ... }"
     // If user layout uses Maroon for sidebar, likely inner-menu-bg is also maroon or slightly different.
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = Theme.of(context).textTheme.bodyLarge?.color ??
+        (isDark ? const Color(0xFFE2E8F0) : Colors.black);
+    final borderColor =
+        isDark ? Colors.white12 : Colors.black.withOpacity(0.1);
+    final headerBorder =
+        isDark ? Colors.white12 : Colors.black.withOpacity(0.5);
+    final iconColor = isDark ? Colors.white70 : Colors.black;
+    final iconMuted = isDark ? Colors.white54 : Colors.black54;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.black.withOpacity(0.1),
-        ),
+        border: Border.all(color: borderColor),
       ),
       clipBehavior: Clip.hardEdge, // Needed for header rounded corners
       child: Column(
@@ -527,37 +585,37 @@ class AdminDashboardScreen extends ConsumerWidget {
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24,
+            padding: EdgeInsets.symmetric(
+              horizontal: ResponsiveHelper.isMobile(context) ? 16 : 24,
               vertical: 16,
-            ), // 1.2rem 1.5rem
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            ),
+            decoration: BoxDecoration(
+              color: cardBg,
               border: Border(
-                bottom: BorderSide(color: Colors.black, width: 0.5),
+                bottom: BorderSide(color: headerBorder, width: 0.5),
               ),
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.bar_chart_rounded,
-                  color: Colors.black,
-                  size: 20,
-                ),
+                Icon(Icons.bar_chart_rounded, color: iconColor, size: 20),
                 const SizedBox(width: 8),
-                Text(
-                  'Faculty Teaching Load (Units)',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
+                Expanded(
+                  child: Text(
+                    'Faculty Teaching Load (Units)',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: textPrimary,
+                    ),
                   ),
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.refresh_rounded,
-                    color: Colors.black54,
+                    color: iconMuted,
                     size: 20,
                   ),
                   onPressed: () {
@@ -569,10 +627,31 @@ class AdminDashboardScreen extends ConsumerWidget {
           ),
           // Chart
           Padding(
-            padding: const EdgeInsets.all(24),
-            child: SizedBox(
-              height: 350,
-              child: FacultyLoadChart(data: data),
+            padding: EdgeInsets.all(ResponsiveHelper.isMobile(context) ? 16 : 24),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = ResponsiveHelper.isMobile(context);
+                final minWidth =
+                    (data.length * (isMobile ? 60.0 : 80.0)).clamp(320.0, 1200.0);
+                if (!isMobile) {
+                  return SizedBox(
+                    height: 350,
+                    width: constraints.maxWidth,
+                    child: FacultyLoadChart(data: data),
+                  );
+                }
+
+                final chartWidth =
+                    minWidth > constraints.maxWidth ? minWidth : constraints.maxWidth;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: chartWidth,
+                    height: 280,
+                    child: FacultyLoadChart(data: data),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -589,17 +668,21 @@ class AdminDashboardScreen extends ConsumerWidget {
   ) {
     final conflictCount = conflicts.length;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = Theme.of(context).textTheme.bodyLarge?.color ??
+        (isDark ? const Color(0xFFE2E8F0) : Colors.black);
     final textMuted = isDark
         ? const Color(0xFF94A3B8)
         : const Color(0xFF666666);
+    final borderColor =
+        isDark ? Colors.white12 : Colors.black.withOpacity(0.15);
+    final headerBorder =
+        isDark ? Colors.white12 : Colors.black.withOpacity(1.0);
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(19),
-        border: Border.all(
-          color: Colors.black.withOpacity(0.15),
-        ),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -614,27 +697,34 @@ class AdminDashboardScreen extends ConsumerWidget {
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            padding: EdgeInsets.symmetric(
+              horizontal: ResponsiveHelper.isMobile(context) ? 16 : 24,
+              vertical: 16,
+            ),
+            decoration: BoxDecoration(
+              color: cardBg,
               border: Border(
-                bottom: BorderSide(color: Colors.black, width: 1),
+                bottom: BorderSide(color: headerBorder, width: 1),
               ),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.shield_rounded,
-                  color: Colors.black,
+                  color: textPrimary,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'Schedule Integrity',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
+                Expanded(
+                  child: Text(
+                    'Schedule Integrity',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: textPrimary,
+                    ),
                   ),
                 ),
               ],
@@ -740,6 +830,10 @@ class AdminDashboardScreen extends ConsumerWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
+                      textStyle: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
@@ -747,13 +841,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                       elevation: 0,
                       shadowColor: primaryColor.withOpacity(0.3),
                     ),
-                    child: Text(
-                      'Resolve All Conflicts',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: const Text('Resolve All Conflicts'),
                   ),
                 ),
               ],
@@ -773,15 +861,21 @@ class AdminDashboardScreen extends ConsumerWidget {
     IconData icon,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = Theme.of(context).textTheme.bodyLarge?.color ??
+        (isDark ? const Color(0xFFE2E8F0) : Colors.black);
     final textMuted = isDark
         ? const Color(0xFF94A3B8)
         : const Color(0xFF666666);
+    final borderColor =
+        isDark ? Colors.white12 : Colors.black.withOpacity(0.15);
+    final headerBorder =
+        isDark ? Colors.white12 : Colors.black.withOpacity(1.0);
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(19),
-        border: Border.all(color: Colors.black.withOpacity(0.15)),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -797,22 +891,22 @@ class AdminDashboardScreen extends ConsumerWidget {
           // Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: cardBg,
               border: Border(
-                bottom: BorderSide(color: Colors.black, width: 1),
+                bottom: BorderSide(color: headerBorder, width: 1),
               ),
             ),
             child: Row(
               children: [
-                Icon(icon, color: Colors.black, size: 20),
+                Icon(icon, color: textPrimary, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   title,
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black,
+                    color: textPrimary,
                   ),
                 ),
               ],

@@ -339,6 +339,12 @@ String _timeslotLabelById(List<Timeslot> list, int? id) {
   return 'Timeslot #$id';
 }
 
+String _formatMinutes(int minutes) {
+  final h = (minutes ~/ 60).clamp(0, 23).toString().padLeft(2, '0');
+  final m = (minutes % 60).clamp(0, 59).toString().padLeft(2, '0');
+  return '$h:$m';
+}
+
 int _timeToMinutes(String time) {
   var value = time.trim();
   if (value.isEmpty) return 0;
@@ -366,6 +372,116 @@ int _timeToMinutes(String time) {
   final hour = int.tryParse(parts[0]) ?? 0;
   final minute = int.tryParse(parts[1].replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
   return hour * 60 + minute;
+}
+
+class _TimeslotWindow {
+  final DayOfWeek day;
+  final String startTime;
+  final String endTime;
+
+  const _TimeslotWindow({
+    required this.day,
+    required this.startTime,
+    required this.endTime,
+  });
+}
+
+class _TimeslotOption {
+  final Timeslot slot;
+  final String label;
+
+  const _TimeslotOption({required this.slot, required this.label});
+}
+
+class _TimeslotOptionsResult {
+  final List<_TimeslotOption> options;
+  final List<_TimeslotWindow> missing;
+
+  const _TimeslotOptionsResult({
+    required this.options,
+    required this.missing,
+  });
+}
+
+List<_TimeslotWindow> _windowsFromAvailability({
+  required List<FacultyAvailability> availability,
+  required int requiredMinutes,
+}) {
+  if (requiredMinutes <= 0) return const [];
+  final windows = <_TimeslotWindow>[];
+  for (final avail in availability) {
+    var start = _timeToMinutes(avail.startTime);
+    final end = _timeToMinutes(avail.endTime);
+    // Laboratories should not start before 9:00 AM.
+    if (requiredMinutes == 180 && start < 9 * 60) {
+      start = 9 * 60;
+    }
+    if (end - start < requiredMinutes) continue;
+
+    for (var s = start; s + requiredMinutes <= end; s += requiredMinutes) {
+      final e = s + requiredMinutes;
+      windows.add(
+        _TimeslotWindow(
+          day: avail.dayOfWeek,
+          startTime: _formatMinutes(s),
+          endTime: _formatMinutes(e),
+        ),
+      );
+    }
+  }
+  return windows;
+}
+
+_TimeslotOptionsResult _buildTimeslotOptionsFromAvailability({
+  required List<FacultyAvailability> availability,
+  required List<Timeslot> timeslots,
+  required double requiredHours,
+  required String typeLabel,
+}) {
+  final requiredMinutes = (requiredHours * 60).round();
+  final windows = _windowsFromAvailability(
+    availability: availability,
+    requiredMinutes: requiredMinutes,
+  );
+
+  final options = <_TimeslotOption>[];
+  final missing = <_TimeslotWindow>[];
+
+  for (final window in windows) {
+    final match = timeslots.firstWhere(
+      (t) =>
+          t.day == window.day &&
+          t.startTime == window.startTime &&
+          t.endTime == window.endTime,
+      orElse: () => Timeslot(
+        day: window.day,
+        startTime: window.startTime,
+        endTime: window.endTime,
+        label: '',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    final isExisting = match.id != null;
+    if (!isExisting) {
+      missing.add(window);
+      continue;
+    }
+
+    final baseLabel = CITESchedDateUtils.formatTimeslot(
+      window.day,
+      window.startTime,
+      window.endTime,
+    );
+    options.add(
+      _TimeslotOption(
+        slot: match,
+        label: '$baseLabel - $typeLabel',
+      ),
+    );
+  }
+
+  return _TimeslotOptionsResult(options: options, missing: missing);
 }
 
 bool _timeslotWithinAvailability(Timeslot slot, FacultyAvailability avail) {
@@ -433,6 +549,61 @@ Future<void> _createTimeslotsFromAvailability({
           day: avail.dayOfWeek,
           startTime: avail.startTime,
           endTime: avail.endTime,
+          label: label,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+      createdCount += 1;
+    }
+
+    ref.invalidate(timeslotsProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            createdCount > 0
+                ? 'Created $createdCount timeslot(s).'
+                : 'All matching timeslots already exist.',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      AppErrorDialog.show(context, e);
+    }
+  }
+}
+
+Future<void> _createTimeslotsFromWindows({
+  required WidgetRef ref,
+  required BuildContext context,
+  required List<_TimeslotWindow> windows,
+}) async {
+  if (windows.isEmpty) {
+    AppErrorDialog.show(context, 'No timeslot windows to create.');
+    return;
+  }
+
+  try {
+    final existing = await client.admin.getAllTimeslots();
+    final existingKeys = existing
+        .map((t) => '${t.day.name}|${t.startTime}|${t.endTime}')
+        .toSet();
+
+    var createdCount = 0;
+    for (final window in windows) {
+      final key = '${window.day.name}|${window.startTime}|${window.endTime}';
+      if (existingKeys.contains(key)) continue;
+      final label =
+          '${_getDayAbbr(window.day)} ${window.startTime}-${window.endTime}';
+      await client.admin.createTimeslot(
+        Timeslot(
+          day: window.day,
+          startTime: window.startTime,
+          endTime: window.endTime,
           label: label,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
@@ -679,17 +850,228 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
   bool _openedInitialEdit = false;
   String _searchQuery = '';
   String? _selectedFaculty;
+  bool _isShowingArchived = false;
   bool _showConflictDetails = false;
   final TextEditingController _searchController = TextEditingController();
+  final Set<int> _selectedScheduleIds = {};
 
   // Color scheme matching admin sidebar
   final Color maroonColor = const Color(0xFF720045);
+
+  bool get isMobile => ResponsiveHelper.isMobile(context);
   final Color innerMenuBg = const Color(0xFF7b004f);
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _syncSelectedSchedules(List<Schedule> schedules) {
+    final visibleIds =
+        schedules.map((schedule) => schedule.id).whereType<int>().toSet();
+    final intersection = _selectedScheduleIds.intersection(visibleIds);
+    if (intersection.length != _selectedScheduleIds.length) {
+      _selectedScheduleIds
+        ..clear()
+        ..addAll(intersection);
+    }
+  }
+
+  void _toggleSelectAllSchedules(
+    List<Schedule> schedules,
+    bool? isSelected,
+  ) {
+    final shouldSelect = isSelected ?? false;
+    setState(() {
+      _selectedScheduleIds.clear();
+      if (shouldSelect) {
+        _selectedScheduleIds.addAll(
+          schedules.map((schedule) => schedule.id).whereType<int>(),
+        );
+      }
+    });
+  }
+
+  void _toggleScheduleSelection(int scheduleId, bool? isSelected) {
+    setState(() {
+      if (isSelected ?? false) {
+        _selectedScheduleIds.add(scheduleId);
+      } else {
+        _selectedScheduleIds.remove(scheduleId);
+      }
+    });
+  }
+
+  Future<void> _archiveSelectedSchedules(List<Schedule> schedules) async {
+    final selected = schedules
+        .where((schedule) => _selectedScheduleIds.contains(schedule.id))
+        .toList();
+    if (selected.isEmpty) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Archive Selected Assignments',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Archive ${selected.length} selected schedule assignments?',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Archive', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        for (final schedule in selected) {
+          await client.admin
+              .updateSchedule(schedule.copyWith(isActive: false));
+        }
+        _selectedScheduleIds.clear();
+        notifyScheduleDataChanged(ref);
+        ref.invalidate(schedulesProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Selected assignments archived successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          AppErrorDialog.show(context, e);
+        }
+      }
+    }
+  }
+
+  Future<void> _deleteSelectedSchedules(List<Schedule> schedules) async {
+    final selected = schedules
+        .where((schedule) => _selectedScheduleIds.contains(schedule.id))
+        .toList();
+    if (selected.isEmpty) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Delete Selected Assignments',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'PERMANENTLY delete ${selected.length} selected assignments? This cannot be undone.',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Delete Permanently', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        for (final schedule in selected) {
+          await client.admin.deleteSchedule(schedule.id!);
+        }
+        _selectedScheduleIds.clear();
+        notifyScheduleDataChanged(ref);
+        ref.invalidate(schedulesProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Selected assignments deleted permanently'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          AppErrorDialog.show(context, e);
+        }
+      }
+    }
+  }
+
+  void _restoreSchedule(Schedule schedule) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Restore Assignment',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Restore this schedule assignment to active lists?',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Restore', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        final restored = schedule.copyWith(isActive: true);
+        await client.admin.updateSchedule(restored);
+        notifyScheduleDataChanged(ref);
+        ref.invalidate(schedulesProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Assignment restored successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          AppErrorDialog.show(context, e);
+        }
+      }
+    }
   }
 
   @override
@@ -730,6 +1112,152 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
         },
       ),
     );
+  }
+
+  void _showAssignmentDetailsDialog({
+    required Schedule schedule,
+    Faculty? faculty,
+    Subject? subject,
+    Room? room,
+    Timeslot? timeslot,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Assignment Details',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _detailRow('Faculty', faculty?.name ?? 'Unknown'),
+              _detailRow('Faculty ID', faculty?.facultyId ?? '-'),
+              const SizedBox(height: 8),
+              _detailRow('Subject', subject?.name ?? 'Unknown'),
+              _detailRow('Code', subject?.code ?? '-'),
+              _detailRow(
+                'Year Level',
+                subject?.yearLevel?.toString() ?? '-',
+              ),
+              const SizedBox(height: 8),
+              _detailRow('Section', schedule.section),
+              _detailRow('Load Type', _getLoadTypeText(schedule.loadTypes)),
+              _detailRow(
+                'Units',
+                subject?.units.toString() ?? schedule.units?.toString() ?? '-',
+              ),
+              _detailRow('Hours', schedule.hours?.toString() ?? '-'),
+              const SizedBox(height: 8),
+              _detailRow('Room', room?.name ?? 'Waiting for AI...'),
+              _detailRow(
+                'Timeslot',
+                timeslot != null
+                    ? '${_getDayAbbr(timeslot.day)} ${timeslot.startTime}-${timeslot.endTime}'
+                    : 'Waiting for AI...',
+              ),
+              const SizedBox(height: 8),
+              _detailRow(
+                'Status',
+                (schedule.roomId == -1 || schedule.timeslotId == -1)
+                    ? 'Pending AI'
+                    : 'Scheduled',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Close',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _archiveSchedule(Schedule schedule) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Archive Assignment',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to archive this schedule assignment?',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Archive', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        final archived = schedule.copyWith(isActive: false);
+        await client.admin.updateSchedule(archived);
+        notifyScheduleDataChanged(ref);
+        ref.invalidate(schedulesProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Assignment archived successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          AppErrorDialog.show(context, e);
+        }
+      }
+    }
   }
 
   void _deleteSchedule(Schedule schedule) async {
@@ -783,6 +1311,59 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
     }
   }
 
+  Widget _buildViewToggle(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.grey[200],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildToggleOption('Active', false, isDark),
+          _buildToggleOption('Archived', true, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleOption(String label, bool isArchived, bool isDark) {
+    final isSelected = _isShowingArchived == isArchived;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isShowingArchived = isArchived;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? maroonColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: maroonColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected
+                ? Colors.white
+                : (isDark ? Colors.grey[400] : Colors.grey[600]),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final schedulesAsync = ref.watch(schedulesProvider);
@@ -807,7 +1388,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
             children: [
               // Header
               Container(
-                padding: const EdgeInsets.all(32),
+                padding: EdgeInsets.all(isMobile ? 20 : 32),
                 decoration: BoxDecoration(
                   color: maroonColor,
                   borderRadius: BorderRadius.circular(16),
@@ -819,55 +1400,108 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                     ),
                   ],
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Faculty Loading',
-                          style: GoogleFonts.poppins(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                child: isMobile
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Faculty Loading',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Manage faculty schedule assignments and workload',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: Colors.white.withValues(alpha: 0.85),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Manage faculty schedule assignments and workload',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: _showNewAssignmentModal,
-                      icon: const Icon(Icons.add_rounded, size: 20),
-                      label: Text(
-                        'Assign Subject',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _showNewAssignmentModal,
+                              icon: const Icon(Icons.add_rounded, size: 20),
+                              label: Text(
+                                'Assign Subject',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: maroonColor,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Faculty Loading',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Manage faculty schedule assignments and workload',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                ),
+                              ),
+                            ],
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: _showNewAssignmentModal,
+                            icon: const Icon(Icons.add_rounded, size: 20),
+                            label: Text(
+                              'Assign Subject',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: maroonColor,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 18,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                            ),
+                          ),
+                        ],
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: maroonColor,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 18,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                      ),
-                    ),
-                  ],
-                ),
               ),
               const SizedBox(height: 24),
 
@@ -880,6 +1514,10 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
               const SizedBox(height: 20),
 
               // Search and Filter Row
+              if (isMobile) ...[
+                _buildViewToggle(isDark),
+                const SizedBox(height: 16),
+              ],
               Row(
                 children: [
                   // Search Bar
@@ -1016,6 +1654,10 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                       ),
                     ),
                   ),
+                  if (!isMobile) ...[
+                    const SizedBox(width: 16),
+                    _buildViewToggle(isDark),
+                  ],
                 ],
               ),
               const SizedBox(height: 24),
@@ -1034,6 +1676,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                   ],
                 ),
                 child: TabBar(
+                  isScrollable: isMobile,
                   indicator: BoxDecoration(
                     color: maroonColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
@@ -1199,39 +1842,65 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                     schedule.facultyId.toString() ==
                                         _selectedFaculty;
 
-                                return matchesSearch && matchesFaculty;
+                                final matchesArchived =
+                                    schedule.isActive != _isShowingArchived;
+
+                                return matchesSearch &&
+                                    matchesFaculty &&
+                                    matchesArchived;
                               }).toList();
+                              final allSelected =
+                                  filteredSchedules.isNotEmpty &&
+                                  _selectedScheduleIds.length ==
+                                      filteredSchedules.length;
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (!mounted) return;
+                                _syncSelectedSchedules(filteredSchedules);
+                              });
 
                               if (filteredSchedules.isEmpty) {
                                 return Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.assignment_outlined,
-                                        size: 64,
-                                        color: Colors.grey[400],
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        _searchQuery.isEmpty
-                                            ? 'No assignments yet'
-                                            : 'No assignments found',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 18,
-                                          color: Colors.grey[600],
+                                  child: SingleChildScrollView(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.assignment_outlined,
+                                          size: 56,
+                                          color: Colors.grey[400],
                                         ),
-                                      ),
-                                      if (_searchQuery.isEmpty) ...[
-                                        const SizedBox(height: 8),
+                                        const SizedBox(height: 12),
                                         Text(
-                                          'Click "New Assignment" to get started',
+                                          _searchQuery.isEmpty
+                                              ? (_isShowingArchived
+                                                    ? 'No archived assignments'
+                                                    : 'No assignments yet')
+                                              : 'No assignments found',
+                                          textAlign: TextAlign.center,
                                           style: GoogleFonts.poppins(
-                                            color: Colors.grey[500],
+                                            fontSize: 16,
+                                            color: Colors.grey[600],
                                           ),
                                         ),
+                                        if (_searchQuery.isEmpty) ...[
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            'Click "New Assignment" to get started',
+                                            textAlign: TextAlign.center,
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.grey[500],
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
                                       ],
-                                    ],
+                                    ),
                                   ),
                                 );
                               }
@@ -1255,8 +1924,8 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                 child: Column(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 24,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isMobile ? 16 : 24,
                                         vertical: 16,
                                       ),
                                       decoration: BoxDecoration(
@@ -1268,44 +1937,277 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                           topRight: Radius.circular(16),
                                         ),
                                       ),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.assignment_rounded,
-                                            color: maroonColor,
-                                            size: 20,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Schedule Assignments',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: maroonColor,
+                                      child: isMobile
+                                          ? Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.assignment_rounded,
+                                                      color: maroonColor,
+                                                      size: 20,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Schedule Assignments',
+                                                        style:
+                                                            GoogleFonts.poppins(
+                                                          fontSize: 15,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: maroonColor,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 4,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: maroonColor,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                          20,
+                                                        ),
+                                                      ),
+                                                      child: Text(
+                                                        '${filteredSchedules.length} Total',
+                                                        style:
+                                                            GoogleFonts.poppins(
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                if (_selectedScheduleIds
+                                                    .isNotEmpty) ...[
+                                                  const SizedBox(height: 10),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 4,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      color: maroonColor
+                                                          .withValues(
+                                                        alpha: 0.1,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                        12,
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      '${_selectedScheduleIds.length} selected',
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: maroonColor,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                                if (_selectedScheduleIds
+                                                    .isNotEmpty) ...[
+                                                  const SizedBox(height: 10),
+                                                  Wrap(
+                                                    spacing: 8,
+                                                    runSpacing: 8,
+                                                    children: [
+                                                      if (!_isShowingArchived)
+                                                        TextButton.icon(
+                                                          onPressed: () =>
+                                                              _archiveSelectedSchedules(
+                                                            filteredSchedules,
+                                                          ),
+                                                          icon: const Icon(
+                                                            Icons
+                                                                .archive_outlined,
+                                                          ),
+                                                          label: Text(
+                                                            'Archive Selected',
+                                                            style: GoogleFonts
+                                                                .poppins(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
+                                                          ),
+                                                          style: TextButton
+                                                              .styleFrom(
+                                                            foregroundColor:
+                                                                maroonColor,
+                                                          ),
+                                                        ),
+                                                      if (_isShowingArchived)
+                                                        TextButton.icon(
+                                                          onPressed: () =>
+                                                              _deleteSelectedSchedules(
+                                                            filteredSchedules,
+                                                          ),
+                                                          icon: const Icon(
+                                                            Icons
+                                                                .delete_forever_outlined,
+                                                          ),
+                                                          label: Text(
+                                                            'Delete Selected',
+                                                            style: GoogleFonts
+                                                                .poppins(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
+                                                          ),
+                                                          style: TextButton
+                                                              .styleFrom(
+                                                            foregroundColor:
+                                                                Colors.red,
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ],
+                                            )
+                                          : Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.assignment_rounded,
+                                                  color: maroonColor,
+                                                  size: 20,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  'Schedule Assignments',
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 16,
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                    color: maroonColor,
+                                                  ),
+                                                ),
+                                                if (_selectedScheduleIds
+                                                    .isNotEmpty) ...[
+                                                  const SizedBox(width: 16),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 4,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      color: maroonColor
+                                                          .withValues(
+                                                        alpha: 0.1,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                        12,
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      '${_selectedScheduleIds.length} selected',
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: maroonColor,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                                const Spacer(),
+                                                if (!_isShowingArchived &&
+                                                    _selectedScheduleIds
+                                                        .isNotEmpty) ...[
+                                                  TextButton.icon(
+                                                    onPressed: () =>
+                                                        _archiveSelectedSchedules(
+                                                      filteredSchedules,
+                                                    ),
+                                                    icon: const Icon(
+                                                      Icons.archive_outlined,
+                                                    ),
+                                                    label: Text(
+                                                      'Archive Selected',
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                    style: TextButton.styleFrom(
+                                                      foregroundColor:
+                                                          maroonColor,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                ],
+                                                if (_isShowingArchived &&
+                                                    _selectedScheduleIds
+                                                        .isNotEmpty) ...[
+                                                  TextButton.icon(
+                                                    onPressed: () =>
+                                                        _deleteSelectedSchedules(
+                                                      filteredSchedules,
+                                                    ),
+                                                    icon: const Icon(
+                                                      Icons
+                                                          .delete_forever_outlined,
+                                                    ),
+                                                    label: Text(
+                                                      'Delete Selected',
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                    style: TextButton.styleFrom(
+                                                      foregroundColor:
+                                                          Colors.red,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                ],
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 6,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: maroonColor,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      20,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    '${filteredSchedules.length} Total',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                          ),
-                                          const Spacer(),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 6,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: maroonColor,
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            ),
-                                            child: Text(
-                                              '${filteredSchedules.length} Total',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
                                     ),
                                     Expanded(
                                       child: LayoutBuilder(
@@ -1322,6 +2224,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                   16,
                                                 ),
                                                 child: DataTable(
+                                                  showCheckboxColumn: false,
                                                   headingRowColor:
                                                       WidgetStateProperty.all(
                                                         maroonColor,
@@ -1343,7 +2246,21 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                         color:
                                                             Colors.transparent,
                                                       ),
-                                                  columns: const [
+                                                  columns: [
+                                                    DataColumn(
+                                                      label: Checkbox(
+                                                        value: allSelected,
+                                                        onChanged: (value) =>
+                                                            _toggleSelectAllSchedules(
+                                                          filteredSchedules,
+                                                          value,
+                                                        ),
+                                                        activeColor:
+                                                            Colors.white,
+                                                        checkColor:
+                                                            maroonColor,
+                                                      ),
+                                                    ),
                                                     DataColumn(
                                                       label: Text('FACULTY'),
                                                     ),
@@ -1430,6 +2347,30 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                         },
                                                       ),
                                                       cells: [
+                                                        DataCell(
+                                                          Checkbox(
+                                                            value:
+                                                                schedule.id !=
+                                                                        null &&
+                                                                    _selectedScheduleIds
+                                                                        .contains(
+                                                                      schedule
+                                                                          .id,
+                                                                    ),
+                                                            onChanged: schedule
+                                                                        .id ==
+                                                                    null
+                                                                ? null
+                                                                : (value) =>
+                                                                    _toggleScheduleSelection(
+                                                                      schedule
+                                                                          .id!,
+                                                                      value,
+                                                                    ),
+                                                            activeColor:
+                                                                maroonColor,
+                                                          ),
+                                                        ),
                                                         DataCell(
                                                           Row(
                                                             children: [
@@ -1923,85 +2864,285 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                                 MainAxisSize
                                                                     .min,
                                                             children: [
-                                                              Material(
-                                                                color: Colors
-                                                                    .transparent,
-                                                                child: InkWell(
-                                                                  borderRadius:
-                                                                      BorderRadius.circular(
+                                                              if (!_isShowingArchived) ...[
+                                                                Material(
+                                                                  color: Colors
+                                                                      .transparent,
+                                                                  child: InkWell(
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                      8,
+                                                                    ),
+                                                                    onTap: () =>
+                                                                        _showAssignmentDetailsDialog(
+                                                                      schedule:
+                                                                          schedule,
+                                                                      faculty:
+                                                                          faculty,
+                                                                      subject:
+                                                                          subject,
+                                                                      room:
+                                                                          room,
+                                                                      timeslot:
+                                                                          timeslot,
+                                                                    ),
+                                                                    child:
+                                                                        Container(
+                                                                      padding:
+                                                                          const EdgeInsets.all(
                                                                         8,
                                                                       ),
-                                                                  onTap: () =>
-                                                                      _showEditAssignmentModal(
-                                                                        schedule,
-                                                                      ),
-                                                                  child: Container(
-                                                                    padding:
-                                                                        const EdgeInsets.all(
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: maroonColor.withValues(
+                                                                          alpha:
+                                                                              0.1,
+                                                                        ),
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(
                                                                           8,
                                                                         ),
-                                                                    decoration: BoxDecoration(
-                                                                      color: maroonColor.withValues(
-                                                                        alpha:
-                                                                            0.1,
                                                                       ),
-                                                                      borderRadius:
-                                                                          BorderRadius.circular(
-                                                                            8,
-                                                                          ),
-                                                                    ),
-                                                                    child: Icon(
-                                                                      Icons
-                                                                          .edit_outlined,
-                                                                      color:
-                                                                          maroonColor,
-                                                                      size: 18,
+                                                                      child:
+                                                                          Icon(
+                                                                        Icons
+                                                                            .open_in_new,
+                                                                        color:
+                                                                            maroonColor,
+                                                                        size:
+                                                                            18,
+                                                                      ),
                                                                     ),
                                                                   ),
                                                                 ),
-                                                              ),
-                                                              const SizedBox(
-                                                                width: 8,
-                                                              ),
-                                                              Material(
-                                                                color: Colors
-                                                                    .transparent,
-                                                                child: InkWell(
-                                                                  borderRadius:
-                                                                      BorderRadius.circular(
+                                                                const SizedBox(
+                                                                  width: 8,
+                                                                ),
+                                                                Material(
+                                                                  color: Colors
+                                                                      .transparent,
+                                                                  child: InkWell(
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                      8,
+                                                                    ),
+                                                                    onTap: () =>
+                                                                        _showEditAssignmentModal(
+                                                                      schedule,
+                                                                    ),
+                                                                    child:
+                                                                        Container(
+                                                                      padding:
+                                                                          const EdgeInsets.all(
                                                                         8,
                                                                       ),
-                                                                  onTap: () =>
-                                                                      _deleteSchedule(
-                                                                        schedule,
-                                                                      ),
-                                                                  child: Container(
-                                                                    padding:
-                                                                        const EdgeInsets.all(
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: maroonColor.withValues(
+                                                                          alpha:
+                                                                              0.1,
+                                                                        ),
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(
                                                                           8,
                                                                         ),
-                                                                    decoration: BoxDecoration(
-                                                                      color: Colors
-                                                                          .red
-                                                                          .withValues(
-                                                                            alpha:
-                                                                                0.1,
-                                                                          ),
-                                                                      borderRadius:
-                                                                          BorderRadius.circular(
-                                                                            8,
-                                                                          ),
-                                                                    ),
-                                                                    child: const Icon(
-                                                                      Icons
-                                                                          .delete_outline,
-                                                                      color: Colors
-                                                                          .red,
-                                                                      size: 18,
+                                                                      ),
+                                                                      child:
+                                                                          Icon(
+                                                                        Icons
+                                                                            .edit_outlined,
+                                                                        color:
+                                                                            maroonColor,
+                                                                        size:
+                                                                            18,
+                                                                      ),
                                                                     ),
                                                                   ),
                                                                 ),
-                                                              ),
+                                                                const SizedBox(
+                                                                  width: 8,
+                                                                ),
+                                                                Material(
+                                                                  color: Colors
+                                                                      .transparent,
+                                                                  child: InkWell(
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                      8,
+                                                                    ),
+                                                                    onTap: () =>
+                                                                        _archiveSchedule(
+                                                                      schedule,
+                                                                    ),
+                                                                    child:
+                                                                        Container(
+                                                                      padding:
+                                                                          const EdgeInsets.all(
+                                                                        8,
+                                                                      ),
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: maroonColor.withValues(
+                                                                          alpha:
+                                                                              0.1,
+                                                                        ),
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(
+                                                                          8,
+                                                                        ),
+                                                                      ),
+                                                                      child:
+                                                                          Icon(
+                                                                        Icons
+                                                                            .archive_outlined,
+                                                                        color:
+                                                                            maroonColor,
+                                                                        size:
+                                                                            18,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ] else ...[
+                                                                Material(
+                                                                  color: Colors
+                                                                      .transparent,
+                                                                  child: InkWell(
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                      8,
+                                                                    ),
+                                                                    onTap: () =>
+                                                                        _showAssignmentDetailsDialog(
+                                                                      schedule:
+                                                                          schedule,
+                                                                      faculty:
+                                                                          faculty,
+                                                                      subject:
+                                                                          subject,
+                                                                      room:
+                                                                          room,
+                                                                      timeslot:
+                                                                          timeslot,
+                                                                    ),
+                                                                    child:
+                                                                        Container(
+                                                                      padding:
+                                                                          const EdgeInsets.all(
+                                                                        8,
+                                                                      ),
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: maroonColor.withValues(
+                                                                          alpha:
+                                                                              0.1,
+                                                                        ),
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(
+                                                                          8,
+                                                                        ),
+                                                                      ),
+                                                                      child:
+                                                                          Icon(
+                                                                        Icons
+                                                                            .open_in_new,
+                                                                        color:
+                                                                            maroonColor,
+                                                                        size:
+                                                                            18,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                  width: 8,
+                                                                ),
+                                                                Material(
+                                                                  color: Colors
+                                                                      .transparent,
+                                                                  child: InkWell(
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                      8,
+                                                                    ),
+                                                                    onTap: () =>
+                                                                        _restoreSchedule(
+                                                                      schedule,
+                                                                    ),
+                                                                    child:
+                                                                        Container(
+                                                                      padding:
+                                                                          const EdgeInsets.all(
+                                                                        8,
+                                                                      ),
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: maroonColor.withValues(
+                                                                          alpha:
+                                                                              0.1,
+                                                                        ),
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(
+                                                                          8,
+                                                                        ),
+                                                                      ),
+                                                                      child:
+                                                                          Icon(
+                                                                        Icons
+                                                                            .restore_rounded,
+                                                                        color:
+                                                                            maroonColor,
+                                                                        size:
+                                                                            18,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                  width: 8,
+                                                                ),
+                                                                Material(
+                                                                  color: Colors
+                                                                      .transparent,
+                                                                  child: InkWell(
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                      8,
+                                                                    ),
+                                                                    onTap: () =>
+                                                                        _deleteSchedule(
+                                                                      schedule,
+                                                                    ),
+                                                                    child:
+                                                                        Container(
+                                                                      padding:
+                                                                          const EdgeInsets.all(
+                                                                        8,
+                                                                      ),
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: Colors.red.withValues(
+                                                                          alpha:
+                                                                              0.1,
+                                                                        ),
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(
+                                                                          8,
+                                                                        ),
+                                                                      ),
+                                                                      child:
+                                                                          Icon(
+                                                                        Icons
+                                                                            .delete_forever_rounded,
+                                                                        color:
+                                                                            Colors.red,
+                                                                        size:
+                                                                            18,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
                                                             ],
                                                           ),
                                                         ),
@@ -2663,6 +3804,101 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
     super.dispose();
   }
 
+  Widget _buildTimeslotSearchField({
+    required String label,
+    required List<_TimeslotOption> options,
+  }) {
+    final selectedOption = _selectedTimeslotId == null
+        ? null
+        : options
+            .where((o) => o.slot.id == _selectedTimeslotId)
+            .cast<_TimeslotOption?>()
+            .firstWhere((o) => o != null, orElse: () => null);
+    final selectedLabel = selectedOption?.label;
+
+    return Autocomplete<_TimeslotOption>(
+      displayStringForOption: (option) => option.label,
+      initialValue: selectedLabel == null
+          ? const TextEditingValue()
+          : TextEditingValue(text: selectedLabel),
+      optionsBuilder: (TextEditingValue value) {
+        final query = value.text.trim().toLowerCase();
+        if (query.isEmpty) {
+          return options;
+        }
+        return options.where(
+          (option) => option.label.toLowerCase().contains(query),
+        );
+      },
+      onSelected: (option) {
+        setState(() => _selectedTimeslotId = option.slot.id);
+      },
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        if (!focusNode.hasFocus &&
+            selectedLabel != null &&
+            selectedLabel.isNotEmpty &&
+            controller.text != selectedLabel) {
+          controller.text = selectedLabel;
+        }
+        return TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: GoogleFonts.poppins(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: widget.maroonColor, width: 2),
+            ),
+          ),
+          onChanged: (value) {
+            final match = options.any(
+              (option) =>
+                  option.label.toLowerCase().trim() ==
+                  value.toLowerCase().trim(),
+            );
+            if (!match && _selectedTimeslotId != null) {
+              setState(() => _selectedTimeslotId = null);
+            }
+          },
+          validator: (_) =>
+              _selectedTimeslotId == null ? 'Required' : null,
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 520,
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final option = options.elementAt(index);
+                  return ListTile(
+                    dense: true,
+                    title: Text(
+                      option.label,
+                      style: GoogleFonts.poppins(fontSize: 13),
+                    ),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -2862,6 +4098,7 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveHelper.isMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final facultyAsync = ref.watch(facultyListProvider);
     final subjectsAsync = ref.watch(subjectsProvider);
@@ -2872,15 +4109,23 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 16 : 24,
+        vertical: isMobile ? 20 : 24,
+      ),
       child: Container(
-        width: 700,
-        constraints: const BoxConstraints(maxHeight: 750),
+        width: isMobile ? double.infinity : 700,
+        constraints: BoxConstraints(
+          maxHeight: isMobile
+              ? MediaQuery.of(context).size.height * 0.9
+              : 750,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(isMobile ? 16 : 24),
               decoration: BoxDecoration(
                 color: widget.maroonColor,
                 borderRadius: const BorderRadius.only(
@@ -2896,15 +4141,18 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                     size: 28,
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    'New Schedule Assignment',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  Expanded(
+                    child: Text(
+                      'New Schedule Assignment',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: isMobile ? 18 : 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                  const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () => Navigator.pop(context),
@@ -2916,7 +4164,7 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
             // Form
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(isMobile ? 16 : 24),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -3101,21 +4349,36 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                                   ),
                               _selectedSubjectId,
                             );
+                            final subjectList = ref
+                                .read(subjectsProvider)
+                                .maybeWhen(
+                                  data: (s) => s,
+                                  orElse: () => <Subject>[],
+                                );
+                            Subject? selectedSubject;
+                            for (final subject in subjectList) {
+                              if (subject.id == _selectedSubjectId) {
+                                selectedSubject = subject;
+                                break;
+                              }
+                            }
+                            final subjectYearLevel = selectedSubject?.yearLevel;
                             Program? targetProgram = selectedSubjectProgram;
                             if (selectedFacultyProgram != null &&
                                 selectedFacultyProgram != Program.emc) {
                               targetProgram = selectedFacultyProgram;
                             }
 
-                            final eligibleStudents = targetProgram == null
-                                ? students
-                                : students.where(
-                                    (student) =>
-                                        _programFromStudentCourse(
-                                          student.course,
-                                        ) ==
-                                        targetProgram,
-                                  );
+                            final eligibleStudents = students.where((student) {
+                              final matchesProgram = targetProgram == null ||
+                                  _programFromStudentCourse(
+                                        student.course,
+                                      ) ==
+                                      targetProgram;
+                              final matchesYear = subjectYearLevel == null ||
+                                  student.yearLevel == subjectYearLevel;
+                              return matchesProgram && matchesYear;
+                            });
 
                             final enrolledSectionIds = eligibleStudents
                                 .where((s) => s.sectionId != null)
@@ -3313,34 +4576,62 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                                 style: GoogleFonts.poppins(fontSize: 12),
                               ),
                               data: (availabilityList) {
-                                final filtered = _dedupeTimeslotsByWindow(
-                                  timeslotList
-                                      .where(
-                                        (t) => availabilityList.any(
-                                          (a) =>
-                                              _timeslotWithinAvailability(t, a),
-                                        ),
-                                      )
-                                      .toList(),
-                                );
-                                final missingWindows = availabilityList
-                                    .where(
-                                      (a) => !timeslotList.any(
-                                        (t) =>
-                                            _timeslotMatchesAvailabilityWindow(
-                                              t,
-                                              a,
-                                            ),
-                                      ),
-                                    )
-                                    .toList();
-
                                 if (availabilityList.isEmpty) {
                                   return Text(
                                     'No preferred timeslots for this faculty',
                                     style: GoogleFonts.poppins(fontSize: 12),
                                   );
                                 }
+
+                                final subjects = ref
+                                    .read(subjectsProvider)
+                                    .maybeWhen(
+                                      data: (list) => list,
+                                      orElse: () => <Subject>[],
+                                    );
+                                Subject? selectedSubject;
+                                for (final subject in subjects) {
+                                  if (subject.id == _selectedSubjectId) {
+                                    selectedSubject = subject;
+                                    break;
+                                  }
+                                }
+
+                                if (selectedSubject == null) {
+                                  return Text(
+                                    'Select a subject to load timeslots',
+                                    style: GoogleFonts.poppins(fontSize: 12),
+                                  );
+                                }
+
+                                if (_isBlendedSubject(selectedSubject.types) &&
+                                    _selectedLoadType == null) {
+                                  return Text(
+                                    'Select Lecture or Lab to load timeslots',
+                                    style: GoogleFonts.poppins(fontSize: 12),
+                                  );
+                                }
+
+                                final effectiveTypes = _effectiveAssignmentTypes(
+                                  selectedSubject.types,
+                                  _selectedLoadType,
+                                );
+                                final requiredHours =
+                                    _hoursForSubjectTypes(effectiveTypes);
+                                final typeLabel =
+                                    effectiveTypes.contains(SubjectType.laboratory)
+                                        ? 'Laboratory'
+                                        : 'Lecture';
+                                final result =
+                                    _buildTimeslotOptionsFromAvailability(
+                                  availability: availabilityList,
+                                  timeslots: timeslotList,
+                                  requiredHours: requiredHours,
+                                  typeLabel: typeLabel,
+                                );
+
+                                final options = result.options;
+                                final missingWindows = result.missing;
 
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3355,11 +4646,10 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                                       const SizedBox(height: 8),
                                       OutlinedButton.icon(
                                         onPressed: () =>
-                                            _createTimeslotsFromAvailability(
+                                            _createTimeslotsFromWindows(
                                               ref: ref,
                                               context: context,
-                                              availabilityList:
-                                                  availabilityList,
+                                              windows: missingWindows,
                                             ),
                                         icon: const Icon(Icons.auto_fix_high),
                                         label: Text(
@@ -3371,33 +4661,17 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                                       ),
                                       const SizedBox(height: 8),
                                     ],
-                                    if (filtered.isEmpty)
+                                    if (options.isEmpty)
                                       Text(
-                                        'No preferred timeslots for this faculty',
+                                        'No timeslots available for this faculty',
                                         style: GoogleFonts.poppins(
                                           fontSize: 12,
                                         ),
                                       )
                                     else
-                                      _buildDropdown<int>(
+                                      _buildTimeslotSearchField(
                                         label: 'Timeslot',
-                                        value: _selectedTimeslotId,
-                                        items: filtered
-                                            .map((t) => t.id!)
-                                            .toList(),
-                                        itemLabel: (id) {
-                                          final t = filtered.firstWhere(
-                                            (t) => t.id == id,
-                                          );
-                                          return CITESchedDateUtils.formatTimeslot(
-                                            t.day,
-                                            t.startTime,
-                                            t.endTime,
-                                          );
-                                        },
-                                        onChanged: (value) => setState(
-                                          () => _selectedTimeslotId = value,
-                                        ),
+                                        options: options,
                                       ),
                                   ],
                                 );
@@ -3414,54 +4688,110 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
 
             // Actions
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(isMobile ? 16 : 24),
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: Colors.grey[300]!)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: _isLoading ? null : () => Navigator.pop(context),
-                    child: Text(
-                      'Cancel',
-                      style: GoogleFonts.poppins(color: Colors.grey[700]),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.maroonColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
+              child: isMobile
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        OutlinedButton(
+                          onPressed:
+                              _isLoading ? null : () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 14,
                             ),
-                          )
-                        : Text(
-                            'Create Assignment',
+                            side: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          child: Text(
+                            'Cancel',
                             style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[700],
                             ),
                           ),
-                  ),
-                ],
-              ),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: _isLoading ? null : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: widget.maroonColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  'Create Assignment',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed:
+                              _isLoading ? null : () => Navigator.pop(context),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.poppins(color: Colors.grey[700]),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: _isLoading ? null : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: widget.maroonColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  'Create Assignment',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -3506,6 +4836,9 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
     required void Function(T?) onChanged,
     String? Function(T?)? validator,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final dropdownBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final uniqueItems = items.toSet().toList();
     final hasSingleMatch = value == null
         ? true
@@ -3514,9 +4847,10 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
 
     return DropdownButtonFormField<T>(
       initialValue: safeValue,
+      dropdownColor: dropdownBg,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.poppins(),
+        labelStyle: GoogleFonts.poppins(color: textColor),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
         ),
@@ -3528,12 +4862,15 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
       items: uniqueItems.map((item) {
         return DropdownMenuItem<T>(
           value: item,
-          child: Text(itemLabel(item), style: GoogleFonts.poppins()),
+          child: Text(
+            itemLabel(item),
+            style: GoogleFonts.poppins(color: textColor),
+          ),
         );
       }).toList(),
       onChanged: onChanged,
       validator: validator,
-      style: GoogleFonts.poppins(color: Colors.black87),
+      style: GoogleFonts.poppins(color: textColor),
     );
   }
 }
@@ -3624,6 +4961,101 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
     _unitsController.dispose();
     _hoursController.dispose();
     super.dispose();
+  }
+
+  Widget _buildTimeslotSearchField({
+    required String label,
+    required List<_TimeslotOption> options,
+  }) {
+    final selectedOption = _selectedTimeslotId == null
+        ? null
+        : options
+            .where((o) => o.slot.id == _selectedTimeslotId)
+            .cast<_TimeslotOption?>()
+            .firstWhere((o) => o != null, orElse: () => null);
+    final selectedLabel = selectedOption?.label;
+
+    return Autocomplete<_TimeslotOption>(
+      displayStringForOption: (option) => option.label,
+      initialValue: selectedLabel == null
+          ? const TextEditingValue()
+          : TextEditingValue(text: selectedLabel),
+      optionsBuilder: (TextEditingValue value) {
+        final query = value.text.trim().toLowerCase();
+        if (query.isEmpty) {
+          return options;
+        }
+        return options.where(
+          (option) => option.label.toLowerCase().contains(query),
+        );
+      },
+      onSelected: (option) {
+        setState(() => _selectedTimeslotId = option.slot.id);
+      },
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        if (!focusNode.hasFocus &&
+            selectedLabel != null &&
+            selectedLabel.isNotEmpty &&
+            controller.text != selectedLabel) {
+          controller.text = selectedLabel;
+        }
+        return TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: GoogleFonts.poppins(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: widget.maroonColor, width: 2),
+            ),
+          ),
+          onChanged: (value) {
+            final match = options.any(
+              (option) =>
+                  option.label.toLowerCase().trim() ==
+                  value.toLowerCase().trim(),
+            );
+            if (!match && _selectedTimeslotId != null) {
+              setState(() => _selectedTimeslotId = null);
+            }
+          },
+          validator: (_) =>
+              _selectedTimeslotId == null ? 'Required' : null,
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 520,
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final option = options.elementAt(index);
+                  return ListTile(
+                    dense: true,
+                    title: Text(
+                      option.label,
+                      style: GoogleFonts.poppins(fontSize: 13),
+                    ),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _submit() async {
@@ -3802,6 +5234,7 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveHelper.isMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final facultyAsync = ref.watch(facultyListProvider);
     final subjectsAsync = ref.watch(subjectsProvider);
@@ -4051,21 +5484,36 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                                   ),
                               _selectedSubjectId,
                             );
+                            final subjectList = ref
+                                .read(subjectsProvider)
+                                .maybeWhen(
+                                  data: (s) => s,
+                                  orElse: () => <Subject>[],
+                                );
+                            Subject? selectedSubject;
+                            for (final subject in subjectList) {
+                              if (subject.id == _selectedSubjectId) {
+                                selectedSubject = subject;
+                                break;
+                              }
+                            }
+                            final subjectYearLevel = selectedSubject?.yearLevel;
                             Program? targetProgram = selectedSubjectProgram;
                             if (selectedFacultyProgram != null &&
                                 selectedFacultyProgram != Program.emc) {
                               targetProgram = selectedFacultyProgram;
                             }
 
-                            final eligibleStudents = targetProgram == null
-                                ? students
-                                : students.where(
-                                    (student) =>
-                                        _programFromStudentCourse(
-                                          student.course,
-                                        ) ==
-                                        targetProgram,
-                                  );
+                            final eligibleStudents = students.where((student) {
+                              final matchesProgram = targetProgram == null ||
+                                  _programFromStudentCourse(
+                                        student.course,
+                                      ) ==
+                                      targetProgram;
+                              final matchesYear = subjectYearLevel == null ||
+                                  student.yearLevel == subjectYearLevel;
+                              return matchesProgram && matchesYear;
+                            });
 
                             final enrolledSectionIds = eligibleStudents
                                 .where((s) => s.sectionId != null)
@@ -4262,34 +5710,63 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                                 style: GoogleFonts.poppins(fontSize: 12),
                               ),
                               data: (availabilityList) {
-                                final filtered = _dedupeTimeslotsByWindow(
-                                  timeslotList
-                                      .where(
-                                        (t) => availabilityList.any(
-                                          (a) =>
-                                              _timeslotWithinAvailability(t, a),
-                                        ),
-                                      )
-                                      .toList(),
-                                );
-                                final missingWindows = availabilityList
-                                    .where(
-                                      (a) => !timeslotList.any(
-                                        (t) =>
-                                            _timeslotMatchesAvailabilityWindow(
-                                              t,
-                                              a,
-                                            ),
-                                      ),
-                                    )
-                                    .toList();
-
                                 if (availabilityList.isEmpty) {
                                   return Text(
                                     'No preferred timeslots for this faculty',
                                     style: GoogleFonts.poppins(fontSize: 12),
                                   );
                                 }
+
+                                final subjects = ref
+                                    .read(subjectsProvider)
+                                    .maybeWhen(
+                                      data: (list) => list,
+                                      orElse: () => <Subject>[],
+                                    );
+                                Subject? selectedSubject;
+                                for (final subject in subjects) {
+                                  if (subject.id == _selectedSubjectId) {
+                                    selectedSubject = subject;
+                                    break;
+                                  }
+                                }
+
+                                if (selectedSubject == null) {
+                                  return Text(
+                                    'Select a subject to load timeslots',
+                                    style: GoogleFonts.poppins(fontSize: 12),
+                                  );
+                                }
+
+                                if (_isBlendedSubject(selectedSubject.types) &&
+                                    _selectedLoadType == null) {
+                                  return Text(
+                                    'Select Lecture or Lab to load timeslots',
+                                    style: GoogleFonts.poppins(fontSize: 12),
+                                  );
+                                }
+
+                                final effectiveTypes = _effectiveAssignmentTypes(
+                                  selectedSubject.types,
+                                  _selectedLoadType,
+                                );
+                                final requiredHours =
+                                    _hoursForSubjectTypes(effectiveTypes);
+                                final typeLabel =
+                                    effectiveTypes.contains(
+                                            SubjectType.laboratory)
+                                        ? 'Laboratory'
+                                        : 'Lecture';
+                                final result =
+                                    _buildTimeslotOptionsFromAvailability(
+                                  availability: availabilityList,
+                                  timeslots: timeslotList,
+                                  requiredHours: requiredHours,
+                                  typeLabel: typeLabel,
+                                );
+
+                                final options = result.options;
+                                final missingWindows = result.missing;
 
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -4304,11 +5781,10 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                                       const SizedBox(height: 8),
                                       OutlinedButton.icon(
                                         onPressed: () =>
-                                            _createTimeslotsFromAvailability(
+                                            _createTimeslotsFromWindows(
                                               ref: ref,
                                               context: context,
-                                              availabilityList:
-                                                  availabilityList,
+                                              windows: missingWindows,
                                             ),
                                         icon: const Icon(Icons.auto_fix_high),
                                         label: Text(
@@ -4320,33 +5796,17 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                                       ),
                                       const SizedBox(height: 8),
                                     ],
-                                    if (filtered.isEmpty)
+                                    if (options.isEmpty)
                                       Text(
-                                        'No preferred timeslots for this faculty',
+                                        'No timeslots available for this faculty',
                                         style: GoogleFonts.poppins(
                                           fontSize: 12,
                                         ),
                                       )
                                     else
-                                      _buildDropdown<int>(
+                                      _buildTimeslotSearchField(
                                         label: 'Timeslot',
-                                        value: _selectedTimeslotId,
-                                        items: filtered
-                                            .map((t) => t.id!)
-                                            .toList(),
-                                        itemLabel: (id) {
-                                          final t = filtered.firstWhere(
-                                            (t) => t.id == id,
-                                          );
-                                          return CITESchedDateUtils.formatTimeslot(
-                                            t.day,
-                                            t.startTime,
-                                            t.endTime,
-                                          );
-                                        },
-                                        onChanged: (value) => setState(
-                                          () => _selectedTimeslotId = value,
-                                        ),
+                                        options: options,
                                       ),
                                   ],
                                 );
@@ -4363,54 +5823,110 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
 
             // Actions
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(isMobile ? 16 : 24),
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: Colors.grey[300]!)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: _isLoading ? null : () => Navigator.pop(context),
-                    child: Text(
-                      'Cancel',
-                      style: GoogleFonts.poppins(color: Colors.grey[700]),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.maroonColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
+              child: isMobile
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        OutlinedButton(
+                          onPressed:
+                              _isLoading ? null : () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 14,
                             ),
-                          )
-                        : Text(
-                            'Save Changes',
+                            side: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          child: Text(
+                            'Cancel',
                             style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[700],
                             ),
                           ),
-                  ),
-                ],
-              ),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: _isLoading ? null : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: widget.maroonColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  'Save Changes',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed:
+                              _isLoading ? null : () => Navigator.pop(context),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.poppins(color: Colors.grey[700]),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: _isLoading ? null : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: widget.maroonColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  'Save Changes',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
             ),
           ],
         ),

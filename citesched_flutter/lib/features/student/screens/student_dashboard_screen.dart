@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
+import 'package:citesched_flutter/core/widgets/full_screen_calendar_scaffold.dart';
 
 final myProfileProvider = FutureProvider<Student?>((ref) async {
   return await client.student.getMyProfile();
@@ -28,6 +29,7 @@ class StudentDashboardScreen extends ConsumerWidget {
     final scheduleAsync = ref.watch(myScheduleProvider);
     final profileAsync = ref.watch(myProfileProvider);
     final user = ref.watch(authProvider);
+    final isMobile = ResponsiveHelper.isMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final maroonColor = const Color(0xFF720045);
@@ -83,97 +85,218 @@ class StudentDashboardScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.2),
-                                width: 2,
-                              ),
-                            ),
-                            child: CircleAvatar(
-                              radius: 35,
-                              backgroundColor: Colors.white.withOpacity(0.15),
-                              child: Text(
-                                (profileAsync.value?.name.isNotEmpty == true
-                                        ? profileAsync.value!.name[0]
-                                        : user?.userName?[0] ?? 'S')
-                                    .toUpperCase(),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 24),
-                          Expanded(
-                            child: Column(
+                      child: isMobile
+                          ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Welcome back, Student!',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white.withOpacity(0.9),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    letterSpacing: 0.5,
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white.withOpacity(0.2),
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: CircleAvatar(
+                                        radius: 30,
+                                        backgroundColor:
+                                            Colors.white.withOpacity(0.15),
+                                        child: Text(
+                                          (profileAsync.value?.name
+                                                      .isNotEmpty ==
+                                                  true
+                                              ? profileAsync.value!.name[0]
+                                              : user?.userName?[0] ?? 'S')
+                                              .toUpperCase(),
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 26,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Welcome back, Student!',
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.white
+                                                  .withOpacity(0.9),
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              letterSpacing: 0.4,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            profileAsync.value?.name ??
+                                                user?.userName ??
+                                                'Student',
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.white,
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: -0.4,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () async {
+                                      final confirm =
+                                          await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) =>
+                                            const LogoutConfirmationDialog(),
+                                      );
+                                      if (confirm == true) {
+                                        ref
+                                            .read(authProvider.notifier)
+                                            .signOut();
+                                      }
+                                    },
+                                    icon: const Icon(
+                                      Icons.logout_rounded,
+                                      size: 18,
+                                    ),
+                                    label: Text(
+                                      'Sign Out',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          Colors.white.withOpacity(0.2),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 18,
+                                        vertical: 14,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                        side:
+                                            const BorderSide(color: Colors.white30),
+                                      ),
+                                      elevation: 0,
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  profileAsync.value?.name ??
-                                      user?.userName ??
-                                      'Student',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: -0.5,
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.2),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: CircleAvatar(
+                                    radius: 35,
+                                    backgroundColor:
+                                        Colors.white.withOpacity(0.15),
+                                    child: Text(
+                                      (profileAsync.value?.name.isNotEmpty ==
+                                              true
+                                          ? profileAsync.value!.name[0]
+                                          : user?.userName?[0] ?? 'S')
+                                          .toUpperCase(),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 24),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Welcome back, Student!',
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white.withOpacity(0.9),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        profileAsync.value?.name ??
+                                            user?.userName ??
+                                            'Student',
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                ElevatedButton.icon(
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) =>
+                                          const LogoutConfirmationDialog(),
+                                    );
+                                    if (confirm == true) {
+                                      ref
+                                          .read(authProvider.notifier)
+                                          .signOut();
+                                    }
+                                  },
+                                  icon: const Icon(Icons.logout_rounded, size: 18),
+                                  label: Text(
+                                    'Sign Out',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white.withOpacity(0.2),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 18,
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      side: const BorderSide(color: Colors.white30),
+                                    ),
+                                    elevation: 0,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (context) =>
-                                    const LogoutConfirmationDialog(),
-                              );
-                              if (confirm == true) {
-                                ref.read(authProvider.notifier).signOut();
-                              }
-                            },
-                            icon: const Icon(Icons.logout_rounded, size: 18),
-                            label: Text(
-                              'Sign Out',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.2),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 14,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                                side: const BorderSide(color: Colors.white30),
-                              ),
-                              elevation: 0,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
 
                     const SizedBox(height: 32),
@@ -219,6 +342,39 @@ class StudentDashboardScreen extends ConsumerWidget {
                             ),
                           );
                         }
+                        if (isMobile) {
+                          return Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              children: [
+                                _infoRow(
+                                  'Student ID',
+                                  profile.studentNumber,
+                                ),
+                                const SizedBox(height: 8),
+                                _infoRow('Name', profile.name),
+                                const SizedBox(height: 8),
+                                _infoRow('Program', profile.course),
+                                const SizedBox(height: 8),
+                                _infoRow(
+                                  'Section',
+                                  profile.section ?? 'Unassigned',
+                                ),
+                                const SizedBox(height: 8),
+                                _infoRow(
+                                  'Year Level',
+                                  '${profile.yearLevel}',
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
                         return Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
@@ -226,31 +382,34 @@ class StudentDashboardScreen extends ConsumerWidget {
                             color: cardBg,
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: DataTable(
-                            headingRowColor: WidgetStateProperty.all(
-                              maroonColor.withOpacity(0.08),
-                            ),
-                            columnSpacing: 16,
-                            columns: [
-                              _tableHeader('STUDENT ID'),
-                              _tableHeader('NAME'),
-                              _tableHeader('PROGRAM'),
-                              _tableHeader('SECTION'),
-                              _tableHeader('YEAR LEVEL'),
-                            ],
-                            rows: [
-                              DataRow(
-                                cells: [
-                                  DataCell(Text(profile.studentNumber)),
-                                  DataCell(Text(profile.name)),
-                                  DataCell(Text(profile.course)),
-                                  DataCell(
-                                    Text(profile.section ?? 'Unassigned'),
-                                  ),
-                                  DataCell(Text('${profile.yearLevel}')),
-                                ],
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: DataTable(
+                              headingRowColor: WidgetStateProperty.all(
+                                maroonColor.withOpacity(0.08),
                               ),
-                            ],
+                              columnSpacing: 16,
+                              columns: [
+                                _tableHeader('STUDENT ID'),
+                                _tableHeader('NAME'),
+                                _tableHeader('PROGRAM'),
+                                _tableHeader('SECTION'),
+                                _tableHeader('YEAR LEVEL'),
+                              ],
+                              rows: [
+                                DataRow(
+                                  cells: [
+                                    DataCell(Text(profile.studentNumber)),
+                                    DataCell(Text(profile.name)),
+                                    DataCell(Text(profile.course)),
+                                    DataCell(
+                                      Text(profile.section ?? 'Unassigned'),
+                                    ),
+                                    DataCell(Text('${profile.yearLevel}')),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -411,6 +570,31 @@ class StudentDashboardScreen extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 16),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => FullScreenCalendarScaffold(
+                                      title: 'My Weekly Schedule',
+                                      backgroundColor: bgColor,
+                                      child: WeeklyCalendarView(
+                                        schedules: scheduled,
+                                        maroonColor: maroonColor,
+                                        isStudentView: true,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.fullscreen_rounded),
+                                label: Text(
+                                  'Full Screen',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
                             SizedBox(
                               height: ResponsiveHelper.calendarHeight(context),
                               child: WeeklyCalendarView(

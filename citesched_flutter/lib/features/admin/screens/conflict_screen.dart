@@ -133,11 +133,14 @@ class _ConflictScreenState extends State<ConflictScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final maroonColor = const Color(0xFF720045);
+    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textPrimary = isDark ? Colors.white : Colors.black87;
+    final textMuted = isDark ? Colors.grey[300]! : Colors.grey[700]!;
     final isMobile = ResponsiveHelper.isMobile(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: bgColor,
       body: Padding(
         padding: EdgeInsets.all(isMobile ? 16 : 32),
         child: Column(
@@ -146,7 +149,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
             // Header (Standardized Maroon Gradient Banner)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(32),
+              padding: EdgeInsets.all(isMobile ? 20 : 32),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -162,95 +165,193 @@ class _ConflictScreenState extends State<ConflictScreen> {
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
+              child: isMobile
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.warning_amber_rounded,
-                          color: Colors.white,
-                          size: 32,
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
                         children: [
-                          Text(
-                            'System Conflicts',
-                            style: GoogleFonts.poppins(
-                              fontSize: isMobile ? 24 : 32,
-                              fontWeight: FontWeight.bold,
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.warning_amber_rounded,
                               color: Colors.white,
-                              letterSpacing: -1,
+                              size: 28,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _isLoading
-                                ? 'Scanning all modules for conflicts...'
-                                : _conflicts.isEmpty
-                                ? 'No scheduling conflicts detected'
-                                : '${_conflicts.length} conflict${_conflicts.length == 1 ? '' : 's'} detected across modules',
-                            style: GoogleFonts.poppins(
-                              fontSize: isMobile ? 12 : 16,
-                              color: Colors.white.withValues(alpha: 0.8),
-                              letterSpacing: 0.2,
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'System Conflicts',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _isLoading
+                                      ? 'Scanning all modules for conflicts...'
+                                      : _conflicts.isEmpty
+                                      ? 'No scheduling conflicts detected'
+                                      : '${_conflicts.length} conflict${_conflicts.length == 1 ? '' : 's'} detected across modules',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isLoading ? null : _fetchConflicts,
+                          icon: _isLoading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Color(0xFF720045),
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.refresh_rounded, size: 20),
+                          label: Text(
+                            _isLoading ? 'Scanning...' : 'Refresh',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: maroonColor,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
                     ],
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _fetchConflicts,
-                    icon: _isLoading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Color(0xFF720045),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
                               ),
                             ),
-                          )
-                        : const Icon(Icons.refresh_rounded, size: 22),
-                    label: Text(
-                      isMobile ? 'Refresh' : 'Refresh Conflicts',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        letterSpacing: 0.5,
+                            child: const Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'System Conflicts',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: -1,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _isLoading
+                                    ? 'Scanning all modules for conflicts...'
+                                    : _conflicts.isEmpty
+                                    ? 'No scheduling conflicts detected'
+                                    : '${_conflicts.length} conflict${_conflicts.length == 1 ? '' : 's'} detected across modules',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: maroonColor,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 16 : 28,
-                        vertical: isMobile ? 12 : 18,
+                      const SizedBox(width: 16),
+                      ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _fetchConflicts,
+                        icon: _isLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFF720045),
+                                  ),
+                                ),
+                              )
+                            : const Icon(Icons.refresh_rounded, size: 22),
+                        label: Text(
+                          _isLoading ? 'Scanning...' : 'Refresh',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: maroonColor,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 28,
+                            vertical: 18,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
+                    ],
                   ),
-                ],
               ),
-            ),
 
             const SizedBox(height: 32),
 
@@ -265,8 +366,14 @@ class _ConflictScreenState extends State<ConflictScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _conflicts.isEmpty
-                  ? _buildEmptyState()
-                  : _buildConflictList(isDark, cardBg, maroonColor),
+                  ? _buildEmptyState(textMuted)
+                  : _buildConflictList(
+                      isDark,
+                      cardBg,
+                      maroonColor,
+                      textPrimary,
+                      textMuted,
+                    ),
             ),
           ],
         ),
@@ -318,7 +425,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(Color textMuted) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -347,14 +454,20 @@ class _ConflictScreenState extends State<ConflictScreen> {
           const SizedBox(height: 8),
           Text(
             'No conflicts across Faculty Loading, Rooms, Subjects, or Timetable.',
-            style: GoogleFonts.poppins(fontSize: 15, color: Colors.grey),
+            style: GoogleFonts.poppins(fontSize: 15, color: textMuted),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildConflictList(bool isDark, Color cardBg, Color maroonColor) {
+  Widget _buildConflictList(
+    bool isDark,
+    Color cardBg,
+    Color maroonColor,
+    Color textPrimary,
+    Color textMuted,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -495,7 +608,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
                                     style: GoogleFonts.poppins(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.grey[600],
+                                      color: textMuted,
                                       letterSpacing: 0.5,
                                     ),
                                   ),
@@ -548,7 +661,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
                               style: GoogleFonts.poppins(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : Colors.black87,
+                                color: textPrimary,
                               ),
                             ),
                             // Details
@@ -558,9 +671,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
                                 conflict.details!,
                                 style: GoogleFonts.poppins(
                                   fontSize: 13,
-                                  color: isDark
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
+                                  color: textMuted,
                                 ),
                               ),
                             ],

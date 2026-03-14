@@ -486,30 +486,43 @@ class _ScheduleOverviewTab extends StatelessWidget {
 
         final isMobile = MediaQuery.of(context).size.width < 600;
 
+        final cards = [
+          _buildStatCard(
+            context,
+            'Total Classes',
+            data.totalSchedules.toString(),
+            Icons.class_outlined,
+            Colors.blue,
+            isMobile: isMobile,
+          ),
+          ...data.schedulesByProgram.entries.map(
+            (e) => _buildStatCard(
+              context,
+              '${e.key} Classes',
+              e.value.toString(),
+              Icons.bookmark_outline,
+              Colors.orange,
+              isMobile: isMobile,
+            ),
+          ),
+        ];
+
+        if (isMobile) {
+          return ListView.separated(
+            padding: const EdgeInsets.all(20),
+            itemBuilder: (context, index) => cards[index],
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemCount: cards.length,
+          );
+        }
+
         return GridView.count(
           padding: const EdgeInsets.all(24),
-          crossAxisCount: isMobile ? 1 : 2,
+          crossAxisCount: 2,
           mainAxisSpacing: 16,
           crossAxisSpacing: 16,
-          childAspectRatio: isMobile ? 2.5 : 1.5,
-          children: [
-            _buildStatCard(
-              context,
-              'Total Classes',
-              data.totalSchedules.toString(),
-              Icons.class_outlined,
-              Colors.blue,
-            ),
-            ...data.schedulesByProgram.entries.map(
-              (e) => _buildStatCard(
-                context,
-                '${e.key} Classes',
-                e.value.toString(),
-                Icons.bookmark_outline,
-                Colors.orange,
-              ),
-            ),
-          ],
+          childAspectRatio: 1.5,
+          children: cards,
         );
       },
     );
@@ -520,10 +533,12 @@ class _ScheduleOverviewTab extends StatelessWidget {
     String title,
     String value,
     IconData icon,
-    Color color,
+    Color color, {
+    bool isMobile = false,
+  }
   ) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 18 : 24),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
@@ -534,16 +549,23 @@ class _ScheduleOverviewTab extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 32, color: color),
-          const SizedBox(height: 12),
+          Icon(icon, size: isMobile ? 28 : 32, color: color),
+          SizedBox(height: isMobile ? 10 : 12),
           Text(
             value,
             style: GoogleFonts.poppins(
-              fontSize: 32,
+              fontSize: isMobile ? 26 : 32,
               fontWeight: FontWeight.bold,
             ),
           ),
-          Text(title, style: GoogleFonts.poppins(color: Colors.grey)),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              color: Colors.grey,
+              fontSize: isMobile ? 12 : 14,
+            ),
+          ),
         ],
       ),
     );

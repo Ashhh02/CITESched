@@ -7,6 +7,7 @@ import 'package:citesched_flutter/core/providers/admin_providers.dart';
 import 'package:citesched_flutter/core/providers/conflict_provider.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
+import 'package:citesched_flutter/core/widgets/full_screen_calendar_scaffold.dart';
 
 final facultyDetailsSchedulesProvider =
     FutureProvider.family<List<Schedule>, int>((
@@ -218,6 +219,47 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => FullScreenCalendarScaffold(
+                              title: 'Weekly Schedule Analysis',
+                              backgroundColor: isDark
+                                  ? const Color(0xFF0F172A)
+                                  : const Color(0xFFF8F9FA),
+                              child: WeeklyCalendarView(
+                                maroonColor: maroonColor,
+                                availabilities:
+                                    availabilityAsync.maybeWhen(
+                                      data: (d) => d,
+                                      orElse: () => null,
+                                    ),
+                                schedules: facultySchedules.map((s) {
+                                  final sConflicts = facultyConflicts
+                                      .where(
+                                        (c) =>
+                                            c.scheduleId == s.id ||
+                                            c.conflictingScheduleId == s.id,
+                                      )
+                                      .toList();
+                                  return ScheduleInfo(
+                                    schedule: s,
+                                    conflicts: sConflicts,
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+                        ),
+                        icon: const Icon(Icons.fullscreen_rounded),
+                        label: Text(
+                          'Full Screen',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],

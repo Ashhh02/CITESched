@@ -679,6 +679,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   backgroundColor: activeThemeColor,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.all(14),
+                                  textStyle: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -692,12 +695,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           strokeWidth: 2,
                                         ),
                                       )
-                                    : Text(
-                                        'SIGN IN',
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
+                                    : const Text('SIGN IN'),
                               ),
 
                               const SizedBox(height: 40),

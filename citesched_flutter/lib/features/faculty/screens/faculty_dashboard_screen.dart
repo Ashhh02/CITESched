@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
+import 'package:citesched_flutter/core/widgets/full_screen_calendar_scaffold.dart';
 
 final facultyScheduleProvider = FutureProvider<List<ScheduleInfo>>((ref) async {
   ref.watch(scheduleSyncTriggerProvider);
@@ -226,9 +227,163 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
     final scheduleAsync = ref.watch(facultyScheduleProvider);
     final availabilityAsync = ref.watch(facultyAvailabilityProvider);
     final user = ref.watch(authProvider);
+    final isMobile = ResponsiveHelper.isMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+
+    Widget buildHeaderActions(bool compact) {
+      final actions = [
+        scheduleAsync.maybeWhen(
+          data: (schedules) => schedules.isEmpty
+              ? const SizedBox()
+              : ElevatedButton.icon(
+                  onPressed: () async {
+                    await ScheduleExportService.exportFacultySchedulePdf(
+                      facultyName: user?.userName ?? 'Faculty',
+                      schedules: schedules,
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.picture_as_pdf_rounded,
+                    size: 18,
+                  ),
+                  label: Text(
+                    'Export PDF',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: maroonColor,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+          orElse: () => const SizedBox(),
+        ),
+        scheduleAsync.maybeWhen(
+          data: (schedules) => schedules.isEmpty
+              ? const SizedBox()
+              : ElevatedButton.icon(
+                  onPressed: () async {
+                    final result =
+                        await ScheduleExportService.exportFacultyScheduleDocx(
+                          facultyName: user?.userName ?? 'Faculty',
+                          schedules: schedules,
+                        );
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          result != null
+                              ? 'DOCX exported: $result'
+                              : 'DOCX export canceled.',
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.description_rounded,
+                    size: 18,
+                  ),
+                  label: Text(
+                    'Export DOCX',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF37474F),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+          orElse: () => const SizedBox(),
+        ),
+        ElevatedButton.icon(
+          onPressed: () async {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (context) => const LogoutConfirmationDialog(),
+            );
+            if (confirm == true) {
+              ref.read(authProvider.notifier).signOut();
+            }
+          },
+          icon: const Icon(Icons.logout_rounded, size: 18),
+          label: Text(
+            'Sign Out',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white.withOpacity(0.2),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 14,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: const BorderSide(color: Colors.white30),
+            ),
+            elevation: 0,
+          ),
+        ),
+        const ThemeModeToggle(compact: true),
+      ];
+
+      if (!compact) {
+        return Row(
+          children: [
+            actions[0],
+            const SizedBox(width: 12),
+            actions[1],
+            const SizedBox(width: 12),
+            actions[2],
+            const SizedBox(width: 12),
+            actions[3],
+          ],
+        );
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (actions[0] is! SizedBox)
+            SizedBox(width: double.infinity, child: actions[0]),
+          if (actions[0] is! SizedBox) const SizedBox(height: 10),
+          if (actions[1] is! SizedBox)
+            SizedBox(width: double.infinity, child: actions[1]),
+          if (actions[1] is! SizedBox) const SizedBox(height: 10),
+          SizedBox(width: double.infinity, child: actions[2]),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: actions[3],
+          ),
+        ],
+      );
+    }
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -265,174 +420,97 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                       ),
                     ],
                   ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 38,
-                        backgroundColor: Colors.white.withOpacity(0.18),
-                        child: Text(
-                          (user?.userName?[0] ?? 'F').toUpperCase(),
-                          style: GoogleFonts.poppins(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      Expanded(
-                        child: Column(
+                  child: isMobile
+                      ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Welcome, Professor',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white.withOpacity(0.8),
-                                fontSize: 14,
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 32,
+                                  backgroundColor:
+                                      Colors.white.withOpacity(0.18),
+                                  child: Text(
+                                    (user?.userName?[0] ?? 'F').toUpperCase(),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Welcome, Professor',
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white.withOpacity(0.8),
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      Text(
+                                        user?.userName ?? 'Faculty Member',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            buildHeaderActions(true),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 38,
+                              backgroundColor: Colors.white.withOpacity(0.18),
+                              child: Text(
+                                (user?.userName?[0] ?? 'F').toUpperCase(),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
-                            Text(
-                              user?.userName ?? 'Faculty Member',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Welcome, Professor',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    user?.userName ?? 'Faculty Member',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
+                            buildHeaderActions(false),
                           ],
                         ),
-                      ),
-                      // Action Buttons
-                      Row(
-                        children: [
-                          scheduleAsync.maybeWhen(
-                            data: (schedules) => schedules.isEmpty
-                                ? const SizedBox()
-                                : ElevatedButton.icon(
-                                    onPressed: () async {
-                                      await ScheduleExportService.exportFacultySchedulePdf(
-                                        facultyName:
-                                            user?.userName ?? 'Faculty',
-                                        schedules: schedules,
-                                      );
-                                    },
-                                    icon: const Icon(
-                                      Icons.picture_as_pdf_rounded,
-                                      size: 18,
-                                    ),
-                                    label: Text(
-                                      'Export PDF',
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      foregroundColor: maroonColor,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 18,
-                                        vertical: 14,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      elevation: 0,
-                                    ),
-                                  ),
-                            orElse: () => const SizedBox(),
-                          ),
-                          const SizedBox(width: 12),
-                          scheduleAsync.maybeWhen(
-                            data: (schedules) => schedules.isEmpty
-                                ? const SizedBox()
-                                : ElevatedButton.icon(
-                                    onPressed: () async {
-                                      final result =
-                                          await ScheduleExportService.exportFacultyScheduleDocx(
-                                            facultyName:
-                                                user?.userName ?? 'Faculty',
-                                            schedules: schedules,
-                                          );
-                                      if (!context.mounted) return;
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            result != null
-                                                ? 'DOCX exported: $result'
-                                                : 'DOCX export canceled.',
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    icon: const Icon(
-                                      Icons.description_rounded,
-                                      size: 18,
-                                    ),
-                                    label: Text(
-                                      'Export DOCX',
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      foregroundColor: const Color(0xFF37474F),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 18,
-                                        vertical: 14,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      elevation: 0,
-                                    ),
-                                  ),
-                            orElse: () => const SizedBox(),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (context) =>
-                                    const LogoutConfirmationDialog(),
-                              );
-                              if (confirm == true) {
-                                ref.read(authProvider.notifier).signOut();
-                              }
-                            },
-                            icon: const Icon(Icons.logout_rounded, size: 18),
-                            label: Text(
-                              'Sign Out',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.2),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 14,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                                side: const BorderSide(color: Colors.white30),
-                              ),
-                              elevation: 0,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          const ThemeModeToggle(compact: true),
-                        ],
-                      ),
-                    ],
-                  ),
                 ),
 
                 const SizedBox(height: 28),
@@ -689,22 +767,98 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                         children: [
                           // ── Tab 1: Calendar ──────────────────────────
                           availabilityAsync.when(
-                            data: (availabilities) => WeeklyCalendarView(
-                              schedules: schedules,
-                              availabilities: availabilities,
-                              maroonColor: maroonColor,
+                            data: (availabilities) => Column(
+                              children: [
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                    onPressed: () =>
+                                        Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            FullScreenCalendarScaffold(
+                                          title: 'Weekly Calendar',
+                                          backgroundColor: isDark
+                                              ? const Color(0xFF0F172A)
+                                              : const Color(0xFFF8F9FA),
+                                          child: WeeklyCalendarView(
+                                            schedules: schedules,
+                                            availabilities: availabilities,
+                                            maroonColor: maroonColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    icon:
+                                        const Icon(Icons.fullscreen_rounded),
+                                    label: Text(
+                                      'Full Screen',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: WeeklyCalendarView(
+                                    schedules: schedules,
+                                    availabilities: availabilities,
+                                    maroonColor: maroonColor,
+                                  ),
+                                ),
+                              ],
                             ),
                             loading: () => const Center(
                               child: CircularProgressIndicator(),
                             ),
-                            error: (err, _) => WeeklyCalendarView(
-                              schedules: schedules,
-                              maroonColor: maroonColor,
+                            error: (err, _) => Column(
+                              children: [
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                    onPressed: () =>
+                                        Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            FullScreenCalendarScaffold(
+                                          title: 'Weekly Calendar',
+                                          backgroundColor: isDark
+                                              ? const Color(0xFF0F172A)
+                                              : const Color(0xFFF8F9FA),
+                                          child: WeeklyCalendarView(
+                                            schedules: schedules,
+                                            maroonColor: maroonColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    icon:
+                                        const Icon(Icons.fullscreen_rounded),
+                                    label: Text(
+                                      'Full Screen',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: WeeklyCalendarView(
+                                    schedules: schedules,
+                                    maroonColor: maroonColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
 
                           // ── Tab 2: Schedule Table ───────────────────
-                          _buildScheduleTable(schedules, cardBg, isDark),
+                          _buildScheduleTable(
+                            context,
+                            schedules,
+                            cardBg,
+                            isDark,
+                          ),
                         ],
                       ),
                     );
@@ -719,10 +873,12 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
   }
 
   Widget _buildScheduleTable(
+    BuildContext context,
     List<ScheduleInfo> schedules,
     Color cardBg,
     bool isDark,
   ) {
+    final isMobile = ResponsiveHelper.isMobile(context);
     // Sort by day then time
     final dayOrder = {
       DayOfWeek.mon: 0,
@@ -742,6 +898,129 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
           b.schedule.timeslot?.startTime ?? '',
         );
       });
+
+    if (isMobile) {
+      return Container(
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: sorted.length,
+          itemBuilder: (context, index) {
+            final info = sorted[index];
+            final s = info.schedule;
+            final ts = s.timeslot;
+            final hasConflict = info.conflicts.isNotEmpty;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: hasConflict
+                    ? Colors.red.withOpacity(0.05)
+                    : (isDark
+                        ? Colors.white.withOpacity(0.03)
+                        : Colors.grey.withOpacity(0.04)),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: hasConflict
+                      ? Colors.red.withOpacity(0.2)
+                      : (isDark ? Colors.white12 : Colors.grey.shade200),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: hasConflict ? Colors.red : maroonColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _getDayName(ts?.day),
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      if (hasConflict)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            'Conflict',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.red[700],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    ts == null
+                        ? 'Time TBD'
+                        : '${ts.startTime} - ${ts.endTime}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: isDark ? Colors.white70 : Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    s.subject?.name ?? 'Subject',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 6,
+                    children: [
+                      _miniChip(
+                        label: 'Section',
+                        value: s.section ?? '--',
+                      ),
+                      _miniChip(
+                        label: 'Room',
+                        value: s.room?.name ?? '--',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -947,6 +1226,25 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _miniChip({required String label, required String value}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: maroonColor.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: maroonColor.withOpacity(0.2)),
+      ),
+      child: Text(
+        '$label: $value',
+        style: GoogleFonts.poppins(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: maroonColor,
+        ),
       ),
     );
   }

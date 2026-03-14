@@ -16,9 +16,15 @@ class FacultyLoadChart extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
-    final gridColor = Colors.black.withOpacity(0.05);
-    final axisColor = Colors.black;
-    final textColor = Colors.black;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color ??
+        (isDark ? const Color(0xFFE2E8F0) : Colors.black);
+    final axisColor = isDark ? Colors.white70 : Colors.black;
+    final gridColor =
+        isDark ? Colors.white12 : Colors.black.withOpacity(0.05);
+    final barColor = isDark ? const Color(0xFFE2E8F0) : Colors.black;
+    final barBgColor =
+        isDark ? Colors.white10 : Colors.black.withOpacity(0.03);
 
     return BarChart(
       BarChartData(
@@ -77,7 +83,7 @@ class FacultyLoadChart extends StatelessWidget {
                 return Text(
                   value.toInt().toString(),
                   style: GoogleFonts.poppins(
-                    color: textColor.withOpacity(0.5),
+                    color: textColor.withOpacity(0.6),
                     fontSize: isMobile ? 9 : 11,
                   ),
                 );
@@ -115,7 +121,7 @@ class FacultyLoadChart extends StatelessWidget {
             barRods: [
               BarChartRodData(
                 toY: entry.value.currentLoad,
-                color: Colors.black,
+                color: barColor,
                 width: isMobile ? 12 : 22,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(6),
@@ -123,7 +129,7 @@ class FacultyLoadChart extends StatelessWidget {
                 backDrawRodData: BackgroundBarChartRodData(
                   show: true,
                   toY: 30,
-                  color: Colors.black.withOpacity(0.03),
+                  color: barBgColor,
                 ),
               ),
             ],

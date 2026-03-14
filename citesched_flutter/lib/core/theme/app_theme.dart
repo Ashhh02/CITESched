@@ -33,6 +33,75 @@ class AppTheme {
   static const Color serverpodDarkGrey = surfaceColor;
 
   // Theme Data - FORMAL ACADEMIC APPEARANCE
+  static TextTheme _buildTextTheme({
+    required Color textColor,
+    required Color labelColor,
+  }) {
+    final base =
+        GoogleFonts.robotoTextTheme(ThemeData.light(useMaterial3: true).textTheme);
+    return base
+        .copyWith(
+          displayLarge: base.displayLarge?.copyWith(
+            inherit: true,
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: textColor,
+          ),
+          displayMedium: base.displayMedium?.copyWith(
+            inherit: true,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: textColor,
+          ),
+          displaySmall: base.displaySmall?.copyWith(
+            inherit: true,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: textColor,
+          ),
+          headlineMedium: base.headlineMedium?.copyWith(
+            inherit: true,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: textColor,
+          ),
+          headlineSmall: base.headlineSmall?.copyWith(
+            inherit: true,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: textColor,
+          ),
+          bodyLarge: base.bodyLarge?.copyWith(
+            inherit: true,
+            fontSize: 16,
+            fontWeight: FontWeight.normal,
+            color: textColor,
+          ),
+          bodyMedium: base.bodyMedium?.copyWith(
+            inherit: true,
+            fontSize: 14,
+            fontWeight: FontWeight.normal,
+            color: textColor,
+          ),
+          bodySmall: base.bodySmall?.copyWith(
+            inherit: true,
+            fontSize: 12,
+            fontWeight: FontWeight.normal,
+            color: textColor,
+          ),
+          labelLarge: base.labelLarge?.copyWith(
+            inherit: true,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: labelColor,
+          ),
+        )
+        .apply(
+          bodyColor: textColor,
+          displayColor: textColor,
+        );
+  }
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
@@ -48,52 +117,9 @@ class AppTheme {
       ),
 
       // Text Theme - CONSISTENT FONT FAMILY
-      textTheme: TextTheme(
-        displayLarge: GoogleFonts.roboto(
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          color: textPrimary,
-        ),
-        displayMedium: GoogleFonts.roboto(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: textPrimary,
-        ),
-        displaySmall: GoogleFonts.roboto(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: textPrimary,
-        ),
-        headlineMedium: GoogleFonts.roboto(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: textPrimary,
-        ),
-        headlineSmall: GoogleFonts.roboto(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: textPrimary,
-        ),
-        bodyLarge: GoogleFonts.roboto(
-          fontSize: 16,
-          fontWeight: FontWeight.normal,
-          color: textPrimary,
-        ),
-        bodyMedium: GoogleFonts.roboto(
-          fontSize: 14,
-          fontWeight: FontWeight.normal,
-          color: textPrimary,
-        ),
-        bodySmall: GoogleFonts.roboto(
-          fontSize: 12,
-          fontWeight: FontWeight.normal,
-          color: textSecondary,
-        ),
-        labelLarge: GoogleFonts.roboto(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
+      textTheme: _buildTextTheme(
+        textColor: textPrimary,
+        labelColor: Colors.white,
       ),
 
       // Input Decoration Theme - BLACK OUTLINED TEXTFIELDS
@@ -239,9 +265,9 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: const Color(0xFF0F172A),
       cardColor: const Color(0xFF1E293B),
-      textTheme: GoogleFonts.robotoTextTheme(base.textTheme).apply(
-        bodyColor: const Color(0xFFE2E8F0),
-        displayColor: const Color(0xFFE2E8F0),
+      textTheme: _buildTextTheme(
+        textColor: const Color(0xFFE2E8F0),
+        labelColor: const Color(0xFFE2E8F0),
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(
         filled: true,

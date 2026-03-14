@@ -1,10 +1,12 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
+import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
 import 'package:citesched_flutter/features/admin/widgets/timetable_filter_panel.dart';
 import 'package:citesched_flutter/features/admin/widgets/timetable_summary_panel.dart';
-import 'package:citesched_flutter/features/admin/screens/faculty_loading_screen.dart';
+import 'package:citesched_flutter/core/widgets/full_screen_calendar_scaffold.dart';
+import 'package:citesched_flutter/features/admin/screens/admin_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
@@ -539,6 +541,134 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     );
   }
 
+  Widget _buildTimetableHeader(BuildContext context) {
+    final isMobile = ResponsiveHelper.isMobile(context);
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(isMobile ? 20 : 32),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [maroonColor, const Color(0xFF8e005b)],
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: maroonColor.withValues(alpha: 0.3),
+            blurRadius: 25,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 900;
+          final titleSize = isNarrow ? 22.0 : 32.0;
+          final subtitleSize = isNarrow ? 12.0 : 16.0;
+          final iconSize = isNarrow ? 26.0 : 32.0;
+          final iconPadding = isNarrow ? 12.0 : 16.0;
+
+          final titleBlock = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: EdgeInsets.all(iconPadding),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Icon(
+                  Icons.calendar_view_week_rounded,
+                  color: Colors.white,
+                  size: iconSize,
+                ),
+              ),
+              SizedBox(width: isNarrow ? 12 : 24),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Weekly Timetable',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: titleSize,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Visualizing class schedules and potential conflicts',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: subtitleSize,
+                        color: Colors.white.withValues(alpha: 0.8),
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+
+          final actionButton = ElevatedButton.icon(
+            onPressed: _generateSchedule,
+            icon: const Icon(Icons.auto_awesome_rounded, size: 24),
+            label: Text(
+              'GENERATE AI SCHEDULE',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                letterSpacing: 0.5,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: maroonColor,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 28,
+                vertical: 18,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 0,
+            ),
+          );
+
+          if (isNarrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                titleBlock,
+                const SizedBox(height: 16),
+                SizedBox(width: double.infinity, child: actionButton),
+              ],
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(child: titleBlock),
+              const SizedBox(width: 16),
+              actionButton,
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final schedulesAsync = ref.watch(filteredSchedulesProvider);
@@ -546,185 +676,109 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     final currentFilter = ref.watch(timetableFilterProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
+    final isMobile = ResponsiveHelper.isMobile(context);
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Sidebar Filters
-          SizedBox(
-            width: 300,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TimetableFilterPanel(
-                currentFilter: currentFilter,
-                facultyList: _facultyList,
-                roomList: _roomList,
-                onFilterChanged: (newFilter) {
-                  ref.read(timetableFilterProvider.notifier).update(newFilter);
-                },
-              ),
-            ),
-          ),
-
-          // Main Content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header (Standardized Maroon Gradient Banner)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [maroonColor, const Color(0xFF8e005b)],
-                    ),
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: maroonColor.withValues(alpha: 0.3),
-                        blurRadius: 25,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isNarrow = constraints.maxWidth < 900;
-                      final titleBlock = Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2),
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.calendar_view_week_rounded,
-                              color: Colors.white,
-                              size: 32,
-                            ),
-                          ),
-                          const SizedBox(width: 24),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Weekly Timetable',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: -1,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Visualizing class schedules and potential conflicts',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-
-                      final actionButton = ElevatedButton.icon(
-                        onPressed: _generateSchedule,
-                        icon: const Icon(Icons.auto_awesome_rounded, size: 24),
-                        label: Text(
-                          'GENERATE AI SCHEDULE',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: maroonColor,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 28,
-                            vertical: 18,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                        ),
-                      );
-
-                      if (isNarrow) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            titleBlock,
-                            const SizedBox(height: 16),
-                            actionButton,
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          titleBlock,
-                          actionButton,
-                        ],
-                      );
+      body: isMobile
+          ? SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TimetableFilterPanel(
+                    currentFilter: currentFilter,
+                    facultyList: _facultyList,
+                    roomList: _roomList,
+                    onFilterChanged: (newFilter) {
+                      ref
+                          .read(timetableFilterProvider.notifier)
+                          .update(newFilter);
                     },
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  _buildTimetableHeader(context),
+                  const SizedBox(height: 16),
+                  schedulesAsync.when(
+                    data: (schedules) {
+                      final availabilities = currentFilter.facultyId != null
+                          ? ref
+                                .watch(
+                                  facultyAvailabilityProvider(
+                                    currentFilter.facultyId!,
+                                  ),
+                                )
+                                .maybeWhen(
+                                  data: (v) => v,
+                                  orElse: () => null,
+                                )
+                          : null;
+                      final selectedFaculty = currentFilter.facultyId != null
+                          ? _facultyList.firstWhere(
+                              (f) => f.id == currentFilter.facultyId,
+                            )
+                          : null;
+                      final calendarHeight =
+                          (MediaQuery.of(context).size.height * 0.65)
+                              .clamp(420.0, 720.0);
 
-                const SizedBox(height: 16),
-
-                // Calendar Area
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: schedulesAsync.when(
-                      data: (schedules) => Column(
+                      return Column(
                         children: [
                           if (currentFilter.facultyId != null &&
                               schedules.isNotEmpty)
                             _buildInstructorSummary(schedules),
-                          Expanded(
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => FullScreenCalendarScaffold(
+                                    title: 'Weekly Timetable',
+                                    backgroundColor: bgColor,
+                                    child: WeeklyCalendarView(
+                                      schedules: schedules,
+                                      maroonColor: maroonColor,
+                                      availabilities: availabilities,
+                                      selectedFaculty: selectedFaculty,
+                                      isInstructorView:
+                                          currentFilter.facultyId != null,
+                                      onEdit: (s) {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => AdminLayout(
+                                              initialIndex: 2,
+                                              initialEditSchedule: s,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              icon: const Icon(Icons.fullscreen_rounded),
+                              label: Text(
+                                'Full Screen',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            height: calendarHeight,
                             child: WeeklyCalendarView(
                               schedules: schedules,
                               maroonColor: maroonColor,
-                              availabilities: currentFilter.facultyId != null
-                                  ? ref
-                                        .watch(
-                                          facultyAvailabilityProvider(
-                                            currentFilter.facultyId!,
-                                          ),
-                                        )
-                                        .maybeWhen(
-                                          data: (v) => v,
-                                          orElse: () => null,
-                                        )
-                                  : null,
-                              selectedFaculty: currentFilter.facultyId != null
-                                  ? _facultyList.firstWhere(
-                                      (f) => f.id == currentFilter.facultyId,
-                                    )
-                                  : null,
-                              isInstructorView: currentFilter.facultyId != null,
+                              availabilities: availabilities,
+                              selectedFaculty: selectedFaculty,
+                              isInstructorView:
+                                  currentFilter.facultyId != null,
                               onEdit: (s) {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) => FacultyLoadingScreen(
+                                    builder: (_) => AdminLayout(
+                                      initialIndex: 2,
                                       initialEditSchedule: s,
                                     ),
                                   ),
@@ -733,31 +787,177 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                             ),
                           ),
                         ],
+                      );
+                    },
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) => Center(child: Text('Error: $err')),
+                  ),
+                  const SizedBox(height: 16),
+                  summaryAsync.when(
+                    data: (summary) => TimetableSummaryPanel(summary: summary),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) =>
+                        const Text('Error loading summary'),
+                  ),
+                ],
+              ),
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Sidebar Filters
+                SizedBox(
+                  width: 300,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: TimetableFilterPanel(
+                      currentFilter: currentFilter,
+                      facultyList: _facultyList,
+                      roomList: _roomList,
+                      onFilterChanged: (newFilter) {
+                        ref
+                            .read(timetableFilterProvider.notifier)
+                            .update(newFilter);
+                      },
+                    ),
+                  ),
+                ),
+
+                // Main Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTimetableHeader(context),
+                      const SizedBox(height: 16),
+
+                      // Calendar Area
+                      Expanded(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: schedulesAsync.when(
+                            data: (schedules) {
+                              final availabilities =
+                                  currentFilter.facultyId != null
+                                      ? ref
+                                            .watch(
+                                              facultyAvailabilityProvider(
+                                                currentFilter.facultyId!,
+                                              ),
+                                            )
+                                            .maybeWhen(
+                                              data: (v) => v,
+                                              orElse: () => null,
+                                            )
+                                      : null;
+                              final selectedFaculty =
+                                  currentFilter.facultyId != null
+                                      ? _facultyList.firstWhere(
+                                          (f) => f.id == currentFilter.facultyId,
+                                        )
+                                      : null;
+
+                              return Column(
+                                children: [
+                                  if (currentFilter.facultyId != null &&
+                                      schedules.isNotEmpty)
+                                    _buildInstructorSummary(schedules),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton.icon(
+                                      onPressed: () => Navigator.of(context)
+                                          .push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              FullScreenCalendarScaffold(
+                                            title: 'Weekly Timetable',
+                                            backgroundColor: bgColor,
+                                            child: WeeklyCalendarView(
+                                              schedules: schedules,
+                                              maroonColor: maroonColor,
+                                              availabilities: availabilities,
+                                              selectedFaculty: selectedFaculty,
+                                              isInstructorView:
+                                                  currentFilter.facultyId !=
+                                                      null,
+                                              onEdit: (s) {
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (_) => AdminLayout(
+                                                      initialIndex: 2,
+                                                      initialEditSchedule: s,
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      icon: const Icon(Icons.fullscreen_rounded),
+                                      label: Text(
+                                        'Full Screen',
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: WeeklyCalendarView(
+                                      schedules: schedules,
+                                      maroonColor: maroonColor,
+                                      availabilities: availabilities,
+                                      selectedFaculty: selectedFaculty,
+                                      isInstructorView:
+                                          currentFilter.facultyId != null,
+                                      onEdit: (s) {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => AdminLayout(
+                                              initialIndex: 2,
+                                              initialEditSchedule: s,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            error: (err, stack) =>
+                                Center(child: Text('Error: $err')),
+                          ),
+                        ),
                       ),
+                    ],
+                  ),
+                ),
+
+                // Summary Side Panel (Floating-like)
+                SizedBox(
+                  width: 280,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: summaryAsync.when(
+                      data: (summary) =>
+                          TimetableSummaryPanel(summary: summary),
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
-                      error: (err, stack) => Center(child: Text('Error: $err')),
+                      error: (err, stack) =>
+                          const Text('Error loading summary'),
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-
-          // Summary Side Panel (Floating-like)
-          SizedBox(
-            width: 280,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: summaryAsync.when(
-                data: (summary) => TimetableSummaryPanel(summary: summary),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Text('Error loading summary'),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

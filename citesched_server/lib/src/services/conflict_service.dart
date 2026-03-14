@@ -66,6 +66,102 @@ class ConflictService {
     return _requiresLaboratoryRoom(subject);
   }
 
+  List<String> _componentTagsForSchedule(Subject subject, Schedule schedule) {
+    final loadTypes = schedule.loadTypes ?? const [];
+    if (loadTypes.isNotEmpty) {
+      final hasLab = loadTypes.contains(SubjectType.laboratory);
+      final hasLecture = loadTypes.contains(SubjectType.lecture);
+      if (hasLab && !hasLecture) return const ['laboratory'];
+      if (hasLecture && !hasLab) return const ['lecture'];
+      if (hasLab && hasLecture) return const ['lecture', 'laboratory'];
+    }
+
+    final hasLecture = subject.types.contains(SubjectType.lecture);
+    final hasLab = subject.types.contains(SubjectType.laboratory);
+    final hasBlended = subject.types.contains(SubjectType.blended);
+    if (hasBlended || (hasLecture && hasLab)) {
+      return const ['lecture', 'laboratory'];
+    }
+    if (hasLab) return const ['laboratory'];
+    return const ['lecture'];
+  }
+
+  Future<void> _appendSubjectFacultyMismatch(
+    Session session,
+    Schedule schedule,
+    Subject? subject,
+    List<ScheduleConflict> conflicts,
+  ) async {
+    if (subject == null) return;
+    if (subject.facultyId == null) return;
+    if (subject.facultyId == schedule.facultyId) return;
+
+    final faculty = await Faculty.db.findById(session, subject.facultyId!);
+    conflicts.add(
+      ScheduleConflict(
+        type: 'subject_faculty_mismatch',
+        message: 'Subject is assigned to a different instructor',
+        facultyId: schedule.facultyId,
+        subjectId: schedule.subjectId,
+        scheduleId: schedule.id,
+        details:
+            'Subject ${subject.code} is assigned to ${faculty?.name ?? 'Faculty ID ${subject.facultyId}'}, but schedule uses Faculty ID ${schedule.facultyId}.',
+      ),
+    );
+  }
+
+  Future<void> _appendDuplicateComponentConflict(
+    Session session,
+    Schedule schedule,
+    Subject? subject,
+    List<ScheduleConflict> conflicts, {
+    int? excludeScheduleId,
+  }) async {
+    if (subject == null) return;
+    final tags = _componentTagsForSchedule(subject, schedule);
+    if (tags.isEmpty) return;
+
+    final sectionId = schedule.sectionId;
+    final sectionCode = schedule.section.trim();
+    if (sectionId == null && sectionCode.isEmpty) return;
+
+    final whereClause = sectionId != null
+        ? (Schedule.t.subjectId.equals(subject.id!) &
+              Schedule.t.sectionId.equals(sectionId))
+        : (Schedule.t.subjectId.equals(subject.id!) &
+              Schedule.t.section.equals(sectionCode));
+
+    var existing = await Schedule.db.find(
+      session,
+      where: (_) => whereClause,
+    );
+
+    if (excludeScheduleId != null) {
+      existing = existing.where((s) => s.id != excludeScheduleId).toList();
+    }
+
+    for (final other in existing) {
+      final otherTags = _componentTagsForSchedule(subject, other).toSet();
+      for (final tag in tags) {
+        if (!otherTags.contains(tag)) continue;
+        conflicts.add(
+          ScheduleConflict(
+            type: 'duplicate_component',
+            message:
+                'Section already has a $tag schedule for this subject',
+            facultyId: schedule.facultyId,
+            subjectId: schedule.subjectId,
+            scheduleId: schedule.id,
+            conflictingScheduleId: other.id,
+            details:
+                '${subject.code} (${subject.name}) already has a $tag schedule for section ${sectionCode.isNotEmpty ? sectionCode : sectionId}.',
+          ),
+        );
+        return;
+      }
+    }
+  }
+
   ScheduleConflict? _buildRoomTypeConflict({
     required Schedule schedule,
     required Subject subject,
@@ -600,6 +696,19 @@ class ConflictService {
     final conflicts = <ScheduleConflict>[];
     final subject = await Subject.db.findById(session, schedule.subjectId);
 
+    await _appendSubjectFacultyMismatch(
+      session,
+      schedule,
+      subject,
+      conflicts,
+    );
+    await _appendDuplicateComponentConflict(
+      session,
+      schedule,
+      subject,
+      conflicts,
+      excludeScheduleId: excludeScheduleId,
+    );
     await _appendRoomConflicts(
       session,
       schedule,

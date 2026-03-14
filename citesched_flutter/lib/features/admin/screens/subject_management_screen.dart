@@ -26,6 +26,7 @@ class _SubjectManagementScreenState
   Program? _selectedProgram;
   bool _isShowingArchived = false;
   final TextEditingController _searchController = TextEditingController();
+  final Set<int> _selectedSubjectIds = {};
 
   final Color maroonColor = const Color(0xFF720045);
 
@@ -33,6 +34,159 @@ class _SubjectManagementScreenState
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _syncSelectedSubjects(List<Subject> subjects) {
+    final visibleIds =
+        subjects.map((subject) => subject.id).whereType<int>().toSet();
+    final intersection = _selectedSubjectIds.intersection(visibleIds);
+    if (intersection.length != _selectedSubjectIds.length) {
+      _selectedSubjectIds
+        ..clear()
+        ..addAll(intersection);
+    }
+  }
+
+  void _toggleSelectAllSubjects(List<Subject> subjects, bool? isSelected) {
+    final shouldSelect = isSelected ?? false;
+    setState(() {
+      _selectedSubjectIds.clear();
+      if (shouldSelect) {
+        _selectedSubjectIds.addAll(
+          subjects.map((subject) => subject.id).whereType<int>(),
+        );
+      }
+    });
+  }
+
+  void _toggleSubjectSelection(int subjectId, bool? isSelected) {
+    setState(() {
+      if (isSelected ?? false) {
+        _selectedSubjectIds.add(subjectId);
+      } else {
+        _selectedSubjectIds.remove(subjectId);
+      }
+    });
+  }
+
+  Future<void> _archiveSelectedSubjects(List<Subject> subjects) async {
+    final selected = subjects
+        .where((subject) => _selectedSubjectIds.contains(subject.id))
+        .toList();
+    if (selected.isEmpty) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Archive Selected Subjects',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Archive ${selected.length} selected subjects?',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Archive', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        for (final subject in selected) {
+          await client.admin.updateSubject(
+            subject.copyWith(isActive: false),
+          );
+        }
+        _selectedSubjectIds.clear();
+        ref.invalidate(subjectsProvider);
+        ref.invalidate(archivedSubjectsProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Selected subjects archived successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          AppErrorDialog.show(context, e);
+        }
+      }
+    }
+  }
+
+  Future<void> _deleteSelectedSubjects(List<Subject> subjects) async {
+    final selected = subjects
+        .where((subject) => _selectedSubjectIds.contains(subject.id))
+        .toList();
+    if (selected.isEmpty) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Delete Selected Subjects',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'PERMANENTLY delete ${selected.length} selected subjects? This cannot be undone.',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Delete Permanently', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        for (final subject in selected) {
+          await client.admin.deleteSubject(subject.id!);
+        }
+        _selectedSubjectIds.clear();
+        ref.invalidate(subjectsProvider);
+        ref.invalidate(archivedSubjectsProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Selected subjects deleted permanently'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          AppErrorDialog.show(context, e);
+        }
+      }
+    }
   }
 
   void _showAddSubjectModal() {
@@ -284,7 +438,8 @@ class _SubjectManagementScreenState
         : ref.watch(subjectsProvider);
     final conflictsAsync = ref.watch(allConflictsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const bgColor = Colors.white;
+    final bgColor =
+        isDark ? const Color(0xFF0F172A) : Colors.white;
 
     final isMobile = ResponsiveHelper.isMobile(context);
 
@@ -299,7 +454,7 @@ class _SubjectManagementScreenState
             // Header (Standardized Maroon Gradient Banner)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(32),
+              padding: EdgeInsets.all(isMobile ? 20 : 32),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -318,79 +473,163 @@ class _SubjectManagementScreenState
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
+              child: isMobile
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.auto_stories_rounded,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Subject Management',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Manage academic subjects, curricula, and units',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color:
+                                          Colors.white.withValues(alpha: 0.8),
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _showAddSubjectModal,
+                            icon: const Icon(Icons.add_rounded, size: 20),
+                            label: Text(
+                              'Add New Subject',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: maroonColor,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                            ),
                           ),
                         ),
-                        child: const Icon(
-                          Icons.auto_stories_rounded,
-                          color: Colors.white,
-                          size: 32,
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.auto_stories_rounded,
+                                color: Colors.white,
+                                size: 32,
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Subject Management',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -1,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Manage academic subjects, curricula, and units',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 24),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Subject Management',
+                        const SizedBox(width: 16),
+                        ElevatedButton.icon(
+                          onPressed: _showAddSubjectModal,
+                          icon: const Icon(Icons.add_rounded, size: 24),
+                          label: Text(
+                            'Add New Subject',
                             style: GoogleFonts.poppins(
-                              fontSize: isMobile ? 24 : 32,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: -1,
+                              fontSize: 15,
+                              letterSpacing: 0.5,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Manage academic subjects, curricula, and units',
-                            style: GoogleFonts.poppins(
-                              fontSize: isMobile ? 12 : 16,
-                              color: Colors.white.withValues(alpha: 0.8),
-                              letterSpacing: 0.2,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: maroonColor,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 28,
+                              vertical: 18,
                             ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: _showAddSubjectModal,
-                    icon: const Icon(Icons.add_rounded, size: 24),
-                    label: Text(
-                      isMobile ? 'Add' : 'Add New Subject',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        letterSpacing: 0.5,
-                      ),
+                        ),
+                      ],
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: maroonColor,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 16 : 28,
-                        vertical: isMobile ? 12 : 18,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                  ),
-                ],
-              ),
             ),
 
             const SizedBox(height: 32),
@@ -452,6 +691,12 @@ class _SubjectManagementScreenState
                         s.program == _selectedProgram;
                     return matchesSearch && matchesYear && matchesProgram;
                   }).toList();
+                  final allSelected = filtered.isNotEmpty &&
+                      _selectedSubjectIds.length == filtered.length;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    _syncSelectedSubjects(filtered);
+                  });
 
                   if (isMobile) {
                     return _buildMobileSubjectList(filtered, isDark);
@@ -503,7 +748,66 @@ class _SubjectManagementScreenState
                                   color: maroonColor,
                                 ),
                               ),
+                              if (_selectedSubjectIds.isNotEmpty) ...[
+                                const SizedBox(width: 16),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: maroonColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${_selectedSubjectIds.length} selected',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: maroonColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
                               const Spacer(),
+                              if (!_isShowingArchived &&
+                                  _selectedSubjectIds.isNotEmpty) ...[
+                                TextButton.icon(
+                                  onPressed: () =>
+                                      _archiveSelectedSubjects(filtered),
+                                  icon: const Icon(Icons.archive_outlined),
+                                  label: Text(
+                                    'Archive Selected',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: maroonColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                              if (_isShowingArchived &&
+                                  _selectedSubjectIds.isNotEmpty) ...[
+                                TextButton.icon(
+                                  onPressed: () =>
+                                      _deleteSelectedSubjects(filtered),
+                                  icon: const Icon(
+                                    Icons.delete_forever_outlined,
+                                  ),
+                                  label: Text(
+                                    'Delete Selected',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -537,6 +841,7 @@ class _SubjectManagementScreenState
                                   child: SingleChildScrollView(
                                     scrollDirection: Axis.vertical,
                                     child: DataTable(
+                                      showCheckboxColumn: false,
                                       headingRowColor: WidgetStateProperty.all(
                                         maroonColor,
                                       ),
@@ -553,7 +858,19 @@ class _SubjectManagementScreenState
                                       decoration: const BoxDecoration(
                                         color: Colors.transparent,
                                       ),
-                                      columns: const [
+                                      columns: [
+                                        DataColumn(
+                                          label: Checkbox(
+                                            value: allSelected,
+                                            onChanged: (value) =>
+                                                _toggleSelectAllSubjects(
+                                              filtered,
+                                              value,
+                                            ),
+                                            activeColor: Colors.white,
+                                            checkColor: maroonColor,
+                                          ),
+                                        ),
                                         DataColumn(label: Text('CODE')),
                                         DataColumn(label: Text('TITLE')),
                                         DataColumn(label: Text('UNITS')),
@@ -572,19 +889,6 @@ class _SubjectManagementScreenState
                                         final index = entry.key;
 
                                         return DataRow(
-                                          onSelectChanged: (selected) {
-                                            if (selected == true) {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      SubjectDetailsScreen(
-                                                        subject: subject,
-                                                      ),
-                                                ),
-                                              );
-                                            }
-                                          },
                                           color:
                                               WidgetStateProperty.resolveWith<
                                                 Color?
@@ -596,6 +900,21 @@ class _SubjectManagementScreenState
                                                 ),
                                               ),
                                           cells: [
+                                            DataCell(
+                                              Checkbox(
+                                                value: subject.id != null &&
+                                                    _selectedSubjectIds
+                                                        .contains(subject.id),
+                                                onChanged: subject.id == null
+                                                    ? null
+                                                    : (value) =>
+                                                        _toggleSubjectSelection(
+                                                          subject.id!,
+                                                          value,
+                                                        ),
+                                                activeColor: maroonColor,
+                                              ),
+                                            ),
                                             DataCell(
                                               Row(
                                                 children: [
@@ -669,9 +988,25 @@ class _SubjectManagementScreenState
                                                 children: [
                                                   if (!_isShowingArchived) ...[
                                                     IconButton(
-                                                      icon: const Icon(
+                                                      icon: Icon(
+                                                        Icons.open_in_new,
+                                                        color: maroonColor,
+                                                      ),
+                                                      onPressed: () =>
+                                                          Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (_) =>
+                                                              SubjectDetailsScreen(
+                                                            subject: subject,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    IconButton(
+                                                      icon: Icon(
                                                         Icons.edit,
-                                                        color: Colors.blue,
+                                                        color: maroonColor,
                                                       ),
                                                       onPressed: () =>
                                                           _showEditSubjectModal(
@@ -679,9 +1014,9 @@ class _SubjectManagementScreenState
                                                           ),
                                                     ),
                                                     IconButton(
-                                                      icon: const Icon(
+                                                      icon: Icon(
                                                         Icons.archive_outlined,
-                                                        color: Colors.orange,
+                                                        color: maroonColor,
                                                       ),
                                                       tooltip:
                                                           'Archive Subject',
@@ -711,8 +1046,7 @@ class _SubjectManagementScreenState
                                                                   8,
                                                                 ),
                                                             decoration: BoxDecoration(
-                                                              color: Colors
-                                                                  .green
+                                                              color: maroonColor
                                                                   .withOpacity(
                                                                     0.1,
                                                                   ),
@@ -721,11 +1055,11 @@ class _SubjectManagementScreenState
                                                                     8,
                                                                   ),
                                                             ),
-                                                            child: const Icon(
+                                                            child: Icon(
                                                               Icons
                                                                   .restore_rounded,
                                                               color:
-                                                                  Colors.green,
+                                                                  maroonColor,
                                                               size: 18,
                                                             ),
                                                           ),
@@ -764,7 +1098,7 @@ class _SubjectManagementScreenState
                                                                     8,
                                                                   ),
                                                             ),
-                                                            child: const Icon(
+                                                            child: Icon(
                                                               Icons
                                                                   .delete_forever_rounded,
                                                               color: Colors.red,
@@ -933,30 +1267,40 @@ class _SubjectManagementScreenState
                         children: [
                           if (!_isShowingArchived) ...[
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.edit,
-                                color: Colors.blue,
+                                color: maroonColor,
                                 size: 20,
                               ),
                               onPressed: () => _showEditSubjectModal(subject),
                             ),
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.archive_outlined,
-                                color: Colors.orange,
+                                color: maroonColor,
                                 size: 20,
                               ),
                               onPressed: () => _archiveSubject(subject),
                             ),
                           ] else ...[
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.restore_rounded,
-                                color: Colors.green,
+                                color: maroonColor,
                                 size: 20,
                               ),
                               tooltip: 'Restore Subject',
                               onPressed: () => _restoreSubject(subject),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_forever_rounded,
+                                color: Colors.red,
+                                size: 20,
+                              ),
+                              tooltip: 'Delete Permanently',
+                              onPressed: () =>
+                                  _permanentDeleteSubject(subject),
                             ),
                           ],
                         ],
@@ -1166,17 +1510,17 @@ class _SubjectManagementScreenState
   }
 }
 
-class _AddSubjectModal extends StatefulWidget {
+class _AddSubjectModal extends ConsumerStatefulWidget {
   final Color maroonColor;
   final VoidCallback onSuccess;
 
   const _AddSubjectModal({required this.maroonColor, required this.onSuccess});
 
   @override
-  State<_AddSubjectModal> createState() => _AddSubjectModalState();
+  ConsumerState<_AddSubjectModal> createState() => _AddSubjectModalState();
 }
 
-class _AddSubjectModalState extends State<_AddSubjectModal> {
+class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
   void _showErrorDialog(BuildContext context, String message) {
     if (!context.mounted) return;
     String cleanMessage = message.replaceAll('Exception: ', '').trim();
@@ -1294,68 +1638,81 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(
+              padding: EdgeInsets.all(isMobile ? 20 : 24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [widget.maroonColor, const Color(0xFF8e005b)],
+                ),
+                borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(20),
                 ),
-                border: Border(
-                  bottom: BorderSide(color: Colors.black, width: 1),
-                ),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.black.withOpacity(0.15)),
-                    ),
-                    child: const Icon(
-                      Icons.library_add_rounded,
-                      color: Colors.black,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isCompact = constraints.maxWidth < 420;
+                  return Row(
                     children: [
-                      Text(
-                        'Add New Subject',
-                        style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: Colors.white.withOpacity(0.25)),
+                        ),
+                        child: const Icon(
+                          Icons.library_add_rounded,
+                          color: Colors.white,
+                          size: 24,
                         ),
                       ),
-                      Text(
-                        'Enter subject details below',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: Colors.black54,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Add New Subject',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              'Enter subject details below',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(
+                                fontSize: isCompact ? 11 : 12,
+                                color: Colors.white.withOpacity(0.85),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.18),
                         ),
                       ),
                     ],
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, color: Colors.black),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black.withOpacity(0.05),
-                    ),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
 
             // Form Content
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(32),
+                padding: EdgeInsets.all(isMobile ? 20 : 32),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -1367,27 +1724,45 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
                         textPrimary,
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              'Subject Code',
-                              _codeController,
-                              isDark,
-                              hint: 'e.g., ITEC 101',
+                      isMobile
+                          ? Column(
+                              children: [
+                                _buildTextField(
+                                  'Subject Code',
+                                  _codeController,
+                                  isDark,
+                                  hint: 'e.g., ITEC 101',
+                                ),
+                                const SizedBox(height: 16),
+                                _buildTextField(
+                                  'Units',
+                                  _unitsController,
+                                  isDark,
+                                  isNumber: true,
+                                ),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTextField(
+                                    'Subject Code',
+                                    _codeController,
+                                    isDark,
+                                    hint: 'e.g., ITEC 101',
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildTextField(
+                                    'Units',
+                                    _unitsController,
+                                    isDark,
+                                    isNumber: true,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              'Units',
-                              _unitsController,
-                              isDark,
-                              isNumber: true,
-                            ),
-                          ),
-                        ],
-                      ),
                       const SizedBox(height: 16),
                       _buildTextField(
                         'Subject Title',
@@ -1484,10 +1859,8 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
                         ),
                       ],
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
+                      isMobile
+                          ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
@@ -1503,10 +1876,10 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
                                 const SizedBox(height: 8),
                                 Wrap(
                                   spacing: 8,
+                                  runSpacing: 8,
                                   children: SubjectType.values.map((type) {
-                                    final isSelected = _selectedTypes.contains(
-                                      type,
-                                    );
+                                    final isSelected =
+                                        _selectedTypes.contains(type);
                                     return FilterChip(
                                       label: Text(type.name.toUpperCase()),
                                       selected: isSelected,
@@ -1593,20 +1966,146 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
                                     );
                                   }).toList(),
                                 ),
+                                const SizedBox(height: 16),
+                                _buildTextField(
+                                  'Student Count',
+                                  _studentsCountController,
+                                  isDark,
+                                  isNumber: true,
+                                ),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Subject Types',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: isDark
+                                              ? Colors.grey[300]
+                                              : Colors.grey[700],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Wrap(
+                                        spacing: 8,
+                                        children:
+                                            SubjectType.values.map((type) {
+                                          final isSelected =
+                                              _selectedTypes.contains(type);
+                                          return FilterChip(
+                                            label:
+                                                Text(type.name.toUpperCase()),
+                                            selected: isSelected,
+                                            onSelected: (selected) {
+                                              setState(() {
+                                                if (selected) {
+                                                  _selectedTypes.add(type);
+                                                } else {
+                                                  _selectedTypes.remove(type);
+                                                }
+                                                if (!selected &&
+                                                    type ==
+                                                        SubjectType.blended) {
+                                                  _selectedTypes.remove(
+                                                    SubjectType.lecture,
+                                                  );
+                                                  _selectedTypes.remove(
+                                                    SubjectType.laboratory,
+                                                  );
+                                                  return;
+                                                }
+                                                if (selected &&
+                                                    (type ==
+                                                            SubjectType
+                                                                .lecture ||
+                                                        type ==
+                                                            SubjectType
+                                                                .laboratory) &&
+                                                    _selectedTypes.contains(
+                                                      SubjectType.blended,
+                                                    )) {
+                                                  _selectedTypes.remove(
+                                                    SubjectType.blended,
+                                                  );
+                                                  return;
+                                                }
+                                                if (_selectedTypes.contains(
+                                                  SubjectType.blended,
+                                                )) {
+                                                  if (!_selectedTypes.contains(
+                                                    SubjectType.lecture,
+                                                  )) {
+                                                    _selectedTypes.add(
+                                                      SubjectType.lecture,
+                                                    );
+                                                  }
+                                                  if (!_selectedTypes.contains(
+                                                    SubjectType.laboratory,
+                                                  )) {
+                                                    _selectedTypes.add(
+                                                      SubjectType.laboratory,
+                                                    );
+                                                  }
+                                                }
+                                                final hasLecture =
+                                                    _selectedTypes.contains(
+                                                  SubjectType.lecture,
+                                                );
+                                                final hasLab =
+                                                    _selectedTypes.contains(
+                                                  SubjectType.laboratory,
+                                                );
+                                                if (hasLecture && hasLab) {
+                                                  if (!_selectedTypes.contains(
+                                                    SubjectType.blended,
+                                                  )) {
+                                                    _selectedTypes.add(
+                                                      SubjectType.blended,
+                                                    );
+                                                  }
+                                                } else {
+                                                  _selectedTypes.remove(
+                                                    SubjectType.blended,
+                                                  );
+                                                }
+                                              });
+                                            },
+                                            selectedColor: widget.maroonColor
+                                                .withOpacity(0.2),
+                                            checkmarkColor: widget.maroonColor,
+                                            labelStyle: GoogleFonts.poppins(
+                                              color: isSelected
+                                                  ? widget.maroonColor
+                                                  : textPrimary,
+                                              fontSize: 12,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.bold
+                                                  : FontWeight.normal,
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildTextField(
+                                    'Student Count',
+                                    _studentsCountController,
+                                    isDark,
+                                    isNumber: true,
+                                  ),
+                                ),
                               ],
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              'Student Count',
-                              _studentsCountController,
-                              isDark,
-                              isNumber: true,
-                            ),
-                          ),
-                        ],
-                      ),
 
                       const SizedBox(height: 24),
                       _buildSectionTitle(
@@ -1615,56 +2114,146 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
                         textPrimary,
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              initialValue: _yearLevel,
-                              decoration: _inputDecoration(
-                                'Year Level',
-                                isDark,
-                              ),
-                              dropdownColor: cardBg,
-                              items: List.generate(
-                                4,
-                                (i) => DropdownMenuItem(
-                                  value: i + 1,
-                                  child: Text(
-                                    'Year ${i + 1}',
-                                    style: GoogleFonts.poppins(
-                                      color: textPrimary,
+                      Builder(
+                        builder: (context) {
+                          final yearLevels = ref
+                              .watch(studentsProvider)
+                              .maybeWhen(
+                                data: (students) {
+                                  final levels = students
+                                      .map((s) => s.yearLevel)
+                                      .whereType<int>()
+                                      .toSet()
+                                      .toList()
+                                    ..sort();
+                                  return levels.isEmpty
+                                      ? <int>[1, 2, 3, 4]
+                                      : levels;
+                                },
+                                orElse: () => <int>[1, 2, 3, 4],
+                              );
+                          final safeYearLevel = yearLevels.contains(_yearLevel)
+                              ? _yearLevel
+                              : yearLevels.first;
+                          if (_yearLevel != safeYearLevel) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (!mounted) return;
+                              setState(() => _yearLevel = safeYearLevel);
+                            });
+                          }
+
+                          return isMobile
+                              ? Column(
+                                  children: [
+                                    DropdownButtonFormField<int>(
+                                      initialValue: safeYearLevel,
+                                      decoration: _inputDecoration(
+                                        'Year Level',
+                                        isDark,
+                                      ),
+                                      dropdownColor: cardBg,
+                                      items: yearLevels
+                                          .map(
+                                            (level) => DropdownMenuItem(
+                                              value: level,
+                                              child: Text(
+                                                'Year $level',
+                                                style: GoogleFonts.poppins(
+                                                  color: textPrimary,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: (v) =>
+                                          setState(() => _yearLevel = v!),
                                     ),
-                                  ),
-                                ),
-                              ),
-                              onChanged: (v) => setState(() => _yearLevel = v!),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              initialValue: _term,
-                              decoration: _inputDecoration('Semester', isDark),
-                              dropdownColor: cardBg,
-                              items: [1, 2]
-                                  .map(
-                                    (i) => DropdownMenuItem(
-                                      value: i,
-                                      child: Text(
-                                        i == 1
-                                            ? '1st Semester'
-                                            : '2nd Semester',
-                                        style: GoogleFonts.poppins(
-                                          color: textPrimary,
+                                    const SizedBox(height: 16),
+                                    DropdownButtonFormField<int>(
+                                      initialValue: _term,
+                                      decoration: _inputDecoration(
+                                        'Semester',
+                                        isDark,
+                                      ),
+                                      dropdownColor: cardBg,
+                                      items: [1, 2]
+                                          .map(
+                                            (i) => DropdownMenuItem(
+                                              value: i,
+                                              child: Text(
+                                                i == 1
+                                                    ? '1st Semester'
+                                                    : '2nd Semester',
+                                                style: GoogleFonts.poppins(
+                                                  color: textPrimary,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: (v) =>
+                                          setState(() => _term = v!),
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Expanded(
+                                      child: DropdownButtonFormField<int>(
+                                        initialValue: safeYearLevel,
+                                        decoration: _inputDecoration(
+                                          'Year Level',
+                                          isDark,
                                         ),
+                                        dropdownColor: cardBg,
+                                        items: yearLevels
+                                            .map(
+                                              (level) => DropdownMenuItem(
+                                                value: level,
+                                                child: Text(
+                                                  'Year $level',
+                                                  style: GoogleFonts.poppins(
+                                                    color: textPrimary,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                        onChanged: (v) =>
+                                            setState(() => _yearLevel = v!),
                                       ),
                                     ),
-                                  )
-                                  .toList(),
-                              onChanged: (v) => setState(() => _term = v!),
-                            ),
-                          ),
-                        ],
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: DropdownButtonFormField<int>(
+                                        initialValue: _term,
+                                        decoration: _inputDecoration(
+                                          'Semester',
+                                          isDark,
+                                        ),
+                                        dropdownColor: cardBg,
+                                        items: [1, 2]
+                                            .map(
+                                              (i) => DropdownMenuItem(
+                                                value: i,
+                                                child: Text(
+                                                  i == 1
+                                                      ? '1st Semester'
+                                                      : '2nd Semester',
+                                                  style: GoogleFonts.poppins(
+                                                    color: textPrimary,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                        onChanged: (v) =>
+                                            setState(() => _term = v!),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                        },
                       ),
                     ],
                   ),
@@ -1678,54 +2267,113 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: borderColor)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                    ),
-                    child: Text(
-                      'Cancel',
-                      style: GoogleFonts.poppins(color: textMuted),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _submit,
-                    icon: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
+              child: isMobile
+                  ? Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _isLoading ? null : _submit,
+                            icon: _isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.check_rounded, size: 20),
+                            label: Text(
+                              _isLoading ? 'Saving...' : 'Create Subject',
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          )
-                        : const Icon(Icons.check_rounded, size: 20),
-                    label: Text(
-                      _isLoading ? 'Saving...' : 'Create Subject',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: widget.maroonColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.poppins(color: textMuted),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 16,
+                            ),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.poppins(color: textMuted),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton.icon(
+                          onPressed: _isLoading ? null : _submit,
+                          icon: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.check_rounded, size: 20),
+                          label: Text(
+                            _isLoading ? 'Saving...' : 'Create Subject',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: widget.maroonColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ],
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.maroonColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
@@ -1866,7 +2514,7 @@ class _AddSubjectModalState extends State<_AddSubjectModal> {
   }
 }
 
-class _EditSubjectModal extends StatefulWidget {
+class _EditSubjectModal extends ConsumerStatefulWidget {
   final Subject subject;
   final Color maroonColor;
   final VoidCallback onSuccess;
@@ -1878,10 +2526,10 @@ class _EditSubjectModal extends StatefulWidget {
   });
 
   @override
-  State<_EditSubjectModal> createState() => _EditSubjectModalState();
+  ConsumerState<_EditSubjectModal> createState() => _EditSubjectModalState();
 }
 
-class _EditSubjectModalState extends State<_EditSubjectModal> {
+class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
   void _showErrorDialog(BuildContext context, String message) {
     if (!context.mounted) return;
     String cleanMessage = message.replaceAll('Exception: ', '').trim();
@@ -2016,61 +2664,119 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
             // Header
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [widget.maroonColor, const Color(0xFF8e005b)],
+                ),
+                borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(20),
                 ),
-                border: Border(
-                  bottom: BorderSide(color: Colors.black, width: 1),
-                ),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.black.withOpacity(0.15)),
-                    ),
-                    child: const Icon(
-                      Icons.edit_note_rounded,
-                      color: Colors.black,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Edit Subject',
-                        style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+              child: isMobile
+                  ? Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.25),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.edit_note_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Update subject details below',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: Colors.black54,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Edit Subject',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                'Update subject details below',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.white.withOpacity(0.85),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, color: Colors.black),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black.withOpacity(0.05),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.18),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.25),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.edit_note_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Edit Subject',
+                              style: GoogleFonts.poppins(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              'Update subject details below',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                color: Colors.white.withOpacity(0.85),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close, color: Colors.black),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.black.withOpacity(0.05),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
 
             // Form Content
@@ -2088,27 +2794,45 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
                         textPrimary,
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              'Subject Code',
-                              _codeController,
-                              isDark,
-                              hint: 'e.g., ITEC 101',
+                      isMobile
+                          ? Column(
+                              children: [
+                                _buildTextField(
+                                  'Subject Code',
+                                  _codeController,
+                                  isDark,
+                                  hint: 'e.g., ITEC 101',
+                                ),
+                                const SizedBox(height: 12),
+                                _buildTextField(
+                                  'Units',
+                                  _unitsController,
+                                  isDark,
+                                  isNumber: true,
+                                ),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTextField(
+                                    'Subject Code',
+                                    _codeController,
+                                    isDark,
+                                    hint: 'e.g., ITEC 101',
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildTextField(
+                                    'Units',
+                                    _unitsController,
+                                    isDark,
+                                    isNumber: true,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              'Units',
-                              _unitsController,
-                              isDark,
-                              isNumber: true,
-                            ),
-                          ),
-                        ],
-                      ),
                       const SizedBox(height: 16),
                       _buildTextField(
                         'Subject Title',
@@ -2308,56 +3032,146 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
                         textPrimary,
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              initialValue: _yearLevel,
-                              decoration: _inputDecoration(
-                                'Year Level',
-                                isDark,
-                              ),
-                              dropdownColor: cardBg,
-                              items: List.generate(
-                                4,
-                                (i) => DropdownMenuItem(
-                                  value: i + 1,
-                                  child: Text(
-                                    'Year ${i + 1}',
-                                    style: GoogleFonts.poppins(
-                                      color: textPrimary,
+                      Builder(
+                        builder: (context) {
+                          final yearLevels = ref
+                              .watch(studentsProvider)
+                              .maybeWhen(
+                                data: (students) {
+                                  final levels = students
+                                      .map((s) => s.yearLevel)
+                                      .whereType<int>()
+                                      .toSet()
+                                      .toList()
+                                    ..sort();
+                                  return levels.isEmpty
+                                      ? <int>[1, 2, 3, 4]
+                                      : levels;
+                                },
+                                orElse: () => <int>[1, 2, 3, 4],
+                              );
+                          final safeYearLevel = yearLevels.contains(_yearLevel)
+                              ? _yearLevel
+                              : yearLevels.first;
+                          if (_yearLevel != safeYearLevel) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (!mounted) return;
+                              setState(() => _yearLevel = safeYearLevel);
+                            });
+                          }
+
+                          return isMobile
+                              ? Column(
+                                  children: [
+                                    DropdownButtonFormField<int>(
+                                      initialValue: safeYearLevel,
+                                      decoration: _inputDecoration(
+                                        'Year Level',
+                                        isDark,
+                                      ),
+                                      dropdownColor: cardBg,
+                                      items: yearLevels
+                                          .map(
+                                            (level) => DropdownMenuItem(
+                                              value: level,
+                                              child: Text(
+                                                'Year $level',
+                                                style: GoogleFonts.poppins(
+                                                  color: textPrimary,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: (v) =>
+                                          setState(() => _yearLevel = v!),
                                     ),
-                                  ),
-                                ),
-                              ),
-                              onChanged: (v) => setState(() => _yearLevel = v!),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              initialValue: _term,
-                              decoration: _inputDecoration('Semester', isDark),
-                              dropdownColor: cardBg,
-                              items: [1, 2]
-                                  .map(
-                                    (i) => DropdownMenuItem(
-                                      value: i,
-                                      child: Text(
-                                        i == 1
-                                            ? '1st Semester'
-                                            : '2nd Semester',
-                                        style: GoogleFonts.poppins(
-                                          color: textPrimary,
+                                    const SizedBox(height: 12),
+                                    DropdownButtonFormField<int>(
+                                      initialValue: _term,
+                                      decoration: _inputDecoration(
+                                        'Semester',
+                                        isDark,
+                                      ),
+                                      dropdownColor: cardBg,
+                                      items: [1, 2]
+                                          .map(
+                                            (i) => DropdownMenuItem(
+                                              value: i,
+                                              child: Text(
+                                                i == 1
+                                                    ? '1st Semester'
+                                                    : '2nd Semester',
+                                                style: GoogleFonts.poppins(
+                                                  color: textPrimary,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: (v) =>
+                                          setState(() => _term = v!),
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Expanded(
+                                      child: DropdownButtonFormField<int>(
+                                        initialValue: safeYearLevel,
+                                        decoration: _inputDecoration(
+                                          'Year Level',
+                                          isDark,
                                         ),
+                                        dropdownColor: cardBg,
+                                        items: yearLevels
+                                            .map(
+                                              (level) => DropdownMenuItem(
+                                                value: level,
+                                                child: Text(
+                                                  'Year $level',
+                                                  style: GoogleFonts.poppins(
+                                                    color: textPrimary,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                        onChanged: (v) =>
+                                            setState(() => _yearLevel = v!),
                                       ),
                                     ),
-                                  )
-                                  .toList(),
-                              onChanged: (v) => setState(() => _term = v!),
-                            ),
-                          ),
-                        ],
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: DropdownButtonFormField<int>(
+                                        initialValue: _term,
+                                        decoration: _inputDecoration(
+                                          'Semester',
+                                          isDark,
+                                        ),
+                                        dropdownColor: cardBg,
+                                        items: [1, 2]
+                                            .map(
+                                              (i) => DropdownMenuItem(
+                                                value: i,
+                                                child: Text(
+                                                  i == 1
+                                                      ? '1st Semester'
+                                                      : '2nd Semester',
+                                                  style: GoogleFonts.poppins(
+                                                    color: textPrimary,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                        onChanged: (v) =>
+                                            setState(() => _term = v!),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                        },
                       ),
                     ],
                   ),
@@ -2367,58 +3181,112 @@ class _EditSubjectModalState extends State<_EditSubjectModal> {
 
             // Footer
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(isMobile ? 20 : 24),
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: borderColor)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                    ),
-                    child: Text(
-                      'Cancel',
-                      style: GoogleFonts.poppins(color: textMuted),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _submit,
-                    icon: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
+              child: isMobile
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 14,
                             ),
-                          )
-                        : const Icon(Icons.check_rounded, size: 20),
-                    label: Text(
-                      _isLoading ? 'Saving...' : 'Save Changes',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                            side: BorderSide(color: borderColor),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.poppins(color: textMuted),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: _isLoading ? null : _submit,
+                          icon: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.check_rounded, size: 20),
+                          label: Text(
+                            _isLoading ? 'Saving...' : 'Save Changes',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: widget.maroonColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 16,
+                            ),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.poppins(color: textMuted),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton.icon(
+                          onPressed: _isLoading ? null : _submit,
+                          icon: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.check_rounded, size: 20),
+                          label: Text(
+                            _isLoading ? 'Saving...' : 'Save Changes',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: widget.maroonColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ],
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.maroonColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),

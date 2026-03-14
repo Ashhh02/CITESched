@@ -20,6 +20,7 @@ class TimetableFilterPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final panelBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -114,7 +115,7 @@ class TimetableFilterPanel extends StatelessWidget {
                 onFilterChanged(currentFilter.copyWith(hasConflicts: v)),
             contentPadding: EdgeInsets.zero,
           ),
-          const Spacer(),
+          if (isMobile) const SizedBox(height: 12) else const Spacer(),
           ElevatedButton(
             onPressed: () => onFilterChanged(TimetableFilterRequest()),
             style: ElevatedButton.styleFrom(

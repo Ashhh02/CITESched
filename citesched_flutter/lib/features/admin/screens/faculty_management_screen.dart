@@ -30,6 +30,7 @@ class _FacultyManagementScreenState
   Program? _selectedProgram;
   bool _isShowingArchived = false;
   final TextEditingController _searchController = TextEditingController();
+  final Set<int> _selectedFacultyIds = {};
 
   // Color scheme matching admin sidebar
   final Color maroonColor = const Color(0xFF720045);
@@ -39,6 +40,159 @@ class _FacultyManagementScreenState
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _syncSelectedFaculty(List<Faculty> facultyList) {
+    final visibleIds =
+        facultyList.map((faculty) => faculty.id).whereType<int>().toSet();
+    final intersection = _selectedFacultyIds.intersection(visibleIds);
+    if (intersection.length != _selectedFacultyIds.length) {
+      _selectedFacultyIds
+        ..clear()
+        ..addAll(intersection);
+    }
+  }
+
+  void _toggleSelectAllFaculty(List<Faculty> facultyList, bool? isSelected) {
+    final shouldSelect = isSelected ?? false;
+    setState(() {
+      _selectedFacultyIds.clear();
+      if (shouldSelect) {
+        _selectedFacultyIds.addAll(
+          facultyList.map((faculty) => faculty.id).whereType<int>(),
+        );
+      }
+    });
+  }
+
+  void _toggleFacultySelection(int facultyId, bool? isSelected) {
+    setState(() {
+      if (isSelected ?? false) {
+        _selectedFacultyIds.add(facultyId);
+      } else {
+        _selectedFacultyIds.remove(facultyId);
+      }
+    });
+  }
+
+  Future<void> _archiveSelectedFaculty(List<Faculty> facultyList) async {
+    final selected = facultyList
+        .where((faculty) => _selectedFacultyIds.contains(faculty.id))
+        .toList();
+    if (selected.isEmpty) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Archive Selected Faculty',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Archive ${selected.length} selected faculty members?',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Archive', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        for (final faculty in selected) {
+          await client.admin.updateFaculty(
+            faculty.copyWith(isActive: false),
+          );
+        }
+        _selectedFacultyIds.clear();
+        ref.invalidate(facultyListProvider);
+        ref.invalidate(archivedFacultyListProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Selected faculty archived successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          AppErrorDialog.show(context, e);
+        }
+      }
+    }
+  }
+
+  Future<void> _deleteSelectedFaculty(List<Faculty> facultyList) async {
+    final selected = facultyList
+        .where((faculty) => _selectedFacultyIds.contains(faculty.id))
+        .toList();
+    if (selected.isEmpty) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Delete Selected Faculty',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'PERMANENTLY delete ${selected.length} selected faculty members? This cannot be undone.',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Delete Permanently', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        for (final faculty in selected) {
+          await client.admin.deleteFaculty(faculty.id!);
+        }
+        _selectedFacultyIds.clear();
+        ref.invalidate(facultyListProvider);
+        ref.invalidate(archivedFacultyListProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Selected faculty deleted permanently'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          AppErrorDialog.show(context, e);
+        }
+      }
+    }
   }
 
   void _showAddFacultyModal() {
@@ -296,7 +450,8 @@ class _FacultyManagementScreenState
         : ref.watch(facultyListProvider);
     final conflictsAsync = ref.watch(allConflictsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const bgColor = Colors.white;
+    final bgColor =
+        isDark ? const Color(0xFF0F172A) : Colors.white;
 
     final isMobile = ResponsiveHelper.isMobile(context);
 
@@ -311,7 +466,7 @@ class _FacultyManagementScreenState
             // Header (Standardized Maroon Gradient Banner)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(32),
+              padding: EdgeInsets.all(isMobile ? 20 : 32),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -330,79 +485,164 @@ class _FacultyManagementScreenState
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
+              child: isMobile
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.people_outline_rounded,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Faculty Management',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Manage instructors, workloads, and schedules',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color:
+                                          Colors.white.withValues(alpha: 0.8),
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _showAddFacultyModal,
+                            icon:
+                                const Icon(Icons.person_add_rounded, size: 20),
+                            label: Text(
+                              'Add Faculty Member',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: maroonColor,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                            ),
                           ),
                         ),
-                        child: const Icon(
-                          Icons.people_outline_rounded,
-                          color: Colors.white,
-                          size: 32,
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.people_outline_rounded,
+                                color: Colors.white,
+                                size: 32,
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Faculty Management',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -1,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Manage instructors, workloads, and schedules',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 24),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Faculty Management',
+                        const SizedBox(width: 16),
+                        ElevatedButton.icon(
+                          onPressed: _showAddFacultyModal,
+                          icon: const Icon(Icons.person_add_rounded, size: 24),
+                          label: Text(
+                            'Add Faculty Member',
                             style: GoogleFonts.poppins(
-                              fontSize: isMobile ? 24 : 32,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: -1,
+                              fontSize: 15,
+                              letterSpacing: 0.5,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Manage instructors, workloads, and schedules',
-                            style: GoogleFonts.poppins(
-                              fontSize: isMobile ? 12 : 16,
-                              color: Colors.white.withValues(alpha: 0.8),
-                              letterSpacing: 0.2,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: maroonColor,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 28,
+                              vertical: 18,
                             ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: _showAddFacultyModal,
-                    icon: const Icon(Icons.person_add_rounded, size: 24),
-                    label: Text(
-                      isMobile ? 'Add' : 'Add Faculty Member',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        letterSpacing: 0.5,
-                      ),
+                        ),
+                      ],
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: maroonColor,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 16 : 28,
-                        vertical: isMobile ? 12 : 18,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                  ),
-                ],
-              ),
             ),
 
             const SizedBox(height: 32),
@@ -464,6 +704,10 @@ class _FacultyManagementScreenState
                 ),
                 data: (facultyList) {
                   final filteredFaculty = _filteredFaculty(facultyList);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    _syncSelectedFaculty(filteredFaculty);
+                  });
 
                   if (filteredFaculty.isEmpty) {
                     return _buildEmptyFacultyState();
@@ -583,21 +827,28 @@ class _FacultyManagementScreenState
 
   Widget _buildEmptyFacultyState() {
     final hasQuery = _searchQuery.isNotEmpty;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textMuted =
+        isDark ? const Color(0xFF94A3B8) : Colors.grey[600]!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
+          Icon(
+            Icons.people_outline,
+            size: 64,
+            color: isDark ? Colors.white24 : Colors.grey[400],
+          ),
           const SizedBox(height: 16),
           Text(
             hasQuery ? 'No faculty found' : 'No faculty members yet',
-            style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey[600]),
+            style: GoogleFonts.poppins(fontSize: 18, color: textMuted),
           ),
           if (!hasQuery) ...[
             const SizedBox(height: 8),
             Text(
               'Click \"Add Faculty\" to get started',
-              style: GoogleFonts.poppins(color: Colors.grey[500]),
+              style: GoogleFonts.poppins(color: textMuted.withOpacity(0.85)),
             ),
           ],
         ],
@@ -625,6 +876,9 @@ class _FacultyManagementScreenState
     AsyncValue<List<ScheduleConflict>> conflictsAsync,
     bool isDark,
   ) {
+    final allSelected = filteredFaculty.isNotEmpty &&
+        _selectedFacultyIds.length == filteredFaculty.length;
+    final anySelected = _selectedFacultyIds.isNotEmpty;
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -640,7 +894,16 @@ class _FacultyManagementScreenState
       ),
       child: Column(
         children: [
-          _buildTableHeader(filteredFaculty.length),
+          _buildTableHeader(
+            filteredFaculty.length,
+            selectedCount: _selectedFacultyIds.length,
+            onArchiveSelected: anySelected && !_isShowingArchived
+                ? () => _archiveSelectedFaculty(filteredFaculty)
+                : null,
+            onDeleteSelected: anySelected && _isShowingArchived
+                ? () => _deleteSelectedFaculty(filteredFaculty)
+                : null,
+          ),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -651,6 +914,7 @@ class _FacultyManagementScreenState
                     child: SingleChildScrollView(
                       scrollDirection: Axis.vertical,
                       child: DataTable(
+                        showCheckboxColumn: false,
                         headingRowColor: WidgetStateProperty.all(maroonColor),
                         headingTextStyle: GoogleFonts.poppins(
                           color: Colors.white,
@@ -663,7 +927,19 @@ class _FacultyManagementScreenState
                         columnSpacing: 32,
                         horizontalMargin: 24,
                         decoration: const BoxDecoration(color: Colors.transparent),
-                        columns: const [
+                        columns: [
+                          DataColumn(
+                            label: Checkbox(
+                              value: allSelected,
+                              onChanged: (value) =>
+                                  _toggleSelectAllFaculty(
+                                    filteredFaculty,
+                                    value,
+                                  ),
+                              activeColor: Colors.white,
+                              checkColor: maroonColor,
+                            ),
+                          ),
                           DataColumn(label: Text('FACULTY ID')),
                           DataColumn(label: Text('NAME')),
                           DataColumn(label: Text('EMAIL')),
@@ -695,7 +971,12 @@ class _FacultyManagementScreenState
     );
   }
 
-  Widget _buildTableHeader(int count) {
+  Widget _buildTableHeader(
+    int count, {
+    required int selectedCount,
+    VoidCallback? onArchiveSelected,
+    VoidCallback? onDeleteSelected,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
@@ -717,7 +998,49 @@ class _FacultyManagementScreenState
               color: maroonColor,
             ),
           ),
+          if (selectedCount > 0) ...[
+            const SizedBox(width: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: maroonColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$selectedCount selected',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: maroonColor,
+                ),
+              ),
+            ),
+          ],
           const Spacer(),
+          if (onArchiveSelected != null) ...[
+            TextButton.icon(
+              onPressed: onArchiveSelected,
+              icon: const Icon(Icons.archive_outlined, size: 18),
+              label: Text(
+                'Archive Selected',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
+              style: TextButton.styleFrom(foregroundColor: maroonColor),
+            ),
+            const SizedBox(width: 12),
+          ],
+          if (onDeleteSelected != null) ...[
+            TextButton.icon(
+              onPressed: onDeleteSelected,
+              icon: const Icon(Icons.delete_forever_outlined, size: 18),
+              label: Text(
+                'Delete Selected',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+            ),
+            const SizedBox(width: 12),
+          ],
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -746,20 +1069,20 @@ class _FacultyManagementScreenState
     bool isDark,
   ) {
     return DataRow(
-      onSelectChanged: (selected) {
-        if (selected == true) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => FacultyDetailsScreen(faculty: faculty),
-            ),
-          );
-        }
-      },
       color: WidgetStateProperty.resolveWith(
         (states) => _resolveRowColor(states, index, isDark),
       ),
       cells: [
+        DataCell(
+          Checkbox(
+            value: faculty.id != null &&
+                _selectedFacultyIds.contains(faculty.id),
+            onChanged: faculty.id == null
+                ? null
+                : (value) => _toggleFacultySelection(faculty.id!, value),
+            activeColor: maroonColor,
+          ),
+        ),
         DataCell(
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -894,59 +1217,49 @@ class _FacultyManagementScreenState
         DataCell(
           Row(
             children: [
-              IconButton(
-                onPressed: () {
-                  Navigator.push(
+              if (!_isShowingArchived) ...[
+                IconButton(
+                  onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => FacultyDetailsScreen(faculty: faculty),
                     ),
-                  );
-                },
-                icon: const Icon(
-                  Icons.visibility_rounded,
-                  color: Colors.blueAccent,
-                  size: 20,
-                ),
-              ),
-              IconButton(
-                onPressed: () => _showEditFacultyModal(faculty),
-                icon: const Icon(
-                  Icons.edit_rounded,
-                  color: Colors.orange,
-                  size: 20,
-                ),
-              ),
-              if (!_isShowingArchived) ...[
-                IconButton(
-                  onPressed: () => _archiveFaculty(faculty),
-                  icon: const Icon(
-                    Icons.archive_outlined,
-                    color: Colors.purple,
+                  ),
+                  icon: Icon(
+                    Icons.open_in_new,
+                    color: maroonColor,
                     size: 20,
                   ),
                 ),
                 IconButton(
-                  onPressed: () => _permanentDeleteFaculty(faculty),
-                  icon: const Icon(
-                    Icons.delete_forever,
-                    color: Colors.red,
+                  onPressed: () => _showEditFacultyModal(faculty),
+                  icon: Icon(
+                    Icons.edit_rounded,
+                    color: maroonColor,
+                    size: 20,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => _archiveFaculty(faculty),
+                  icon: Icon(
+                    Icons.archive_outlined,
+                    color: maroonColor,
                     size: 20,
                   ),
                 ),
               ] else ...[
                 IconButton(
                   onPressed: () => _restoreFaculty(faculty),
-                  icon: const Icon(
-                    Icons.restore_from_trash_rounded,
-                    color: Colors.green,
+                  icon: Icon(
+                    Icons.restore_rounded,
+                    color: maroonColor,
                     size: 20,
                   ),
                 ),
                 IconButton(
                   onPressed: () => _permanentDeleteFaculty(faculty),
                   icon: const Icon(
-                    Icons.delete_forever,
+                    Icons.delete_forever_rounded,
                     color: Colors.red,
                     size: 20,
                   ),
@@ -1237,34 +1550,41 @@ class _FacultyManagementScreenState
                         if (!_isShowingArchived) ...[
                           TextButton.icon(
                             onPressed: () => _showEditFacultyModal(faculty),
-                            icon: const Icon(Icons.edit_outlined),
-                            label: const Text('Edit'),
+                            icon: Icon(
+                              Icons.edit_outlined,
+                              color: maroonColor,
+                            ),
+                            label: Text(
+                              'Edit',
+                              style: TextStyle(color: maroonColor),
+                            ),
                           ),
                           TextButton.icon(
                             onPressed: () => _archiveFaculty(faculty),
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.archive_outlined,
-                              color: Colors.orange,
+                              color: maroonColor,
                             ),
-                            label: const Text(
+                            label: Text(
                               'Archive',
-                              style: TextStyle(color: Colors.orange),
+                              style: TextStyle(color: maroonColor),
                             ),
                           ),
                         ] else ...[
                           TextButton.icon(
                             onPressed: () => _restoreFaculty(faculty),
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.restore_rounded,
-                              color: Colors.green,
+                              color: maroonColor,
                             ),
-                            label: const Text(
+                            label: Text(
                               'Restore',
-                              style: TextStyle(color: Colors.green),
+                              style: TextStyle(color: maroonColor),
                             ),
                           ),
                           TextButton.icon(
-                            onPressed: () => _permanentDeleteFaculty(faculty),
+                            onPressed: () =>
+                                _permanentDeleteFaculty(faculty),
                             icon: const Icon(
                               Icons.delete_forever_rounded,
                               color: Colors.red,
@@ -1710,74 +2030,152 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                   bottomRight: Radius.circular(19),
                 ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () => Navigator.pop(context),
-                      style: TextButton.styleFrom(
-                        foregroundColor: textMuted,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: Colors.black.withOpacity(0.1),
+              child: isMobile
+                  ? Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryPurple,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                              disabledBackgroundColor:
+                                  primaryPurple.withOpacity(0.5),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.check_rounded, size: 20),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          'Add Faculty Member',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                           ),
                         ),
-                      ),
-                      child: Text(
-                        'Cancel',
-                        style: GoogleFonts.poppins(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _submit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryPurple,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                        disabledBackgroundColor: primaryPurple.withOpacity(0.5),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.check_rounded, size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Add Faculty Member',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () => Navigator.pop(context),
+                            style: TextButton.styleFrom(
+                              foregroundColor: textMuted,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: Colors.black.withOpacity(0.1),
                                 ),
-                              ],
+                              ),
                             ),
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.poppins(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () => Navigator.pop(context),
+                            style: TextButton.styleFrom(
+                              foregroundColor: textMuted,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: Colors.black.withOpacity(0.1),
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.poppins(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryPurple,
+                              foregroundColor: Colors.white,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                              disabledBackgroundColor:
+                                  primaryPurple.withOpacity(0.5),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.check_rounded, size: 20),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Add Faculty Member',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),

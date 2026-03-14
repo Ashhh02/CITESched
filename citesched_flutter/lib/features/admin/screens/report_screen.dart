@@ -63,10 +63,12 @@ class _ReportScreenState extends State<ReportScreen>
   Widget build(BuildContext context) {
     final isMobile = ResponsiveHelper.isMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textMuted = isDark ? Colors.grey[300]! : Colors.grey[700]!;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: bgColor,
       body: Padding(
         padding: EdgeInsets.all(isMobile ? 16 : 32),
         child: Column(
@@ -74,7 +76,7 @@ class _ReportScreenState extends State<ReportScreen>
             // Header (Standardized Maroon Gradient Banner)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(32),
+              padding: EdgeInsets.all(isMobile ? 20 : 32),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -90,49 +92,140 @@ class _ReportScreenState extends State<ReportScreen>
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Row(
+              child: isMobile
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.analytics_rounded,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Analytical Reports',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Comprehensive system metrics and utilization analysis',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color:
+                                          Colors.white.withValues(alpha: 0.8),
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.analytics_rounded,
+                                  color: Colors.white,
+                                  size: 32,
+                                ),
+                              ),
+                              const SizedBox(width: 24),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Analytical Reports',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        letterSpacing: -1,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Comprehensive system metrics and utilization analysis',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        color: Colors.white.withValues(
+                                          alpha: 0.8,
+                                        ),
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(20),
+                            color: Colors.white.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: Colors.white.withValues(alpha: 0.2),
                             ),
                           ),
-                          child: const Icon(
-                            Icons.analytics_rounded,
-                            color: Colors.white,
-                            size: 32,
-                          ),
-                        ),
-                        SizedBox(width: isMobile ? 12 : 24),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Text(
-                                'Analytical Reports',
-                                style: GoogleFonts.poppins(
-                                  fontSize: isMobile ? 22 : 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: -1,
-                                ),
+                              const Icon(
+                                Icons.calendar_today_rounded,
+                                color: Colors.white,
+                                size: 20,
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(width: 12),
                               Text(
-                                'Comprehensive system metrics and utilization analysis',
+                                'AY 2025-2026',
                                 style: GoogleFonts.poppins(
-                                  fontSize: isMobile ? 12 : 16,
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  letterSpacing: 0.2,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
@@ -140,40 +233,6 @@ class _ReportScreenState extends State<ReportScreen>
                         ),
                       ],
                     ),
-                  ),
-                  if (!isMobile)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.calendar_today_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'AY 2025-2026',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
             ),
             const SizedBox(height: 32),
 
@@ -194,7 +253,7 @@ class _ReportScreenState extends State<ReportScreen>
                 controller: _tabController,
                 isScrollable: isMobile,
                 labelColor: maroonColor,
-                unselectedLabelColor: Colors.grey,
+                unselectedLabelColor: textMuted,
                 indicator: BoxDecoration(
                   color: maroonColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
@@ -245,7 +304,6 @@ class _ReportScreenState extends State<ReportScreen>
       ),
     );
   }
-
 }
 
 class _FacultyLoadTab extends ConsumerWidget {
@@ -294,90 +352,190 @@ class _FacultyLoadTab extends ConsumerWidget {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
         const maroonColor = Color(0xFF720045);
-        final headerBg = isDark
-            ? maroonColor.withOpacity(0.22)
-            : maroonColor.withOpacity(0.08);
+        final textPrimary = isDark ? Colors.white : Colors.black87;
+        final textMuted = isDark ? Colors.grey[300]! : Colors.grey[700]!;
         final rowBgA = isDark ? const Color(0xFF0F172A) : Colors.white;
         final rowBgB = isDark
             ? const Color(0xFF111827)
             : const Color(0xFFF9FAFB);
-        final dividerColor = isDark
-            ? Colors.white.withOpacity(0.08)
-            : Colors.black.withOpacity(0.06);
 
-        return Card(
-          color: cardBg,
-          elevation: 4,
-          shadowColor: Colors.black.withOpacity(0.2),
-          shape: RoundedRectangleBorder(
+        return Container(
+          decoration: BoxDecoration(
+            color: cardBg,
             borderRadius: BorderRadius.circular(16),
+            border: Border(left: BorderSide(color: maroonColor, width: 4)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.leaderboard_rounded, color: maroonColor, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Faculty Load',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
                 ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      headingRowColor: WidgetStateProperty.all(headerBg),
-                      headingTextStyle: GoogleFonts.poppins(
-                        color: maroonColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                      dataRowColor: WidgetStateProperty.resolveWith(
-                        (states) => states.contains(WidgetState.selected)
-                            ? maroonColor.withOpacity(0.06)
-                            : null,
-                      ),
-                      columnSpacing: 20,
-                      columns: const [
-                        DataColumn(label: Text('FACULTY')),
-                        DataColumn(label: Text('PROGRAM')),
-                        DataColumn(label: Text('UNITS')),
-                        DataColumn(label: Text('HOURS')),
-                        DataColumn(label: Text('SUBJECTS')),
-                        DataColumn(label: Text('STATUS')),
-                      ],
-                      rows: data
-                          .map((r) => DataRow(
-                                cells: [
-                                  DataCell(Text(r.facultyName)),
-                                  DataCell(Text((r.program ?? 'N/A').toUpperCase())),
-                                  DataCell(Text(r.totalUnits.toStringAsFixed(1))),
-                                  DataCell(Text(r.totalHours.toStringAsFixed(1))),
-                                  DataCell(Text(r.totalSubjects.toString())),
-                                  DataCell(_loadStatusBadge(r.loadStatus)),
-                                ],
-                              ))
-                          .toList(),
-                    ),
+                decoration: BoxDecoration(
+                  color: maroonColor.withOpacity(0.05),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
                   ),
                 ),
-              ],
-            ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isCompact = constraints.maxWidth < 420;
+                    return Row(
+                      children: [
+                        Icon(
+                          Icons.leaderboard_rounded,
+                          color: maroonColor,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Faculty Load Summary',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: isCompact ? 14 : 16,
+                              fontWeight: FontWeight.bold,
+                              color: maroonColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: maroonColor,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${data.length} Total',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.vertical,
+                          child: DataTable(
+                            headingRowColor: WidgetStateProperty.all(
+                              maroonColor,
+                            ),
+                            headingTextStyle: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              letterSpacing: 0.5,
+                            ),
+                            dataTextStyle: GoogleFonts.poppins(
+                              color: textPrimary,
+                              fontSize: 12,
+                            ),
+                            dataRowMinHeight: 65,
+                            dataRowMaxHeight: 85,
+                            columnSpacing: 28,
+                            horizontalMargin: 24,
+                            decoration:
+                                const BoxDecoration(color: Colors.transparent),
+                            columns: const [
+                              DataColumn(label: Text('FACULTY')),
+                              DataColumn(label: Text('PROGRAM')),
+                              DataColumn(label: Text('SUBJECTS')),
+                              DataColumn(label: Text('UNITS')),
+                              DataColumn(label: Text('HOURS')),
+                              DataColumn(label: Text('STATUS')),
+                            ],
+                            rows: data.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final r = entry.value;
+                              return DataRow(
+                                color: WidgetStateProperty.all(
+                                  index.isEven ? rowBgA : rowBgB,
+                                ),
+                                cells: [
+                                  DataCell(
+                                    Text(
+                                      r.facultyName,
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w600,
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      (r.program ?? 'N/A').toUpperCase(),
+                                      style: GoogleFonts.poppins(
+                                        color: textMuted,
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      r.totalSubjects.toString(),
+                                      style: GoogleFonts.poppins(
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      r.totalUnits.toStringAsFixed(1),
+                                      style: GoogleFonts.poppins(
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      r.totalHours.toStringAsFixed(1),
+                                      style: GoogleFonts.poppins(
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(_loadStatusBadge(r.loadStatus)),
+                                ],
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         );
       },
     );
   }
-
 }
 
 class _RoomUtilizationTab extends ConsumerWidget {
@@ -391,6 +549,9 @@ class _RoomUtilizationTab extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(child: Text('Error: $error')),
       data: (data) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final textPrimary = isDark ? Colors.white : Colors.black87;
+        final textMuted = isDark ? Colors.grey[300]! : Colors.grey[700]!;
         return LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
@@ -435,6 +596,7 @@ class _RoomUtilizationTab extends ConsumerWidget {
                               style: GoogleFonts.poppins(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
+                                color: textPrimary,
                               ),
                             ),
                           ),
@@ -449,7 +611,7 @@ class _RoomUtilizationTab extends ConsumerWidget {
                             children: [
                               Text(
                                 'Utilization',
-                                style: GoogleFonts.poppins(color: Colors.grey),
+                                style: GoogleFonts.poppins(color: textMuted),
                               ),
                               Text(
                                 '${item.utilizationPercentage.toStringAsFixed(1)}%',
@@ -476,7 +638,7 @@ class _RoomUtilizationTab extends ConsumerWidget {
                         '${item.totalBookings} timeslots assigned',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
-                          color: Colors.grey,
+                          color: textMuted,
                         ),
                       ),
                     ],
@@ -565,32 +727,36 @@ class _ConflictSummaryTab extends ConsumerWidget {
     final reportAsync = ref.watch(conflictSummaryReportProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textPrimary = isDark ? Colors.white : Colors.black87;
+    final textMuted = isDark ? Colors.grey[300]! : Colors.grey[700]!;
 
     return reportAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(child: Text('Error: $error')),
       data: (conflicts) {
-        return Card(
-          color: cardBg,
-          elevation: 4,
-          shadowColor: Colors.black.withOpacity(0.15),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildConflictHeader(conflicts),
-                const SizedBox(height: 20),
-                const Divider(),
-                const SizedBox(height: 12),
-                if (conflicts.isEmpty)
-                  _buildEmptyState()
-                else
-                  _buildConflictList(conflicts, isDark),
-              ],
+        return SingleChildScrollView(
+          child: Card(
+            color: cardBg,
+            elevation: 4,
+            shadowColor: Colors.black.withOpacity(0.15),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildConflictHeader(conflicts, textPrimary),
+                  const SizedBox(height: 20),
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  if (conflicts.isEmpty)
+                    _buildEmptyState(textMuted)
+                  else
+                    _buildConflictList(conflicts, isDark),
+                ],
+              ),
             ),
           ),
         );
@@ -598,12 +764,16 @@ class _ConflictSummaryTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildConflictHeader(List<ScheduleConflict> conflicts) {
+  Widget _buildConflictHeader(
+    List<ScheduleConflict> conflicts,
+    Color textPrimary,
+  ) {
     final hasConflicts = conflicts.isNotEmpty;
     final statusColor = hasConflicts ? Colors.red : Colors.green;
     final summaryColor = hasConflicts ? Colors.red[700] : Colors.green;
-    final statusIcon =
-        hasConflicts ? Icons.warning_rounded : Icons.verified_rounded;
+    final statusIcon = hasConflicts
+        ? Icons.warning_rounded
+        : Icons.verified_rounded;
 
     return Row(
       children: [
@@ -629,6 +799,7 @@ class _ConflictSummaryTab extends ConsumerWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: textPrimary,
                 ),
               ),
               Text(
@@ -642,24 +813,29 @@ class _ConflictSummaryTab extends ConsumerWidget {
           ),
         ),
         if (hasConflicts)
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.end,
-            children: [
-              _buildCountBadge(conflicts, 'CRITICAL', [
-                'room_conflict',
-                'faculty_conflict',
-                'section_conflict',
-              ], Colors.red),
-              _buildCountBadge(conflicts, 'WARNING', [
-                'max_load_exceeded',
-                'room_inactive',
-                'faculty_unavailable',
-                'program_mismatch',
-                'capacity_exceeded',
-              ], Colors.orange),
-            ],
+          Flexible(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.end,
+                children: [
+                  _buildCountBadge(conflicts, 'CRITICAL', [
+                    'room_conflict',
+                    'faculty_conflict',
+                    'section_conflict',
+                  ], Colors.red),
+                  _buildCountBadge(conflicts, 'WARNING', [
+                    'max_load_exceeded',
+                    'room_inactive',
+                    'faculty_unavailable',
+                    'program_mismatch',
+                    'capacity_exceeded',
+                  ], Colors.orange),
+                ],
+              ),
+            ),
           ),
       ],
     );
@@ -673,11 +849,12 @@ class _ConflictSummaryTab extends ConsumerWidget {
     return '$conflictCount conflict$suffix require attention';
   }
 
-  Widget _buildEmptyState() {
-    return Expanded(
-      child: Center(
+  Widget _buildEmptyState(Color textMuted) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.all(24),
@@ -703,9 +880,10 @@ class _ConflictSummaryTab extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(
               'No scheduling conflicts found. The timetable is valid.',
+              textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 14,
-                color: Colors.grey,
+                color: textMuted,
               ),
             ),
           ],
@@ -718,11 +896,12 @@ class _ConflictSummaryTab extends ConsumerWidget {
     List<ScheduleConflict> conflicts,
     bool isDark,
   ) {
-    return Expanded(
-      child: ListView.separated(
-        itemCount: conflicts.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
-        itemBuilder: (context, index) {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: conflicts.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
           final conflict = conflicts[index];
           final cfg = _cfg(conflict.type);
           return Container(
@@ -806,8 +985,7 @@ class _ConflictSummaryTab extends ConsumerWidget {
             ),
           );
         },
-      ),
-    );
+      );
   }
 
   Widget _buildCountBadge(
@@ -869,10 +1047,11 @@ class _ScheduleOverviewTab extends ConsumerWidget {
       error: (error, stack) => Center(child: Text('Error: $error')),
       data: (data) {
         final isMobile = ResponsiveHelper.isMobile(context);
-        return Column(
-          children: [
+        return SingleChildScrollView(
+          child: Column(
+            children: [
             if (isMobile) ...[
-              _buildStatTile(
+              _buildStatTileCard(
                 context,
                 'Total Schedules',
                 data.totalSchedules.toString(),
@@ -880,7 +1059,7 @@ class _ScheduleOverviewTab extends ConsumerWidget {
                 Colors.blue,
               ),
               const SizedBox(height: 16),
-              _buildStatTile(
+              _buildStatTileCard(
                 context,
                 'Active Programs',
                 data.schedulesByProgram.length.toString(),
@@ -890,20 +1069,24 @@ class _ScheduleOverviewTab extends ConsumerWidget {
             ] else ...[
               Row(
                 children: [
-                  _buildStatTile(
-                    context,
-                    'Total Schedules',
-                    data.totalSchedules.toString(),
-                    Icons.event_note_rounded,
-                    Colors.blue,
+                  Expanded(
+                    child: _buildStatTileCard(
+                      context,
+                      'Total Schedules',
+                      data.totalSchedules.toString(),
+                      Icons.event_note_rounded,
+                      Colors.blue,
+                    ),
                   ),
                   const SizedBox(width: 24),
-                  _buildStatTile(
-                    context,
-                    'Active Programs',
-                    data.schedulesByProgram.length.toString(),
-                    Icons.account_tree_rounded,
-                    Colors.purple,
+                  Expanded(
+                    child: _buildStatTileCard(
+                      context,
+                      'Active Programs',
+                      data.schedulesByProgram.length.toString(),
+                      Icons.account_tree_rounded,
+                      Colors.purple,
+                    ),
                   ),
                 ],
               ),
@@ -931,10 +1114,9 @@ class _ScheduleOverviewTab extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: 24),
-            Expanded(
-              child: _buildSectionSubjectsBreakdown(context, ref),
-            ),
+            _buildSectionSubjectsBreakdown(context, ref),
           ],
+          ),
         );
       },
     );
@@ -946,6 +1128,9 @@ class _ScheduleOverviewTab extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, st) => Center(child: Text('Error loading schedules: $e')),
       data: (schedules) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final textPrimary = isDark ? Colors.white : Colors.black87;
+        final textMuted = isDark ? Colors.grey[300]! : Colors.grey[700]!;
         // Group schedules by section
         final Map<String, List<Schedule>> schedulesBySection = {};
         for (var schedule in schedules) {
@@ -973,65 +1158,78 @@ class _ScheduleOverviewTab extends ConsumerWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: textPrimary,
                 ),
               ),
               const SizedBox(height: 16),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: sectionNames.length,
-                  itemBuilder: (context, index) {
-                    final section = sectionNames[index];
-                    final sectionSchedules = schedulesBySection[section]!;
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: sectionNames.length,
+                itemBuilder: (context, index) {
+                  final section = sectionNames[index];
+                  final sectionSchedules = schedulesBySection[section]!;
 
-                    return ExpansionTile(
-                      title: Text(
-                        'Section: $section',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF720045),
-                        ),
+                  return ExpansionTile(
+                    title: Text(
+                      'Section: $section',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF720045),
                       ),
-                      subtitle: Text(
-                        '${sectionSchedules.length} Subject${sectionSchedules.length == 1 ? '' : 's'}',
-                        style: GoogleFonts.poppins(fontSize: 12),
+                    ),
+                    subtitle: Text(
+                      '${sectionSchedules.length} Subject${sectionSchedules.length == 1 ? '' : 's'}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: textMuted,
                       ),
-                      children: [
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: DataTable(
-                            headingRowHeight: 40,
-                            dataRowMinHeight: 40,
-                            dataRowMaxHeight: 50,
-                            columns: const [
-                              DataColumn(label: Text('Code')),
-                              DataColumn(label: Text('Description')),
-                              DataColumn(label: Text('Faculty')),
-                              DataColumn(label: Text('Room')),
-                              DataColumn(label: Text('Schedule')),
-                            ],
-                            rows: sectionSchedules.map((s) {
-                              return DataRow(
-                                cells: [
-                                  DataCell(Text(s.subject?.code ?? 'N/A')),
-                                  DataCell(Text(s.subject?.name ?? 'Unknown')),
-                                  DataCell(Text(s.faculty?.name ?? 'TBA')),
-                                  DataCell(Text(s.room?.name ?? 'TBA')),
-                                  DataCell(
-                                    Text(
-                                      s.timeslot != null
-                                          ? '${s.timeslot!.day.name.substring(0, 3)} ${s.timeslot!.startTime}-${s.timeslot!.endTime}'
-                                          : 'TBA',
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }).toList(),
+                    ),
+                    children: [
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          headingTextStyle: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            color: textPrimary,
+                            fontSize: 12,
                           ),
+                          dataTextStyle: GoogleFonts.poppins(
+                            color: textPrimary,
+                            fontSize: 12,
+                          ),
+                          headingRowHeight: 40,
+                          dataRowMinHeight: 40,
+                          dataRowMaxHeight: 50,
+                          columns: const [
+                            DataColumn(label: Text('Code')),
+                            DataColumn(label: Text('Description')),
+                            DataColumn(label: Text('Faculty')),
+                            DataColumn(label: Text('Room')),
+                            DataColumn(label: Text('Schedule')),
+                          ],
+                          rows: sectionSchedules.map((s) {
+                            return DataRow(
+                              cells: [
+                                DataCell(Text(s.subject?.code ?? 'N/A')),
+                                DataCell(Text(s.subject?.name ?? 'Unknown')),
+                                DataCell(Text(s.faculty?.name ?? 'TBA')),
+                                DataCell(Text(s.room?.name ?? 'TBA')),
+                                DataCell(
+                                  Text(
+                                    s.timeslot != null
+                                        ? '${s.timeslot!.day.name.substring(0, 3)} ${s.timeslot!.startTime}-${s.timeslot!.endTime}'
+                                        : 'TBA',
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList(),
                         ),
-                      ],
-                    );
-                  },
-                ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -1040,60 +1238,67 @@ class _ScheduleOverviewTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatTile(
+  Widget _buildStatTileCard(
     BuildContext context,
     String title,
     String value,
     IconData icon,
     Color color,
   ) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? Colors.white : Colors.black87;
+    final textMuted = isDark ? Colors.grey[300]! : Colors.grey[700]!;
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 24 : 32),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(isMobile ? 12 : 16),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: color, size: isMobile ? 26 : 32),
+          ),
+          SizedBox(width: isMobile ? 16 : 24),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: GoogleFonts.poppins(
+                  fontSize: isMobile ? 24 : 32,
+                  fontWeight: FontWeight.bold,
+                  color: textPrimary,
+                ),
               ),
-              child: Icon(icon, color: color, size: 32),
-            ),
-            const SizedBox(width: 24),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: GoogleFonts.poppins(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                  ),
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  color: textMuted,
+                  fontWeight: FontWeight.w500,
+                  fontSize: isMobile ? 12 : 14,
                 ),
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildProgramBreakdown(BuildContext context, Map<String, int> data) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? Colors.white : Colors.black87;
+    final textMuted = isDark ? Colors.grey[300]! : Colors.grey[700]!;
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -1108,6 +1313,7 @@ class _ScheduleOverviewTab extends ConsumerWidget {
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: textPrimary,
             ),
           ),
           const SizedBox(height: 24),
@@ -1123,11 +1329,12 @@ class _ScheduleOverviewTab extends ConsumerWidget {
                         e.key.toUpperCase(),
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.w600,
+                          color: textPrimary,
                         ),
                       ),
                       Text(
                         '${e.value} Classes',
-                        style: GoogleFonts.poppins(color: Colors.grey),
+                        style: GoogleFonts.poppins(color: textMuted),
                       ),
                     ],
                   ),
@@ -1151,6 +1358,8 @@ class _ScheduleOverviewTab extends ConsumerWidget {
   }
 
   Widget _buildTermBreakdown(BuildContext context, Map<String, int> data) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? Colors.white : Colors.black87;
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -1165,6 +1374,7 @@ class _ScheduleOverviewTab extends ConsumerWidget {
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: textPrimary,
             ),
           ),
           const SizedBox(height: 24),
@@ -1177,7 +1387,10 @@ class _ScheduleOverviewTab extends ConsumerWidget {
               ),
               title: Text(
                 'Term ${e.key}',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  color: textPrimary,
+                ),
               ),
               trailing: Text(
                 '${e.value} Subjects',
