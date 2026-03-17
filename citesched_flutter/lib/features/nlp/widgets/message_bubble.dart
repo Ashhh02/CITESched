@@ -51,8 +51,9 @@ class MessageBubble extends StatelessWidget {
   Widget _buildAssistantBubble(BuildContext context, Color maroonColor) {
     final bubbleColor = const Color(0xFF2a2a3e);
 
-    // If we have a response type and metadata, use the ResponseDisplay widget
-    if (message.responseType != null && message.metadata != null) {
+    // If we have a response type (and optional schedules), use the ResponseDisplay widget
+    if (message.responseType != null &&
+        (message.metadata != null || message.schedules != null)) {
       return Align(
         alignment: Alignment.centerLeft,
         child: Container(
@@ -68,7 +69,8 @@ class MessageBubble extends StatelessWidget {
           child: ResponseDisplay(
             intent: _parseResponseIntent(message.responseType!),
             message: message.text,
-            metadata: message.metadata,
+            metadata: message.metadata ?? const {},
+            schedules: message.schedules?.cast<Schedule>(),
           ),
         ),
       );

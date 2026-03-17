@@ -60,6 +60,11 @@ admin:
   - deleteFacultyAvailability:
   - precheckSchedule:
   - regenerateSchedule:
+chatHistory:
+  - getMyHistory:
+  - getMySessions:
+  - getSessionHistory:
+  - deleteSession:
 customAuth:
   - loginWithId:
 debug:

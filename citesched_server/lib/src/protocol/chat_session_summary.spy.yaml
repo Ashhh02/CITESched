@@ -1,0 +1,6 @@
+class: ChatSessionSummary
+fields:
+  sessionId: String
+  title: String
+  lastMessageAt: DateTime
+  lastMessageText: String

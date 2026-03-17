@@ -40,14 +40,17 @@ import 'package:citesched_client/src/protocol/reports/schedule_overview_report.d
 import 'package:citesched_client/src/protocol/section.dart' as _i20;
 import 'package:citesched_client/src/protocol/faculty_availability.dart'
     as _i21;
-import 'package:serverpod_auth_client/serverpod_auth_client.dart' as _i22;
-import 'package:citesched_client/src/protocol/nlp_response.dart' as _i23;
-import 'package:citesched_client/src/protocol/schedule_info.dart' as _i24;
+import 'package:citesched_client/src/protocol/chat_history.dart' as _i22;
+import 'package:citesched_client/src/protocol/chat_session_summary.dart'
+    as _i23;
+import 'package:serverpod_auth_client/serverpod_auth_client.dart' as _i24;
+import 'package:citesched_client/src/protocol/nlp_response.dart' as _i25;
+import 'package:citesched_client/src/protocol/schedule_info.dart' as _i26;
 import 'package:citesched_client/src/protocol/timetable_filter_request.dart'
-    as _i25;
-import 'package:citesched_client/src/protocol/timetable_summary.dart' as _i26;
-import 'package:citesched_client/src/protocol/greetings/greeting.dart' as _i27;
-import 'protocol.dart' as _i28;
+    as _i27;
+import 'package:citesched_client/src/protocol/timetable_summary.dart' as _i28;
+import 'package:citesched_client/src/protocol/greetings/greeting.dart' as _i29;
+import 'protocol.dart' as _i30;
 
 /// By extending [EmailIdpBaseEndpoint], the email identity provider endpoints
 /// are made available on the server and enable the corresponding sign-in widget
@@ -725,6 +728,48 @@ class EndpointAdmin extends _i2.EndpointRef {
 }
 
 /// {@category Endpoint}
+class EndpointChatHistory extends _i2.EndpointRef {
+  EndpointChatHistory(_i2.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'chatHistory';
+
+  _i3.Future<List<_i22.ChatHistory>> getMyHistory({required int limit}) =>
+      caller.callServerEndpoint<List<_i22.ChatHistory>>(
+        'chatHistory',
+        'getMyHistory',
+        {'limit': limit},
+      );
+
+  _i3.Future<List<_i23.ChatSessionSummary>> getMySessions({
+    required int limit,
+  }) => caller.callServerEndpoint<List<_i23.ChatSessionSummary>>(
+    'chatHistory',
+    'getMySessions',
+    {'limit': limit},
+  );
+
+  _i3.Future<List<_i22.ChatHistory>> getSessionHistory({
+    required String sessionId,
+    required int limit,
+  }) => caller.callServerEndpoint<List<_i22.ChatHistory>>(
+    'chatHistory',
+    'getSessionHistory',
+    {
+      'sessionId': sessionId,
+      'limit': limit,
+    },
+  );
+
+  _i3.Future<bool> deleteSession({required String sessionId}) =>
+      caller.callServerEndpoint<bool>(
+        'chatHistory',
+        'deleteSession',
+        {'sessionId': sessionId},
+      );
+}
+
+/// {@category Endpoint}
 class EndpointCustomAuth extends _i2.EndpointRef {
   EndpointCustomAuth(_i2.EndpointCaller caller) : super(caller);
 
@@ -732,11 +777,11 @@ class EndpointCustomAuth extends _i2.EndpointRef {
   String get name => 'customAuth';
 
   /// Logs in a user using their ID (Student ID or Faculty ID) and password.
-  _i3.Future<_i22.AuthenticationResponse> loginWithId({
+  _i3.Future<_i24.AuthenticationResponse> loginWithId({
     required String id,
     required String password,
     required String role,
-  }) => caller.callServerEndpoint<_i22.AuthenticationResponse>(
+  }) => caller.callServerEndpoint<_i24.AuthenticationResponse>(
     'customAuth',
     'loginWithId',
     {
@@ -803,12 +848,19 @@ class EndpointNLP extends _i2.EndpointRef {
   /// - Forbidden keyword filtering
   /// - Role-based access control (RBAC)
   /// - No dynamic SQL execution
-  _i3.Future<_i23.NLPResponse> query(String text) =>
-      caller.callServerEndpoint<_i23.NLPResponse>(
-        'nLP',
-        'query',
-        {'text': text},
-      );
+  _i3.Future<_i25.NLPResponse> query(
+    String text, {
+    String? sessionId,
+    String? sessionTitle,
+  }) => caller.callServerEndpoint<_i25.NLPResponse>(
+    'nLP',
+    'query',
+    {
+      'text': text,
+      'sessionId': sessionId,
+      'sessionTitle': sessionTitle,
+    },
+  );
 }
 
 /// {@category Endpoint}
@@ -841,8 +893,8 @@ class EndpointSetup extends _i2.EndpointRef {
   );
 
   /// Fetches a UserInfo by email (case-insensitive).
-  _i3.Future<_i22.UserInfo?> getUserInfoByEmail({required String email}) =>
-      caller.callServerEndpoint<_i22.UserInfo?>(
+  _i3.Future<_i24.UserInfo?> getUserInfoByEmail({required String email}) =>
+      caller.callServerEndpoint<_i24.UserInfo?>(
         'setup',
         'getUserInfoByEmail',
         {'email': email},
@@ -946,24 +998,24 @@ class EndpointTimetable extends _i2.EndpointRef {
   @override
   String get name => 'timetable';
 
-  _i3.Future<List<_i24.ScheduleInfo>> getSchedules(
-    _i25.TimetableFilterRequest filter,
-  ) => caller.callServerEndpoint<List<_i24.ScheduleInfo>>(
+  _i3.Future<List<_i26.ScheduleInfo>> getSchedules(
+    _i27.TimetableFilterRequest filter,
+  ) => caller.callServerEndpoint<List<_i26.ScheduleInfo>>(
     'timetable',
     'getSchedules',
     {'filter': filter},
   );
 
-  _i3.Future<_i26.TimetableSummary> getSummary(
-    _i25.TimetableFilterRequest filter,
-  ) => caller.callServerEndpoint<_i26.TimetableSummary>(
+  _i3.Future<_i28.TimetableSummary> getSummary(
+    _i27.TimetableFilterRequest filter,
+  ) => caller.callServerEndpoint<_i28.TimetableSummary>(
     'timetable',
     'getSummary',
     {'filter': filter},
   );
 
-  _i3.Future<List<_i24.ScheduleInfo>> getPersonalSchedule() =>
-      caller.callServerEndpoint<List<_i24.ScheduleInfo>>(
+  _i3.Future<List<_i26.ScheduleInfo>> getPersonalSchedule() =>
+      caller.callServerEndpoint<List<_i26.ScheduleInfo>>(
         'timetable',
         'getPersonalSchedule',
         {},
@@ -980,8 +1032,8 @@ class EndpointGreeting extends _i2.EndpointRef {
   String get name => 'greeting';
 
   /// Returns a personalized greeting message: "Hello {name}".
-  _i3.Future<_i27.Greeting> hello(String name) =>
-      caller.callServerEndpoint<_i27.Greeting>(
+  _i3.Future<_i29.Greeting> hello(String name) =>
+      caller.callServerEndpoint<_i29.Greeting>(
         'greeting',
         'hello',
         {'name': name},
@@ -991,13 +1043,13 @@ class EndpointGreeting extends _i2.EndpointRef {
 class Modules {
   Modules(Client client) {
     serverpod_auth_idp = _i1.Caller(client);
-    auth = _i22.Caller(client);
+    auth = _i24.Caller(client);
     serverpod_auth_core = _i4.Caller(client);
   }
 
   late final _i1.Caller serverpod_auth_idp;
 
-  late final _i22.Caller auth;
+  late final _i24.Caller auth;
 
   late final _i4.Caller serverpod_auth_core;
 }
@@ -1022,7 +1074,7 @@ class Client extends _i2.ServerpodClientShared {
     bool? disconnectStreamsOnLostInternetConnection,
   }) : super(
          host,
-         _i28.Protocol(),
+         _i30.Protocol(),
          securityContext: securityContext,
          streamingConnectionTimeout: streamingConnectionTimeout,
          connectionTimeout: connectionTimeout,
@@ -1035,6 +1087,7 @@ class Client extends _i2.ServerpodClientShared {
     googleIdp = EndpointGoogleIdp(this);
     jwtRefresh = EndpointJwtRefresh(this);
     admin = EndpointAdmin(this);
+    chatHistory = EndpointChatHistory(this);
     customAuth = EndpointCustomAuth(this);
     debug = EndpointDebug(this);
     faculty = EndpointFaculty(this);
@@ -1054,6 +1107,8 @@ class Client extends _i2.ServerpodClientShared {
   late final EndpointJwtRefresh jwtRefresh;
 
   late final EndpointAdmin admin;
+
+  late final EndpointChatHistory chatHistory;
 
   late final EndpointCustomAuth customAuth;
 
@@ -1081,6 +1136,7 @@ class Client extends _i2.ServerpodClientShared {
     'googleIdp': googleIdp,
     'jwtRefresh': jwtRefresh,
     'admin': admin,
+    'chatHistory': chatHistory,
     'customAuth': customAuth,
     'debug': debug,
     'faculty': faculty,

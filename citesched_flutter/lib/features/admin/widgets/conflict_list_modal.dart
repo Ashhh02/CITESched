@@ -1,4 +1,5 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'package:citesched_flutter/features/admin/screens/admin_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -291,8 +292,12 @@ class ConflictListModal extends StatelessWidget {
                     const SizedBox(width: 12),
                     ElevatedButton.icon(
                       onPressed: () {
-                        // Navigate to conflict resolution page or trigger action
                         Navigator.of(context).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const AdminLayout(initialIndex: 5),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.arrow_forward_rounded, size: 16),
                       label: Text(

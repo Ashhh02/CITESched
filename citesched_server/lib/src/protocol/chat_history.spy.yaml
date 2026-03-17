@@ -1,0 +1,12 @@
+class: ChatHistory
+table: chat_history
+fields:
+  userId: String
+  role: String
+  sessionId: String?
+  sessionTitle: String?
+  sender: String
+  text: String
+  intent: String?
+  metadataJson: String?
+  createdAt: DateTime

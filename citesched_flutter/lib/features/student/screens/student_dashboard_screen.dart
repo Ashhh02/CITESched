@@ -6,6 +6,7 @@ import 'package:citesched_flutter/core/utils/schedule_export_service.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/features/auth/widgets/logout_confirmation_dialog.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
+import 'package:citesched_flutter/features/nlp/providers/chat_history_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -28,6 +29,7 @@ class StudentDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheduleAsync = ref.watch(myScheduleProvider);
     final profileAsync = ref.watch(myProfileProvider);
+    final historyAsync = ref.watch(chatHistoryProvider(20));
     final user = ref.watch(authProvider);
     final isMobile = ResponsiveHelper.isMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -416,6 +418,114 @@ class StudentDashboardScreen extends ConsumerWidget {
                     ),
 
                     const SizedBox(height: 32),
+
+                    Text(
+                      'Assistant History',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    historyAsync.when(
+                      loading: () => Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const LinearProgressIndicator(minHeight: 6),
+                      ),
+                      error: (err, _) => Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          'Could not load history: $err',
+                          style: GoogleFonts.poppins(fontSize: 12),
+                        ),
+                      ),
+                      data: (items) {
+                        if (items.isEmpty) {
+                          return Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              'No assistant history yet. Ask a question in the NLP chat to start.',
+                              style: GoogleFonts.poppins(fontSize: 12),
+                            ),
+                          );
+                        }
+
+                        final visible = items.take(6).toList();
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: maroonColor.withOpacity(0.1),
+                            ),
+                          ),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: visible.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 16),
+                            itemBuilder: (context, index) {
+                              final entry = visible[index];
+                              final isUser = entry.sender == 'user';
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 14,
+                                    backgroundColor: isUser
+                                        ? maroonColor.withOpacity(0.15)
+                                        : Colors.green.withOpacity(0.15),
+                                    child: Icon(
+                                      isUser ? Icons.person : Icons.smart_toy,
+                                      size: 14,
+                                      color: isUser ? maroonColor : Colors.green,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          isUser ? 'You' : 'CITESched AI',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          entry.text,
+                                          style: GoogleFonts.poppins(fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
 
                     Text(
                       'My Class Schedule',

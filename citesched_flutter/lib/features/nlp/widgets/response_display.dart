@@ -1,4 +1,7 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'package:citesched_flutter/core/widgets/full_screen_calendar_scaffold.dart';
+import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
+import 'package:citesched_flutter/features/admin/screens/admin_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -84,6 +87,30 @@ class ResponseDisplay extends StatelessWidget {
             _buildConflictItem('Room Conflicts', roomConflicts),
           if (facultyConflicts > 0)
             _buildConflictItem('Faculty Conflicts', facultyConflicts),
+          if (totalConflicts > 0)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const AdminLayout(initialIndex: 6),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.warning_rounded, size: 16),
+                label: Text(
+                  'Resolve Conflicts',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red.shade300,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -260,8 +287,75 @@ class ResponseDisplay extends StatelessWidget {
               );
             },
           ),
+          if (metadata?['showTimetable'] == true)
+            _buildTimetablePreview(context),
         ],
       ),
+    );
+  }
+
+  Widget _buildTimetablePreview(BuildContext context) {
+    final scheduleInfos = schedules!
+        .map((s) => ScheduleInfo(schedule: s, conflicts: const []))
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        Text(
+          'Timetable Preview',
+          style: GoogleFonts.poppins(
+            color: Colors.white70,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 220,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.03),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.08)),
+          ),
+          child: WeeklyCalendarView(
+            schedules: scheduleInfos,
+            maroonColor: const Color(0xFF720045),
+            isStudentView: true,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => FullScreenCalendarScaffold(
+                    title: 'Timetable',
+                    backgroundColor: const Color(0xFF0F172A),
+                    child: WeeklyCalendarView(
+                      schedules: scheduleInfos,
+                      maroonColor: const Color(0xFF720045),
+                      isStudentView: true,
+                    ),
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.fullscreen_rounded, size: 16),
+            label: Text(
+              'Full Screen',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.white70),
+          ),
+        ),
+      ],
     );
   }
 

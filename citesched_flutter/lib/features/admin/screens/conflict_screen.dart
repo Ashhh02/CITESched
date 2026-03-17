@@ -1,5 +1,6 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
+import 'package:citesched_flutter/features/admin/screens/admin_layout.dart';
 import 'package:citesched_flutter/features/admin/widgets/admin_header_container.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +8,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:citesched_flutter/core/utils/error_handler.dart';
 
 class ConflictScreen extends StatefulWidget {
-  const ConflictScreen({super.key});
+  final String? filterType;
+
+  const ConflictScreen({super.key, this.filterType});
 
   @override
   State<ConflictScreen> createState() => _ConflictScreenState();
@@ -124,10 +127,17 @@ class _ConflictScreenState extends State<ConflictScreen> {
 
   Map<String, int> _getConflictCounts() {
     var counts = <String, int>{};
-    for (var c in _conflicts) {
+    for (var c in _filteredConflicts()) {
       counts[c.type] = (counts[c.type] ?? 0) + 1;
     }
     return counts;
+  }
+
+  List<ScheduleConflict> _filteredConflicts() {
+    if (widget.filterType == null) return _conflicts;
+    return _conflicts
+        .where((c) => c.type == widget.filterType)
+        .toList();
   }
 
   @override
@@ -350,7 +360,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
             const SizedBox(height: 32),
 
             // Summary Stat Chips
-            if (!_isLoading && _conflicts.isNotEmpty) ...[
+            if (!_isLoading && _filteredConflicts().isNotEmpty) ...[
               _buildSummaryChips(maroonColor, cardBg, isDark),
               const SizedBox(height: 24),
             ],
@@ -359,7 +369,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : _conflicts.isEmpty
+                  : _filteredConflicts().isEmpty
                   ? _buildEmptyState(textMuted)
                   : _buildConflictList(
                       isDark,
@@ -513,7 +523,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    '${_conflicts.length} items',
+                    '${_filteredConflicts().length} items',
                     style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontSize: 12,
@@ -527,10 +537,10 @@ class _ConflictScreenState extends State<ConflictScreen> {
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
-              itemCount: _conflicts.length,
+              itemCount: _filteredConflicts().length,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                final conflict = _conflicts[index];
+                final conflict = _filteredConflicts()[index];
                 final config = _getConfig(conflict.type);
 
                 return Container(
@@ -669,6 +679,30 @@ class _ConflictScreenState extends State<ConflictScreen> {
                                 ),
                               ),
                             ],
+                            const SizedBox(height: 10),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: () => _resolveConflict(
+                                  context,
+                                  conflict,
+                                ),
+                                icon: const Icon(
+                                  Icons.auto_fix_high,
+                                  size: 16,
+                                ),
+                                label: Text(
+                                  'Resolve',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: config.color,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -679,6 +713,42 @@ class _ConflictScreenState extends State<ConflictScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _resolveConflict(BuildContext context, ScheduleConflict conflict) {
+    int index;
+    switch (conflict.type) {
+      case 'room_conflict':
+      case 'faculty_conflict':
+      case 'section_conflict':
+      case 'generation_failed':
+        index = 5; // Timetable
+        break;
+      case 'capacity_exceeded':
+      case 'room_inactive':
+        index = 4; // Rooms
+        break;
+      case 'program_mismatch':
+        index = 3; // Subjects
+        break;
+      case 'max_load_exceeded':
+      case 'faculty_unavailable':
+        index = 2; // Faculty Loading
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No resolution workflow for this conflict type.'),
+          ),
+        );
+        return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AdminLayout(initialIndex: index),
       ),
     );
   }

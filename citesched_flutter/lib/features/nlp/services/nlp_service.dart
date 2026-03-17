@@ -7,10 +7,18 @@ final nlpServiceProvider = Provider((ref) => NLPService());
 class NLPService {
   /// Sends a natural language query to the NLP endpoint
   /// Returns the NLPResponse from the server
-  Future<NLPResponse> queryNLP(String text) async {
+  Future<NLPResponse> queryNLP(
+    String text, {
+    String? sessionId,
+    String? sessionTitle,
+  }) async {
     try {
       // Call the NLP endpoint using the auto-generated client
-      final response = await client.nLP.query(text);
+      final response = await client.nLP.query(
+        text,
+        sessionId: sessionId,
+        sessionTitle: sessionTitle,
+      );
       return response;
     } catch (e) {
       print('NLP Query Error: $e');

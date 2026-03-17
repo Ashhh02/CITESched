@@ -7,6 +7,7 @@ class ChatMessage {
   final DateTime timestamp;
   final String? responseType; // conflict, overload, schedule, availability
   final Map<String, dynamic>? metadata; // For structured data
+  final List<dynamic>? schedules;
 
   ChatMessage({
     required this.id,
@@ -15,5 +16,6 @@ class ChatMessage {
     required this.timestamp,
     this.responseType,
     this.metadata,
+    this.schedules,
   });
 }

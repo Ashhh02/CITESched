@@ -885,12 +885,15 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
           ),
         ),
         const SizedBox(height: 6),
-        Expanded(
+        Flexible(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 faculty,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w700,
                   fontSize: 11,
@@ -911,6 +914,8 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
               ),
               Text(
                 'Section: ${schedule.section}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
                   fontSize: 9,
                   color: isStudentView ? Colors.black87 : Colors.white70,
@@ -918,6 +923,8 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
               ),
               Text(
                 'Room: $room',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
                   fontSize: 9,
                   color: isStudentView ? Colors.black87 : Colors.white70,

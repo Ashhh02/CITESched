@@ -1,0 +1,634 @@
+/* AUTOMATICALLY GENERATED CODE DO NOT MODIFY */
+/*   To generate run: "serverpod generate"    */
+
+// ignore_for_file: implementation_imports
+// ignore_for_file: library_private_types_in_public_api
+// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: public_member_api_docs
+// ignore_for_file: type_literal_in_constant_pattern
+// ignore_for_file: use_super_parameters
+// ignore_for_file: invalid_use_of_internal_member
+
+// ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'package:serverpod/serverpod.dart' as _i1;
+
+abstract class ChatHistory
+    implements _i1.TableRow<int?>, _i1.ProtocolSerialization {
+  ChatHistory._({
+    this.id,
+    required this.userId,
+    required this.role,
+    this.sessionId,
+    this.sessionTitle,
+    required this.sender,
+    required this.text,
+    this.intent,
+    this.metadataJson,
+    required this.createdAt,
+  });
+
+  factory ChatHistory({
+    int? id,
+    required String userId,
+    required String role,
+    String? sessionId,
+    String? sessionTitle,
+    required String sender,
+    required String text,
+    String? intent,
+    String? metadataJson,
+    required DateTime createdAt,
+  }) = _ChatHistoryImpl;
+
+  factory ChatHistory.fromJson(Map<String, dynamic> jsonSerialization) {
+    return ChatHistory(
+      id: jsonSerialization['id'] as int?,
+      userId: jsonSerialization['userId'] as String,
+      role: jsonSerialization['role'] as String,
+      sessionId: jsonSerialization['sessionId'] as String?,
+      sessionTitle: jsonSerialization['sessionTitle'] as String?,
+      sender: jsonSerialization['sender'] as String,
+      text: jsonSerialization['text'] as String,
+      intent: jsonSerialization['intent'] as String?,
+      metadataJson: jsonSerialization['metadataJson'] as String?,
+      createdAt: _i1.DateTimeJsonExtension.fromJson(
+        jsonSerialization['createdAt'],
+      ),
+    );
+  }
+
+  static final t = ChatHistoryTable();
+
+  static const db = ChatHistoryRepository._();
+
+  @override
+  int? id;
+
+  String userId;
+
+  String role;
+
+  String? sessionId;
+
+  String? sessionTitle;
+
+  String sender;
+
+  String text;
+
+  String? intent;
+
+  String? metadataJson;
+
+  DateTime createdAt;
+
+  @override
+  _i1.Table<int?> get table => t;
+
+  /// Returns a shallow copy of this [ChatHistory]
+  /// with some or all fields replaced by the given arguments.
+  @_i1.useResult
+  ChatHistory copyWith({
+    int? id,
+    String? userId,
+    String? role,
+    String? sessionId,
+    String? sessionTitle,
+    String? sender,
+    String? text,
+    String? intent,
+    String? metadataJson,
+    DateTime? createdAt,
+  });
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      '__className__': 'ChatHistory',
+      if (id != null) 'id': id,
+      'userId': userId,
+      'role': role,
+      if (sessionId != null) 'sessionId': sessionId,
+      if (sessionTitle != null) 'sessionTitle': sessionTitle,
+      'sender': sender,
+      'text': text,
+      if (intent != null) 'intent': intent,
+      if (metadataJson != null) 'metadataJson': metadataJson,
+      'createdAt': createdAt.toJson(),
+    };
+  }
+
+  @override
+  Map<String, dynamic> toJsonForProtocol() {
+    return {
+      '__className__': 'ChatHistory',
+      if (id != null) 'id': id,
+      'userId': userId,
+      'role': role,
+      if (sessionId != null) 'sessionId': sessionId,
+      if (sessionTitle != null) 'sessionTitle': sessionTitle,
+      'sender': sender,
+      'text': text,
+      if (intent != null) 'intent': intent,
+      if (metadataJson != null) 'metadataJson': metadataJson,
+      'createdAt': createdAt.toJson(),
+    };
+  }
+
+  static ChatHistoryInclude include() {
+    return ChatHistoryInclude._();
+  }
+
+  static ChatHistoryIncludeList includeList({
+    _i1.WhereExpressionBuilder<ChatHistoryTable>? where,
+    int? limit,
+    int? offset,
+    _i1.OrderByBuilder<ChatHistoryTable>? orderBy,
+    bool orderDescending = false,
+    _i1.OrderByListBuilder<ChatHistoryTable>? orderByList,
+    ChatHistoryInclude? include,
+  }) {
+    return ChatHistoryIncludeList._(
+      where: where,
+      limit: limit,
+      offset: offset,
+      orderBy: orderBy?.call(ChatHistory.t),
+      orderDescending: orderDescending,
+      orderByList: orderByList?.call(ChatHistory.t),
+      include: include,
+    );
+  }
+
+  @override
+  String toString() {
+    return _i1.SerializationManager.encode(this);
+  }
+}
+
+class _Undefined {}
+
+class _ChatHistoryImpl extends ChatHistory {
+  _ChatHistoryImpl({
+    int? id,
+    required String userId,
+    required String role,
+    String? sessionId,
+    String? sessionTitle,
+    required String sender,
+    required String text,
+    String? intent,
+    String? metadataJson,
+    required DateTime createdAt,
+  }) : super._(
+         id: id,
+         userId: userId,
+         role: role,
+         sessionId: sessionId,
+         sessionTitle: sessionTitle,
+         sender: sender,
+         text: text,
+         intent: intent,
+         metadataJson: metadataJson,
+         createdAt: createdAt,
+       );
+
+  /// Returns a shallow copy of this [ChatHistory]
+  /// with some or all fields replaced by the given arguments.
+  @_i1.useResult
+  @override
+  ChatHistory copyWith({
+    Object? id = _Undefined,
+    String? userId,
+    String? role,
+    Object? sessionId = _Undefined,
+    Object? sessionTitle = _Undefined,
+    String? sender,
+    String? text,
+    Object? intent = _Undefined,
+    Object? metadataJson = _Undefined,
+    DateTime? createdAt,
+  }) {
+    return ChatHistory(
+      id: id is int? ? id : this.id,
+      userId: userId ?? this.userId,
+      role: role ?? this.role,
+      sessionId: sessionId is String? ? sessionId : this.sessionId,
+      sessionTitle: sessionTitle is String? ? sessionTitle : this.sessionTitle,
+      sender: sender ?? this.sender,
+      text: text ?? this.text,
+      intent: intent is String? ? intent : this.intent,
+      metadataJson: metadataJson is String? ? metadataJson : this.metadataJson,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+}
+
+class ChatHistoryUpdateTable extends _i1.UpdateTable<ChatHistoryTable> {
+  ChatHistoryUpdateTable(super.table);
+
+  _i1.ColumnValue<String, String> userId(String value) => _i1.ColumnValue(
+    table.userId,
+    value,
+  );
+
+  _i1.ColumnValue<String, String> role(String value) => _i1.ColumnValue(
+    table.role,
+    value,
+  );
+
+  _i1.ColumnValue<String, String> sessionId(String? value) => _i1.ColumnValue(
+    table.sessionId,
+    value,
+  );
+
+  _i1.ColumnValue<String, String> sessionTitle(String? value) =>
+      _i1.ColumnValue(
+        table.sessionTitle,
+        value,
+      );
+
+  _i1.ColumnValue<String, String> sender(String value) => _i1.ColumnValue(
+    table.sender,
+    value,
+  );
+
+  _i1.ColumnValue<String, String> text(String value) => _i1.ColumnValue(
+    table.text,
+    value,
+  );
+
+  _i1.ColumnValue<String, String> intent(String? value) => _i1.ColumnValue(
+    table.intent,
+    value,
+  );
+
+  _i1.ColumnValue<String, String> metadataJson(String? value) =>
+      _i1.ColumnValue(
+        table.metadataJson,
+        value,
+      );
+
+  _i1.ColumnValue<DateTime, DateTime> createdAt(DateTime value) =>
+      _i1.ColumnValue(
+        table.createdAt,
+        value,
+      );
+}
+
+class ChatHistoryTable extends _i1.Table<int?> {
+  ChatHistoryTable({super.tableRelation}) : super(tableName: 'chat_history') {
+    updateTable = ChatHistoryUpdateTable(this);
+    userId = _i1.ColumnString(
+      'userId',
+      this,
+    );
+    role = _i1.ColumnString(
+      'role',
+      this,
+    );
+    sessionId = _i1.ColumnString(
+      'sessionId',
+      this,
+    );
+    sessionTitle = _i1.ColumnString(
+      'sessionTitle',
+      this,
+    );
+    sender = _i1.ColumnString(
+      'sender',
+      this,
+    );
+    text = _i1.ColumnString(
+      'text',
+      this,
+    );
+    intent = _i1.ColumnString(
+      'intent',
+      this,
+    );
+    metadataJson = _i1.ColumnString(
+      'metadataJson',
+      this,
+    );
+    createdAt = _i1.ColumnDateTime(
+      'createdAt',
+      this,
+    );
+  }
+
+  late final ChatHistoryUpdateTable updateTable;
+
+  late final _i1.ColumnString userId;
+
+  late final _i1.ColumnString role;
+
+  late final _i1.ColumnString sessionId;
+
+  late final _i1.ColumnString sessionTitle;
+
+  late final _i1.ColumnString sender;
+
+  late final _i1.ColumnString text;
+
+  late final _i1.ColumnString intent;
+
+  late final _i1.ColumnString metadataJson;
+
+  late final _i1.ColumnDateTime createdAt;
+
+  @override
+  List<_i1.Column> get columns => [
+    id,
+    userId,
+    role,
+    sessionId,
+    sessionTitle,
+    sender,
+    text,
+    intent,
+    metadataJson,
+    createdAt,
+  ];
+}
+
+class ChatHistoryInclude extends _i1.IncludeObject {
+  ChatHistoryInclude._();
+
+  @override
+  Map<String, _i1.Include?> get includes => {};
+
+  @override
+  _i1.Table<int?> get table => ChatHistory.t;
+}
+
+class ChatHistoryIncludeList extends _i1.IncludeList {
+  ChatHistoryIncludeList._({
+    _i1.WhereExpressionBuilder<ChatHistoryTable>? where,
+    super.limit,
+    super.offset,
+    super.orderBy,
+    super.orderDescending,
+    super.orderByList,
+    super.include,
+  }) {
+    super.where = where?.call(ChatHistory.t);
+  }
+
+  @override
+  Map<String, _i1.Include?> get includes => include?.includes ?? {};
+
+  @override
+  _i1.Table<int?> get table => ChatHistory.t;
+}
+
+class ChatHistoryRepository {
+  const ChatHistoryRepository._();
+
+  /// Returns a list of [ChatHistory]s matching the given query parameters.
+  ///
+  /// Use [where] to specify which items to include in the return value.
+  /// If none is specified, all items will be returned.
+  ///
+  /// To specify the order of the items use [orderBy] or [orderByList]
+  /// when sorting by multiple columns.
+  ///
+  /// The maximum number of items can be set by [limit]. If no limit is set,
+  /// all items matching the query will be returned.
+  ///
+  /// [offset] defines how many items to skip, after which [limit] (or all)
+  /// items are read from the database.
+  ///
+  /// ```dart
+  /// var persons = await Persons.db.find(
+  ///   session,
+  ///   where: (t) => t.lastName.equals('Jones'),
+  ///   orderBy: (t) => t.firstName,
+  ///   limit: 100,
+  /// );
+  /// ```
+  Future<List<ChatHistory>> find(
+    _i1.Session session, {
+    _i1.WhereExpressionBuilder<ChatHistoryTable>? where,
+    int? limit,
+    int? offset,
+    _i1.OrderByBuilder<ChatHistoryTable>? orderBy,
+    bool orderDescending = false,
+    _i1.OrderByListBuilder<ChatHistoryTable>? orderByList,
+    _i1.Transaction? transaction,
+  }) async {
+    return session.db.find<ChatHistory>(
+      where: where?.call(ChatHistory.t),
+      orderBy: orderBy?.call(ChatHistory.t),
+      orderByList: orderByList?.call(ChatHistory.t),
+      orderDescending: orderDescending,
+      limit: limit,
+      offset: offset,
+      transaction: transaction,
+    );
+  }
+
+  /// Returns the first matching [ChatHistory] matching the given query parameters.
+  ///
+  /// Use [where] to specify which items to include in the return value.
+  /// If none is specified, all items will be returned.
+  ///
+  /// To specify the order use [orderBy] or [orderByList]
+  /// when sorting by multiple columns.
+  ///
+  /// [offset] defines how many items to skip, after which the next one will be picked.
+  ///
+  /// ```dart
+  /// var youngestPerson = await Persons.db.findFirstRow(
+  ///   session,
+  ///   where: (t) => t.lastName.equals('Jones'),
+  ///   orderBy: (t) => t.age,
+  /// );
+  /// ```
+  Future<ChatHistory?> findFirstRow(
+    _i1.Session session, {
+    _i1.WhereExpressionBuilder<ChatHistoryTable>? where,
+    int? offset,
+    _i1.OrderByBuilder<ChatHistoryTable>? orderBy,
+    bool orderDescending = false,
+    _i1.OrderByListBuilder<ChatHistoryTable>? orderByList,
+    _i1.Transaction? transaction,
+  }) async {
+    return session.db.findFirstRow<ChatHistory>(
+      where: where?.call(ChatHistory.t),
+      orderBy: orderBy?.call(ChatHistory.t),
+      orderByList: orderByList?.call(ChatHistory.t),
+      orderDescending: orderDescending,
+      offset: offset,
+      transaction: transaction,
+    );
+  }
+
+  /// Finds a single [ChatHistory] by its [id] or null if no such row exists.
+  Future<ChatHistory?> findById(
+    _i1.Session session,
+    int id, {
+    _i1.Transaction? transaction,
+  }) async {
+    return session.db.findById<ChatHistory>(
+      id,
+      transaction: transaction,
+    );
+  }
+
+  /// Inserts all [ChatHistory]s in the list and returns the inserted rows.
+  ///
+  /// The returned [ChatHistory]s will have their `id` fields set.
+  ///
+  /// This is an atomic operation, meaning that if one of the rows fails to
+  /// insert, none of the rows will be inserted.
+  Future<List<ChatHistory>> insert(
+    _i1.Session session,
+    List<ChatHistory> rows, {
+    _i1.Transaction? transaction,
+  }) async {
+    return session.db.insert<ChatHistory>(
+      rows,
+      transaction: transaction,
+    );
+  }
+
+  /// Inserts a single [ChatHistory] and returns the inserted row.
+  ///
+  /// The returned [ChatHistory] will have its `id` field set.
+  Future<ChatHistory> insertRow(
+    _i1.Session session,
+    ChatHistory row, {
+    _i1.Transaction? transaction,
+  }) async {
+    return session.db.insertRow<ChatHistory>(
+      row,
+      transaction: transaction,
+    );
+  }
+
+  /// Updates all [ChatHistory]s in the list and returns the updated rows. If
+  /// [columns] is provided, only those columns will be updated. Defaults to
+  /// all columns.
+  /// This is an atomic operation, meaning that if one of the rows fails to
+  /// update, none of the rows will be updated.
+  Future<List<ChatHistory>> update(
+    _i1.Session session,
+    List<ChatHistory> rows, {
+    _i1.ColumnSelections<ChatHistoryTable>? columns,
+    _i1.Transaction? transaction,
+  }) async {
+    return session.db.update<ChatHistory>(
+      rows,
+      columns: columns?.call(ChatHistory.t),
+      transaction: transaction,
+    );
+  }
+
+  /// Updates a single [ChatHistory]. The row needs to have its id set.
+  /// Optionally, a list of [columns] can be provided to only update those
+  /// columns. Defaults to all columns.
+  Future<ChatHistory> updateRow(
+    _i1.Session session,
+    ChatHistory row, {
+    _i1.ColumnSelections<ChatHistoryTable>? columns,
+    _i1.Transaction? transaction,
+  }) async {
+    return session.db.updateRow<ChatHistory>(
+      row,
+      columns: columns?.call(ChatHistory.t),
+      transaction: transaction,
+    );
+  }
+
+  /// Updates a single [ChatHistory] by its [id] with the specified [columnValues].
+  /// Returns the updated row or null if no row with the given id exists.
+  Future<ChatHistory?> updateById(
+    _i1.Session session,
+    int id, {
+    required _i1.ColumnValueListBuilder<ChatHistoryUpdateTable> columnValues,
+    _i1.Transaction? transaction,
+  }) async {
+    return session.db.updateById<ChatHistory>(
+      id,
+      columnValues: columnValues(ChatHistory.t.updateTable),
+      transaction: transaction,
+    );
+  }
+
+  /// Updates all [ChatHistory]s matching the [where] expression with the specified [columnValues].
+  /// Returns the list of updated rows.
+  Future<List<ChatHistory>> updateWhere(
+    _i1.Session session, {
+    required _i1.ColumnValueListBuilder<ChatHistoryUpdateTable> columnValues,
+    required _i1.WhereExpressionBuilder<ChatHistoryTable> where,
+    int? limit,
+    int? offset,
+    _i1.OrderByBuilder<ChatHistoryTable>? orderBy,
+    _i1.OrderByListBuilder<ChatHistoryTable>? orderByList,
+    bool orderDescending = false,
+    _i1.Transaction? transaction,
+  }) async {
+    return session.db.updateWhere<ChatHistory>(
+      columnValues: columnValues(ChatHistory.t.updateTable),
+      where: where(ChatHistory.t),
+      limit: limit,
+      offset: offset,
+      orderBy: orderBy?.call(ChatHistory.t),
+      orderByList: orderByList?.call(ChatHistory.t),
+      orderDescending: orderDescending,
+      transaction: transaction,
+    );
+  }
+
+  /// Deletes all [ChatHistory]s in the list and returns the deleted rows.
+  /// This is an atomic operation, meaning that if one of the rows fail to
+  /// be deleted, none of the rows will be deleted.
+  Future<List<ChatHistory>> delete(
+    _i1.Session session,
+    List<ChatHistory> rows, {
+    _i1.Transaction? transaction,
+  }) async {
+    return session.db.delete<ChatHistory>(
+      rows,
+      transaction: transaction,
+    );
+  }
+
+  /// Deletes a single [ChatHistory].
+  Future<ChatHistory> deleteRow(
+    _i1.Session session,
+    ChatHistory row, {
+    _i1.Transaction? transaction,
+  }) async {
+    return session.db.deleteRow<ChatHistory>(
+      row,
+      transaction: transaction,
+    );
+  }
+
+  /// Deletes all rows matching the [where] expression.
+  Future<List<ChatHistory>> deleteWhere(
+    _i1.Session session, {
+    required _i1.WhereExpressionBuilder<ChatHistoryTable> where,
+    _i1.Transaction? transaction,
+  }) async {
+    return session.db.deleteWhere<ChatHistory>(
+      where: where(ChatHistory.t),
+      transaction: transaction,
+    );
+  }
+
+  /// Counts the number of rows matching the [where] expression. If omitted,
+  /// will return the count of all rows in the table.
+  Future<int> count(
+    _i1.Session session, {
+    _i1.WhereExpressionBuilder<ChatHistoryTable>? where,
+    int? limit,
+    _i1.Transaction? transaction,
+  }) async {
+    return session.db.count<ChatHistory>(
+      where: where?.call(ChatHistory.t),
+      limit: limit,
+      transaction: transaction,
+    );
+  }
+}
