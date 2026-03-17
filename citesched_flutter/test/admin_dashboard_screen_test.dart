@@ -13,18 +13,18 @@ DashboardStats _buildFakeStats() {
     totalSubjects: 18,
     totalRooms: 9,
     totalConflicts: 0,
-    facultyLoad: const [
+    facultyLoad: [
       FacultyLoadData(
         facultyName: 'Test Faculty',
         currentLoad: 9,
         maxLoad: 15,
       ),
     ],
-    recentConflicts: const [],
-    sectionDistribution: const [
+    recentConflicts: [],
+    sectionDistribution: [
       DistributionData(label: 'A', count: 10),
     ],
-    yearLevelDistribution: const [
+    yearLevelDistribution: [
       DistributionData(label: '1st', count: 10),
     ],
   );
