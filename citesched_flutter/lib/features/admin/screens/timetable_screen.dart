@@ -43,8 +43,25 @@ final timetableSummaryProvider = FutureProvider<TimetableSummary>((ref) async {
   return await client.timetable.getSummary(filter);
 });
 
+class TimetableMetadata {
+  final List<Faculty> facultyList;
+  final List<Room> roomList;
+
+  const TimetableMetadata({
+    required this.facultyList,
+    required this.roomList,
+  });
+}
+
 class TimetableScreen extends ConsumerStatefulWidget {
-  const TimetableScreen({super.key});
+  final TimetableMetadata? initialMetadata;
+  final bool skipMetadataLoad;
+
+  const TimetableScreen({
+    super.key,
+    this.initialMetadata,
+    this.skipMetadataLoad = false,
+  });
 
   @override
   ConsumerState<TimetableScreen> createState() => _TimetableScreenState();
@@ -58,7 +75,12 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
   @override
   void initState() {
     super.initState();
-    _loadMetadata();
+    if (widget.initialMetadata != null) {
+      _facultyList = widget.initialMetadata!.facultyList;
+      _roomList = widget.initialMetadata!.roomList;
+    } else if (!widget.skipMetadataLoad) {
+      _loadMetadata();
+    }
   }
 
   Future<void> _loadMetadata() async {
@@ -670,6 +692,151 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     );
   }
 
+  Faculty? _findFacultyById(int? facultyId) {
+    if (facultyId == null) return null;
+    for (final faculty in _facultyList) {
+      if (faculty.id == facultyId) return faculty;
+    }
+    return null;
+  }
+
+  void _openEditSchedule(Schedule schedule) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AdminLayout(
+          initialIndex: 2,
+          initialEditSchedule: schedule,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFullScreenButton({
+    required List<ScheduleInfo> schedules,
+    required List<FacultyAvailability>? availabilities,
+    required Faculty? selectedFaculty,
+    required Color bgColor,
+    required bool isInstructorView,
+  }) {
+    return TextButton.icon(
+      onPressed: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => FullScreenCalendarScaffold(
+            title: 'Weekly Timetable',
+            backgroundColor: bgColor,
+            child: WeeklyCalendarView(
+              schedules: schedules,
+              maroonColor: maroonColor,
+              availabilities: availabilities,
+              selectedFaculty: selectedFaculty,
+              isInstructorView: isInstructorView,
+              onEdit: _openEditSchedule,
+            ),
+          ),
+        ),
+      ),
+      icon: const Icon(Icons.fullscreen_rounded),
+      label: Text(
+        'Full Screen',
+        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  Widget _buildWeeklyCalendar({
+    required List<ScheduleInfo> schedules,
+    required List<FacultyAvailability>? availabilities,
+    required Faculty? selectedFaculty,
+    required bool isInstructorView,
+  }) {
+    return WeeklyCalendarView(
+      schedules: schedules,
+      maroonColor: maroonColor,
+      availabilities: availabilities,
+      selectedFaculty: selectedFaculty,
+      isInstructorView: isInstructorView,
+      onEdit: _openEditSchedule,
+    );
+  }
+
+  Widget _buildSchedulesContent({
+    required List<ScheduleInfo> schedules,
+    required TimetableFilterRequest currentFilter,
+    required Color bgColor,
+    required bool isMobile,
+  }) {
+    final availabilities = currentFilter.facultyId != null
+        ? ref
+            .watch(
+              facultyAvailabilityProvider(currentFilter.facultyId!),
+            )
+            .maybeWhen(
+              data: (v) => v,
+              orElse: () => null,
+            )
+        : null;
+    final selectedFaculty = _findFacultyById(currentFilter.facultyId);
+    final isInstructorView = currentFilter.facultyId != null;
+
+    final calendar = _buildWeeklyCalendar(
+      schedules: schedules,
+      availabilities: availabilities,
+      selectedFaculty: selectedFaculty,
+      isInstructorView: isInstructorView,
+    );
+
+    if (isMobile) {
+      final calendarHeight =
+          (MediaQuery.of(context).size.height * 0.65).clamp(420.0, 720.0);
+      return Column(
+        children: [
+          if (isInstructorView && schedules.isNotEmpty)
+            _buildInstructorSummary(schedules),
+          Align(
+            alignment: Alignment.centerRight,
+            child: _buildFullScreenButton(
+              schedules: schedules,
+              availabilities: availabilities,
+              selectedFaculty: selectedFaculty,
+              bgColor: bgColor,
+              isInstructorView: isInstructorView,
+            ),
+          ),
+          SizedBox(height: calendarHeight, child: calendar),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        if (isInstructorView && schedules.isNotEmpty)
+          _buildInstructorSummary(schedules),
+        Align(
+          alignment: Alignment.centerRight,
+          child: _buildFullScreenButton(
+            schedules: schedules,
+            availabilities: availabilities,
+            selectedFaculty: selectedFaculty,
+            bgColor: bgColor,
+            isInstructorView: isInstructorView,
+          ),
+        ),
+        Expanded(child: calendar),
+      ],
+    );
+  }
+
+  Widget _buildFilterPanel(TimetableFilterRequest currentFilter) {
+    return TimetableFilterPanel(
+      currentFilter: currentFilter,
+      facultyList: _facultyList,
+      roomList: _roomList,
+      onFilterChanged: (newFilter) {
+        ref.read(timetableFilterProvider.notifier).update(newFilter);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final schedulesAsync = ref.watch(filteredSchedulesProvider);
@@ -687,107 +854,17 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TimetableFilterPanel(
-                    currentFilter: currentFilter,
-                    facultyList: _facultyList,
-                    roomList: _roomList,
-                    onFilterChanged: (newFilter) {
-                      ref
-                          .read(timetableFilterProvider.notifier)
-                          .update(newFilter);
-                    },
-                  ),
+                  _buildFilterPanel(currentFilter),
                   const SizedBox(height: 16),
                   _buildTimetableHeader(context),
                   const SizedBox(height: 16),
                   schedulesAsync.when(
                     data: (schedules) {
-                      final availabilities = currentFilter.facultyId != null
-                          ? ref
-                                .watch(
-                                  facultyAvailabilityProvider(
-                                    currentFilter.facultyId!,
-                                  ),
-                                )
-                                .maybeWhen(
-                                  data: (v) => v,
-                                  orElse: () => null,
-                                )
-                          : null;
-                      final selectedFaculty = currentFilter.facultyId != null
-                          ? _facultyList.firstWhere(
-                              (f) => f.id == currentFilter.facultyId,
-                            )
-                          : null;
-                      final calendarHeight =
-                          (MediaQuery.of(context).size.height * 0.65)
-                              .clamp(420.0, 720.0);
-
-                      return Column(
-                        children: [
-                          if (currentFilter.facultyId != null &&
-                              schedules.isNotEmpty)
-                            _buildInstructorSummary(schedules),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => FullScreenCalendarScaffold(
-                                    title: 'Weekly Timetable',
-                                    backgroundColor: bgColor,
-                                    child: WeeklyCalendarView(
-                                      schedules: schedules,
-                                      maroonColor: maroonColor,
-                                      availabilities: availabilities,
-                                      selectedFaculty: selectedFaculty,
-                                      isInstructorView:
-                                          currentFilter.facultyId != null,
-                                      onEdit: (s) {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) => AdminLayout(
-                                              initialIndex: 2,
-                                              initialEditSchedule: s,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              icon: const Icon(Icons.fullscreen_rounded),
-                              label: Text(
-                                'Full Screen',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            height: calendarHeight,
-                            child: WeeklyCalendarView(
-                              schedules: schedules,
-                              maroonColor: maroonColor,
-                              availabilities: availabilities,
-                              selectedFaculty: selectedFaculty,
-                              isInstructorView:
-                                  currentFilter.facultyId != null,
-                              onEdit: (s) {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => AdminLayout(
-                                      initialIndex: 2,
-                                      initialEditSchedule: s,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
+                      return _buildSchedulesContent(
+                        schedules: schedules,
+                        currentFilter: currentFilter,
+                        bgColor: bgColor,
+                        isMobile: true,
                       );
                     },
                     loading: () =>
@@ -813,16 +890,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                   width: 300,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: TimetableFilterPanel(
-                      currentFilter: currentFilter,
-                      facultyList: _facultyList,
-                      roomList: _roomList,
-                      onFilterChanged: (newFilter) {
-                        ref
-                            .read(timetableFilterProvider.notifier)
-                            .update(newFilter);
-                      },
-                    ),
+                    child: _buildFilterPanel(currentFilter),
                   ),
                 ),
 
@@ -839,97 +907,15 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                         child: Padding(
                           padding:
                               const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: schedulesAsync.when(
-                            data: (schedules) {
-                              final availabilities =
-                                  currentFilter.facultyId != null
-                                      ? ref
-                                            .watch(
-                                              facultyAvailabilityProvider(
-                                                currentFilter.facultyId!,
-                                              ),
-                                            )
-                                            .maybeWhen(
-                                              data: (v) => v,
-                                              orElse: () => null,
-                                            )
-                                      : null;
-                              final selectedFaculty =
-                                  currentFilter.facultyId != null
-                                      ? _facultyList.firstWhere(
-                                          (f) => f.id == currentFilter.facultyId,
-                                        )
-                                      : null;
-
-                              return Column(
-                                children: [
-                                  if (currentFilter.facultyId != null &&
-                                      schedules.isNotEmpty)
-                                    _buildInstructorSummary(schedules),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: TextButton.icon(
-                                      onPressed: () => Navigator.of(context)
-                                          .push(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              FullScreenCalendarScaffold(
-                                            title: 'Weekly Timetable',
-                                            backgroundColor: bgColor,
-                                            child: WeeklyCalendarView(
-                                              schedules: schedules,
-                                              maroonColor: maroonColor,
-                                              availabilities: availabilities,
-                                              selectedFaculty: selectedFaculty,
-                                              isInstructorView:
-                                                  currentFilter.facultyId !=
-                                                      null,
-                                              onEdit: (s) {
-                                                Navigator.of(context).push(
-                                                  MaterialPageRoute(
-                                                    builder: (_) => AdminLayout(
-                                                      initialIndex: 2,
-                                                      initialEditSchedule: s,
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      icon: const Icon(Icons.fullscreen_rounded),
-                                      label: Text(
-                                        'Full Screen',
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: WeeklyCalendarView(
-                                      schedules: schedules,
-                                      maroonColor: maroonColor,
-                                      availabilities: availabilities,
-                                      selectedFaculty: selectedFaculty,
-                                      isInstructorView:
-                                          currentFilter.facultyId != null,
-                                      onEdit: (s) {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) => AdminLayout(
-                                              initialIndex: 2,
-                                              initialEditSchedule: s,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
+                        child: schedulesAsync.when(
+                          data: (schedules) {
+                            return _buildSchedulesContent(
+                              schedules: schedules,
+                              currentFilter: currentFilter,
+                              bgColor: bgColor,
+                              isMobile: false,
+                            );
+                          },
                             loading: () => const Center(
                               child: CircularProgressIndicator(),
                             ),

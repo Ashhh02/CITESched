@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'faculty_details_screen.dart';
 import 'package:citesched_flutter/core/providers/conflict_provider.dart';
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
+import 'package:citesched_flutter/features/admin/widgets/admin_header_container.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
@@ -464,27 +465,17 @@ class _FacultyManagementScreenState
           children: [
             // Header
             // Header (Standardized Maroon Gradient Banner)
-            Container(
-              width: double.infinity,
+            AdminHeaderContainer(
+              primaryColor: maroonColor,
               padding: EdgeInsets.all(isMobile ? 20 : 32),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    maroonColor,
-                    const Color(0xFF8e005b),
-                  ],
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: maroonColor.withValues(alpha: 0.3),
+                  blurRadius: 25,
+                  offset: const Offset(0, 12),
                 ),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: maroonColor.withValues(alpha: 0.3),
-                    blurRadius: 25,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
+              ],
               child: isMobile
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

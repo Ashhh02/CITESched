@@ -1,6 +1,7 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/core/theme/design_system.dart';
+import 'package:citesched_flutter/features/admin/widgets/admin_header_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -63,24 +64,17 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           children: [
             // ── Hero Section ──────────────────────────────────────────────
             // Header (Standardized Maroon Gradient Banner)
-            Container(
-              width: double.infinity,
+            AdminHeaderContainer(
+              primaryColor: maroonColor,
               padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [maroonColor, const Color(0xFF8e005b)],
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: maroonColor.withValues(alpha: 0.3),
+                  blurRadius: 25,
+                  offset: const Offset(0, 12),
                 ),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: maroonColor.withValues(alpha: 0.3),
-                    blurRadius: 25,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
+              ],
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

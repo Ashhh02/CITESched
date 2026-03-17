@@ -1,6 +1,7 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/features/admin/widgets/conflict_list_modal.dart';
+import 'package:citesched_flutter/features/admin/widgets/admin_header_container.dart';
 import 'package:citesched_flutter/features/admin/widgets/faculty_load_chart.dart';
 import 'package:citesched_flutter/features/admin/widgets/report_modal.dart';
 import 'package:citesched_flutter/features/admin/widgets/stat_card.dart';
@@ -15,6 +16,26 @@ import 'package:google_fonts/google_fonts.dart';
 final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
   return await client.admin.getDashboardStats();
 });
+
+class _StatCardConfig {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color borderColor;
+  final Color iconColor;
+  final Color valueColor;
+  final VoidCallback? onTap;
+
+  const _StatCardConfig({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.borderColor,
+    required this.iconColor,
+    required this.valueColor,
+    this.onTap,
+  });
+}
 
 class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({super.key});
@@ -98,24 +119,8 @@ class AdminDashboardScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header (Standardized Maroon Gradient Banner)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(40),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [primaryPurple, const Color(0xFF8e005b)],
-                    ),
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryPurple.withValues(alpha: 0.3),
-                        blurRadius: 30,
-                        offset: const Offset(0, 15),
-                      ),
-                    ],
-                  ),
+                AdminHeaderContainer(
+                  primaryColor: primaryPurple,
                   child: Column(
                     children: [
                       Row(
@@ -289,144 +294,66 @@ class AdminDashboardScreen extends ConsumerWidget {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final isWide = isDesktop;
+                    final conflictsLabel =
+                        isWide ? 'Conflicts' : 'Unresolved Conflicts';
+                    final cards = [
+                      _StatCardConfig(
+                        label: 'Scheduled Classes',
+                        value: totalSchedules.toString(),
+                        icon: Icons.calendar_today_rounded,
+                        borderColor: primaryPurple,
+                        iconColor: primaryPurple,
+                        valueColor: primaryPurple,
+                      ),
+                      _StatCardConfig(
+                        label: 'Active Users',
+                        value: totalUsers.toString(),
+                        icon: Icons.people_rounded,
+                        borderColor: const Color(0xFF9333ea),
+                        iconColor: const Color(0xFF9333ea),
+                        valueColor: const Color(0xFF9333ea),
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (_) => const UserListModal(),
+                          );
+                        },
+                      ),
+                      _StatCardConfig(
+                        label: 'Total Subjects',
+                        value: stats.totalSubjects.toString(),
+                        icon: Icons.book_rounded,
+                        borderColor: const Color(0xFFc026d3),
+                        iconColor: const Color(0xFFc026d3),
+                        valueColor: const Color(0xFFc026d3),
+                      ),
+                      _StatCardConfig(
+                        label: 'Total Rooms',
+                        value: stats.totalRooms.toString(),
+                        icon: Icons.meeting_room_rounded,
+                        borderColor: const Color(0xFFdb2777),
+                        iconColor: const Color(0xFFdb2777),
+                        valueColor: const Color(0xFFdb2777),
+                      ),
+                      _StatCardConfig(
+                        label: conflictsLabel,
+                        value: totalConflicts.toString(),
+                        icon: Icons.warning_amber_rounded,
+                        borderColor: const Color(0xFFb5179e),
+                        iconColor: const Color(0xFFb5179e),
+                        valueColor: const Color(0xFFb5179e),
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (_) => ConflictListModal(
+                              conflicts: recentConflicts,
+                            ),
+                          );
+                        },
+                      ),
+                    ];
 
-                    if (isWide) {
-                      return Row(
-                        children: [
-                          Expanded(
-                            child: StatCard(
-                              label: 'Scheduled Classes',
-                              value: totalSchedules.toString(),
-                              icon: Icons.calendar_today_rounded,
-                              borderColor: primaryPurple,
-                              iconColor: primaryPurple,
-                              valueColor: primaryPurple,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: StatCard(
-                              label: 'Active Users',
-                              value: totalUsers.toString(),
-                              icon: Icons.people_rounded,
-                              borderColor: const Color(0xFF9333ea),
-                              iconColor: const Color(0xFF9333ea),
-                              valueColor: const Color(0xFF9333ea),
-                              onTap: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => const UserListModal(),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: StatCard(
-                              label: 'Total Subjects',
-                              value: stats.totalSubjects.toString(),
-                              icon: Icons.book_rounded,
-                              borderColor: const Color(0xFFc026d3),
-                              iconColor: const Color(0xFFc026d3),
-                              valueColor: const Color(0xFFc026d3),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: StatCard(
-                              label: 'Total Rooms',
-                              value: stats.totalRooms.toString(),
-                              icon: Icons.meeting_room_rounded,
-                              borderColor: const Color(0xFFdb2777),
-                              iconColor: const Color(0xFFdb2777),
-                              valueColor: const Color(0xFFdb2777),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: StatCard(
-                              label: 'Conflicts',
-                              value: totalConflicts.toString(),
-                              icon: Icons.warning_amber_rounded,
-                              borderColor: const Color(0xFFb5179e),
-                              iconColor: const Color(0xFFb5179e),
-                              valueColor: const Color(0xFFb5179e),
-                              onTap: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => ConflictListModal(
-                                    conflicts: recentConflicts,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      );
-                    } else {
-                      return Column(
-                        children: [
-                          StatCard(
-                            label: 'Scheduled Classes',
-                            value: totalSchedules.toString(),
-                            icon: Icons.calendar_today_rounded,
-                            borderColor: primaryPurple,
-                            iconColor: primaryPurple,
-                            valueColor: primaryPurple,
-                          ),
-                          const SizedBox(height: 16),
-                          StatCard(
-                            label: 'Active Users',
-                            value: totalUsers.toString(),
-                            icon: Icons.people_rounded,
-                            borderColor: const Color(0xFF9333ea),
-                            iconColor: const Color(0xFF9333ea),
-                            valueColor: const Color(0xFF9333ea),
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => const UserListModal(),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          StatCard(
-                            label: 'Total Subjects',
-                            value: stats.totalSubjects.toString(),
-                            icon: Icons.book_rounded,
-                            borderColor: const Color(0xFFc026d3),
-                            iconColor: const Color(0xFFc026d3),
-                            valueColor: const Color(0xFFc026d3),
-                          ),
-                          const SizedBox(height: 16),
-                          StatCard(
-                            label: 'Total Rooms',
-                            value: stats.totalRooms.toString(),
-                            icon: Icons.meeting_room_rounded,
-                            borderColor: const Color(0xFFdb2777),
-                            iconColor: const Color(0xFFdb2777),
-                            valueColor: const Color(0xFFdb2777),
-                          ),
-                          const SizedBox(height: 16),
-                          StatCard(
-                            label: 'Unresolved Conflicts',
-                            value: totalConflicts.toString(),
-                            icon: Icons.warning_amber_rounded,
-                            borderColor: const Color(0xFFb5179e),
-                            iconColor: const Color(0xFFb5179e),
-                            valueColor: const Color(0xFFb5179e),
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => ConflictListModal(
-                                  conflicts: recentConflicts,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      );
-                    }
+                    return _buildStatCards(cards, isWide);
                   },
                 ),
 
@@ -550,6 +477,52 @@ class AdminDashboardScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Widget _buildStatCards(List<_StatCardConfig> cards, bool isWide) {
+    if (isWide) {
+      final rowChildren = <Widget>[];
+      for (var i = 0; i < cards.length; i++) {
+        final card = cards[i];
+        rowChildren.add(
+          Expanded(
+            child: StatCard(
+              label: card.label,
+              value: card.value,
+              icon: card.icon,
+              borderColor: card.borderColor,
+              iconColor: card.iconColor,
+              valueColor: card.valueColor,
+              onTap: card.onTap,
+            ),
+          ),
+        );
+        if (i < cards.length - 1) {
+          rowChildren.add(const SizedBox(width: 16));
+        }
+      }
+      return Row(children: rowChildren);
+    }
+
+    final columnChildren = <Widget>[];
+    for (var i = 0; i < cards.length; i++) {
+      final card = cards[i];
+      columnChildren.add(
+        StatCard(
+          label: card.label,
+          value: card.value,
+          icon: card.icon,
+          borderColor: card.borderColor,
+          iconColor: card.iconColor,
+          valueColor: card.valueColor,
+          onTap: card.onTap,
+        ),
+      );
+      if (i < cards.length - 1) {
+        columnChildren.add(const SizedBox(height: 16));
+      }
+    }
+    return Column(children: columnChildren);
   }
 
   Widget _buildChartCard(

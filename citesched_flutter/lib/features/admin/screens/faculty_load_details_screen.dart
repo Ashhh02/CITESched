@@ -6,6 +6,7 @@ import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
 import 'package:citesched_flutter/core/providers/conflict_provider.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
+import 'package:citesched_flutter/features/admin/widgets/admin_header_container.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
 import 'package:citesched_flutter/core/widgets/full_screen_calendar_scaffold.dart';
 
@@ -65,23 +66,16 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
       body: Column(
         children: [
           // Header (Standardized Maroon Gradient Banner)
-          Container(
-            width: double.infinity,
+          AdminHeaderContainer(
+            primaryColor: const Color(0xFF720045),
             padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [const Color(0xFF720045), const Color(0xFF8e005b)],
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF720045).withValues(alpha: 0.3),
+                blurRadius: 25,
+                offset: const Offset(0, 12),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF720045).withValues(alpha: 0.3),
-                  blurRadius: 25,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
+            ],
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

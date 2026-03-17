@@ -1,5 +1,6 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
+import 'package:citesched_flutter/features/admin/widgets/admin_header_container.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,23 +40,16 @@ class FacultyDetailsScreen extends ConsumerWidget {
       body: Column(
         children: [
           // Header (Standardized Maroon Gradient Banner)
-          Container(
-            width: double.infinity,
+          AdminHeaderContainer(
+            primaryColor: maroonColor,
             padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [maroonColor, const Color(0xFF8e005b)],
+            boxShadow: [
+              BoxShadow(
+                color: maroonColor.withValues(alpha: 0.3),
+                blurRadius: 25,
+                offset: const Offset(0, 12),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: maroonColor.withValues(alpha: 0.3),
-                  blurRadius: 25,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
+            ],
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
