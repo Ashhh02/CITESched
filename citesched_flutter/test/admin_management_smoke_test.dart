@@ -15,7 +15,16 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
+  Future<void> _setDesktopSurface(WidgetTester tester) async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+  }
+
   testWidgets('Subject management screen renders header', (tester) async {
+    await _setDesktopSurface(tester);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -34,6 +43,7 @@ void main() {
   });
 
   testWidgets('Room management screen renders header', (tester) async {
+    await _setDesktopSurface(tester);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -52,6 +62,7 @@ void main() {
   });
 
   testWidgets('Faculty management screen renders header', (tester) async {
+    await _setDesktopSurface(tester);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -70,6 +81,7 @@ void main() {
   });
 
   testWidgets('User management screen renders header', (tester) async {
+    await _setDesktopSurface(tester);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [

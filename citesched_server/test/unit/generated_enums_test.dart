@@ -23,10 +23,10 @@ void main() {
     );
     expect(FacultyShiftPreference.evening.toJson(), 'evening');
 
-    expect(NLPIntent.fromJson('schedule_query'), NLPIntent.scheduleQuery);
-    expect(NLPIntent.general.toJson(), 'general');
+    expect(NLPIntent.fromJson('schedule'), NLPIntent.schedule);
+    expect(NLPIntent.unknown.toJson(), 'unknown');
 
-    expect(SubjectType.fromJson('major'), SubjectType.major);
-    expect(SubjectType.general.toJson(), 'general');
+    expect(SubjectType.fromJson('lecture'), SubjectType.lecture);
+    expect(SubjectType.blended.toJson(), 'blended');
   });
 }
