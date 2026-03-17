@@ -28,12 +28,17 @@ jobs:
       - name: Generate Reports
         run: |
           # Generate analysis report for SonarCloud
-          cd citesched_flutter && flutter analyze --write=../analysis_report.txt || true
-          
-          # Generate coverage files (Optional, but fixes the 0.0% coverage)
-          cd citesched_flutter && flutter test --coverage || true
-          cd ../citesched_server && dart test --coverage=coverage || true
-          cd ../citesched_server && dart run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --packages=.dart_tool/package_config.json --report-on=lib || true
+          pushd citesched_flutter
+          flutter analyze --write=../analysis_report.txt
+          # Generate coverage file for Flutter
+          flutter test --coverage
+          popd
+
+          # Generate coverage file for Server (unit tests only)
+          pushd citesched_server
+          dart test test/unit --coverage=coverage
+          dart run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --packages=.dart_tool/package_config.json --report-on=lib
+          popd
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v4
