@@ -155,6 +155,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     }
 
     // Step 2: Confirmation dialog
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
