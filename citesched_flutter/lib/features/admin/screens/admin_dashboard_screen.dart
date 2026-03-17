@@ -1,4 +1,6 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'dart:async';
+
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/features/admin/widgets/conflict_list_modal.dart';
 import 'package:citesched_flutter/features/admin/widgets/admin_header_container.dart';
@@ -37,11 +39,34 @@ class _StatCardConfig {
   });
 }
 
-class AdminDashboardScreen extends ConsumerWidget {
+class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminDashboardScreen> createState() =>
+      _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState
+    extends ConsumerState<AdminDashboardScreen> {
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      ref.invalidate(dashboardStatsProvider);
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final userInfo = ref.watch(authProvider);
     final statsAsync = ref.watch(dashboardStatsProvider);
 

@@ -1,4 +1,6 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'dart:async';
+
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
@@ -28,13 +30,25 @@ class _SubjectManagementScreenState
   bool _isShowingArchived = false;
   final TextEditingController _searchController = TextEditingController();
   final Set<int> _selectedSubjectIds = {};
+  Timer? _refreshTimer;
 
   final Color maroonColor = const Color(0xFF720045);
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      ref.invalidate(subjectsProvider);
+      ref.invalidate(archivedSubjectsProvider);
+      ref.invalidate(allConflictsProvider);
+    });
   }
 
   void _syncSelectedSubjects(List<Subject> subjects) {

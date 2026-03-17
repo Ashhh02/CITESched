@@ -1,4 +1,6 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'dart:async';
+
 import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/features/admin/widgets/admin_header_container.dart';
@@ -36,26 +38,31 @@ final scheduleOverviewReportProvider = FutureProvider<ScheduleOverviewReport>((
   return await client.admin.getScheduleOverviewReport();
 });
 
-class ReportScreen extends StatefulWidget {
+class ReportScreen extends ConsumerStatefulWidget {
   const ReportScreen({super.key});
 
   @override
-  State<ReportScreen> createState() => _ReportScreenState();
+  ConsumerState<ReportScreen> createState() => _ReportScreenState();
 }
 
-class _ReportScreenState extends State<ReportScreen>
+class _ReportScreenState extends ConsumerState<ReportScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final maroonColor = const Color(0xFF720045);
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _refreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      ref.invalidate(schedulesProvider);
+    });
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _tabController.dispose();
     super.dispose();
   }

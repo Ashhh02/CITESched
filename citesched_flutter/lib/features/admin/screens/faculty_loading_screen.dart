@@ -1,4 +1,6 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'dart:async';
+
 import 'package:citesched_flutter/core/utils/date_utils.dart';
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/main.dart';
@@ -847,6 +849,23 @@ class FacultyLoadingScreen extends ConsumerStatefulWidget {
 }
 
 class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      ref.invalidate(schedulesProvider);
+      ref.invalidate(facultyListProvider);
+      ref.invalidate(subjectsProvider);
+      ref.invalidate(roomsProvider);
+      ref.invalidate(timeslotsProvider);
+      ref.invalidate(sectionListProvider);
+      ref.invalidate(studentsProvider);
+      ref.invalidate(allConflictsProvider);
+    });
+  }
+
   bool _openedInitialEdit = false;
   String _searchQuery = '';
   String? _selectedFaculty;
@@ -863,6 +882,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }

@@ -1,4 +1,6 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'dart:async';
+
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +34,7 @@ class _FacultyManagementScreenState
   bool _isShowingArchived = false;
   final TextEditingController _searchController = TextEditingController();
   final Set<int> _selectedFacultyIds = {};
+  Timer? _refreshTimer;
 
   // Color scheme matching admin sidebar
   final Color maroonColor = const Color(0xFF720045);
@@ -39,8 +42,19 @@ class _FacultyManagementScreenState
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      ref.invalidate(facultyListProvider);
+      ref.invalidate(archivedFacultyListProvider);
+      ref.invalidate(allConflictsProvider);
+    });
   }
 
   void _syncSelectedFaculty(List<Faculty> facultyList) {
