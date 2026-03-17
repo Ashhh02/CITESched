@@ -9,23 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:riverpod/riverpod.dart' show Override;
-
-Widget _wrapWithOverrides({
-  required Widget child,
-  required List<Override> overrides,
-}) {
-  return ProviderScope(
-    overrides: overrides,
-    child: MaterialApp(home: child),
-  );
-}
-
-List<Override> _baseOverrides() {
-  return [
-    allConflictsProvider.overrideWith((ref) async => <ScheduleConflict>[]),
-  ];
-}
 
 void main() {
   setUpAll(() {
@@ -34,13 +17,13 @@ void main() {
 
   testWidgets('Subject management screen renders header', (tester) async {
     await tester.pumpWidget(
-      _wrapWithOverrides(
-        child: const SubjectManagementScreen(),
+      ProviderScope(
         overrides: [
-          ..._baseOverrides(),
+          allConflictsProvider.overrideWith((ref) async => <ScheduleConflict>[]),
           subjectsProvider.overrideWith((ref) async => <Subject>[]),
           archivedSubjectsProvider.overrideWith((ref) async => <Subject>[]),
         ],
+        child: const MaterialApp(home: SubjectManagementScreen()),
       ),
     );
 
@@ -51,13 +34,13 @@ void main() {
 
   testWidgets('Room management screen renders header', (tester) async {
     await tester.pumpWidget(
-      _wrapWithOverrides(
-        child: const RoomManagementScreen(),
+      ProviderScope(
         overrides: [
-          ..._baseOverrides(),
+          allConflictsProvider.overrideWith((ref) async => <ScheduleConflict>[]),
           roomListProvider.overrideWith((ref) async => <Room>[]),
           archivedRoomListProvider.overrideWith((ref) async => <Room>[]),
         ],
+        child: const MaterialApp(home: RoomManagementScreen()),
       ),
     );
 
@@ -68,13 +51,13 @@ void main() {
 
   testWidgets('Faculty management screen renders header', (tester) async {
     await tester.pumpWidget(
-      _wrapWithOverrides(
-        child: const FacultyManagementScreen(),
+      ProviderScope(
         overrides: [
-          ..._baseOverrides(),
+          allConflictsProvider.overrideWith((ref) async => <ScheduleConflict>[]),
           facultyListProvider.overrideWith((ref) async => <Faculty>[]),
           archivedFacultyListProvider.overrideWith((ref) async => <Faculty>[]),
         ],
+        child: const MaterialApp(home: FacultyManagementScreen()),
       ),
     );
 
@@ -85,14 +68,14 @@ void main() {
 
   testWidgets('User management screen renders header', (tester) async {
     await tester.pumpWidget(
-      _wrapWithOverrides(
-        child: const UserManagementScreen(),
+      ProviderScope(
         overrides: [
-          ..._baseOverrides(),
+          allConflictsProvider.overrideWith((ref) async => <ScheduleConflict>[]),
           studentsProvider.overrideWith((ref) async => <Student>[]),
           archivedStudentsProvider.overrideWith((ref) async => <Student>[]),
           sectionListProvider.overrideWith((ref) async => <Section>[]),
         ],
+        child: const MaterialApp(home: UserManagementScreen()),
       ),
     );
 
