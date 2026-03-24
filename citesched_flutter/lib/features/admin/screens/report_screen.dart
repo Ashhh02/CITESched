@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
-import 'package:citesched_flutter/features/admin/utils/pdf_generator.dart';
 
 // REAR-TIME REPORT PROVIDERS
 final facultyLoadReportProvider = FutureProvider<List<FacultyLoadReport>>((
@@ -344,7 +343,6 @@ class _FacultyLoadTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reportAsync = ref.watch(facultyLoadReportProvider);
-    final schedulesAsync = ref.watch(schedulesProvider);
 
     return reportAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -400,7 +398,7 @@ class _FacultyLoadTab extends ConsumerWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Faculty Load Summary',
+                            'Faculty Teaching Load Summary',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.poppins(
@@ -1125,118 +1123,270 @@ class _ScheduleOverviewTab extends ConsumerWidget {
 
   Widget _buildSectionSubjectsBreakdown(BuildContext context, WidgetRef ref) {
     final schedulesAsync = ref.watch(schedulesProvider);
-    return schedulesAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, st) => Center(child: Text('Error loading schedules: $e')),
-      data: (schedules) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final textPrimary = isDark ? Colors.white : Colors.black87;
-        final textMuted = isDark ? Colors.grey[300]! : Colors.grey[700]!;
-        // Group schedules by section
-        final Map<String, List<Schedule>> schedulesBySection = {};
-        for (var schedule in schedules) {
-          schedulesBySection
-              .putIfAbsent(schedule.section, () => [])
-              .add(
-                schedule,
-              );
-        }
+    final subjectsAsync = ref.watch(subjectsProvider);
+    final facultyAsync = ref.watch(facultyListProvider);
+    final roomsAsync = ref.watch(roomListProvider);
+    final timeslotsAsync = ref.watch(timeslotsProvider);
 
-        // Sort sections alphabetically
-        final sectionNames = schedulesBySection.keys.toList()..sort();
+    final schedules = schedulesAsync.maybeWhen(
+      data: (value) => value,
+      orElse: () => null,
+    );
+    final subjects = subjectsAsync.maybeWhen(
+      data: (value) => value,
+      orElse: () => null,
+    );
+    final faculty = facultyAsync.maybeWhen(
+      data: (value) => value,
+      orElse: () => null,
+    );
+    final rooms = roomsAsync.maybeWhen(
+      data: (value) => value,
+      orElse: () => null,
+    );
+    final timeslots = timeslotsAsync.maybeWhen(
+      data: (value) => value,
+      orElse: () => null,
+    );
 
-        return Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(24),
+    if (schedules == null ||
+        subjects == null ||
+        faculty == null ||
+        rooms == null ||
+        timeslots == null) {
+      final error =
+          schedulesAsync.error ??
+          subjectsAsync.error ??
+          facultyAsync.error ??
+          roomsAsync.error ??
+          timeslotsAsync.error;
+      if (error != null) {
+        return Center(child: Text('Error loading schedule details: $error'));
+      }
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? Colors.white : Colors.black87;
+    final textMuted = isDark ? Colors.grey[300]! : Colors.grey[700]!;
+    const maroonColor = Color(0xFF720045);
+    final rowBgA = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final rowBgB = isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB);
+
+    final subjectMap = {for (final subject in subjects) subject.id!: subject};
+    final facultyMap = {for (final entry in faculty) entry.id!: entry};
+    final roomMap = {for (final room in rooms) room.id!: room};
+    final timeslotMap = {for (final slot in timeslots) slot.id!: slot};
+
+    final Map<String, List<Schedule>> schedulesBySection = {};
+    for (final schedule in schedules) {
+      schedulesBySection.putIfAbsent(schedule.section, () => []).add(schedule);
+    }
+
+    final sectionNames = schedulesBySection.keys.toList()..sort();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border(left: BorderSide(color: maroonColor, width: 4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Subjects per Section',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimary,
-                ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            decoration: BoxDecoration(
+              color: maroonColor.withOpacity(0.05),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
               ),
-              const SizedBox(height: 16),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: sectionNames.length,
-                itemBuilder: (context, index) {
-                  final section = sectionNames[index];
-                  final sectionSchedules = schedulesBySection[section]!;
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.table_chart_rounded, color: maroonColor, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Subjects per Section',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: maroonColor,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: maroonColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${sectionNames.length} Sections',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            itemCount: sectionNames.length,
+            itemBuilder: (context, index) {
+              final section = sectionNames[index];
+              final sectionSchedules = schedulesBySection[section]!
+                ..sort((a, b) {
+                  final subjectA = subjectMap[a.subjectId]?.code ?? '';
+                  final subjectB = subjectMap[b.subjectId]?.code ?? '';
+                  return subjectA.compareTo(subjectB);
+                });
 
-                  return ExpansionTile(
-                    title: Text(
-                      'Section: $section',
-                      style: GoogleFonts.poppins(
+              return ExpansionTile(
+                tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                title: Text(
+                  'Section: $section',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    color: maroonColor,
+                  ),
+                ),
+                subtitle: Text(
+                  '${sectionSchedules.length} Subject${sectionSchedules.length == 1 ? '' : 's'}',
+                  style: GoogleFonts.poppins(fontSize: 12, color: textMuted),
+                ),
+                children: [
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowColor: WidgetStateProperty.all(maroonColor),
+                      headingTextStyle: GoogleFonts.poppins(
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF720045),
+                        fontSize: 13,
+                        letterSpacing: 0.5,
                       ),
-                    ),
-                    subtitle: Text(
-                      '${sectionSchedules.length} Subject${sectionSchedules.length == 1 ? '' : 's'}',
-                      style: GoogleFonts.poppins(
+                      dataTextStyle: GoogleFonts.poppins(
+                        color: textPrimary,
                         fontSize: 12,
-                        color: textMuted,
                       ),
-                    ),
-                    children: [
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          headingTextStyle: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            color: textPrimary,
-                            fontSize: 12,
+                      dataRowMinHeight: 65,
+                      dataRowMaxHeight: 88,
+                      columnSpacing: 28,
+                      horizontalMargin: 24,
+                      columns: const [
+                        DataColumn(label: Text('CODE')),
+                        DataColumn(label: Text('DESCRIPTION')),
+                        DataColumn(label: Text('FACULTY')),
+                        DataColumn(label: Text('ROOM')),
+                        DataColumn(label: Text('SCHEDULE')),
+                      ],
+                      rows: sectionSchedules.asMap().entries.map((entry) {
+                        final rowIndex = entry.key;
+                        final schedule = entry.value;
+                        final subject = subjectMap[schedule.subjectId];
+                        final assignedFaculty = facultyMap[schedule.facultyId];
+                        final room = schedule.roomId != null
+                            ? roomMap[schedule.roomId!]
+                            : null;
+                        final timeslot = schedule.timeslotId != null
+                            ? timeslotMap[schedule.timeslotId!]
+                            : null;
+
+                        return DataRow(
+                          color: WidgetStateProperty.all(
+                            rowIndex.isEven ? rowBgA : rowBgB,
                           ),
-                          dataTextStyle: GoogleFonts.poppins(
-                            color: textPrimary,
-                            fontSize: 12,
-                          ),
-                          headingRowHeight: 40,
-                          dataRowMinHeight: 40,
-                          dataRowMaxHeight: 50,
-                          columns: const [
-                            DataColumn(label: Text('Code')),
-                            DataColumn(label: Text('Description')),
-                            DataColumn(label: Text('Faculty')),
-                            DataColumn(label: Text('Room')),
-                            DataColumn(label: Text('Schedule')),
-                          ],
-                          rows: sectionSchedules.map((s) {
-                            return DataRow(
-                              cells: [
-                                DataCell(Text(s.subject?.code ?? 'N/A')),
-                                DataCell(Text(s.subject?.name ?? 'Unknown')),
-                                DataCell(Text(s.faculty?.name ?? 'TBA')),
-                                DataCell(Text(s.room?.name ?? 'TBA')),
-                                DataCell(
-                                  Text(
-                                    s.timeslot != null
-                                        ? '${s.timeslot!.day.name.substring(0, 3)} ${s.timeslot!.startTime}-${s.timeslot!.endTime}'
-                                        : 'TBA',
+                          cells: [
+                            DataCell(Text(subject?.code ?? 'N/A')),
+                            DataCell(
+                              SizedBox(
+                                width: 220,
+                                child: Text(subject?.name ?? 'Unknown'),
+                              ),
+                            ),
+                            DataCell(Text(assignedFaculty?.name ?? 'TBA')),
+                            DataCell(Text(room?.name ?? 'TBA')),
+                            DataCell(
+                              SizedBox(
+                                width: 220,
+                                child: Text(
+                                  _formatScheduleDisplay(
+                                    timeslot,
+                                    schedule.loadTypes ?? subject?.types,
                                   ),
                                 ),
-                              ],
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ],
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              );
+            },
           ),
-        );
-      },
+        ],
+      ),
     );
+  }
+
+  String _formatScheduleDisplay(
+    Timeslot? timeslot,
+    List<SubjectType>? loadTypes,
+  ) {
+    if (timeslot == null) return 'TBA';
+    final loadLabel = _formatLoadType(loadTypes);
+    return '${_formatDisplayTime(timeslot.startTime)} - ${_formatDisplayTime(timeslot.endTime)} $loadLabel';
+  }
+
+  String _formatLoadType(List<SubjectType>? loadTypes) {
+    final types = loadTypes ?? const [];
+    if (types.contains(SubjectType.laboratory) &&
+        !types.contains(SubjectType.lecture)) {
+      return 'LABORATORY';
+    }
+    if (types.contains(SubjectType.lecture) &&
+        !types.contains(SubjectType.laboratory)) {
+      return 'LECTURE';
+    }
+    if (types.contains(SubjectType.blended) ||
+        (types.contains(SubjectType.lecture) &&
+            types.contains(SubjectType.laboratory))) {
+      return 'BLENDED';
+    }
+    return 'CLASS';
+  }
+
+  String _formatDisplayTime(String value) {
+    final parts = value.split(':');
+    if (parts.length != 2) return value;
+    final hour = int.tryParse(parts[0]) ?? 0;
+    final minute = int.tryParse(parts[1]) ?? 0;
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final normalizedHour = hour % 12 == 0 ? 12 : hour % 12;
+    final minuteLabel = minute == 0
+        ? ''
+        : ':${minute.toString().padLeft(2, '0')}';
+    return '$normalizedHour$minuteLabel$period';
   }
 
   Widget _buildStatTileCard(

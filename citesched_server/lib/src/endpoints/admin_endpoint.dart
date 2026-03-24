@@ -1096,13 +1096,42 @@ class AdminEndpoint extends Endpoint {
     }
 
     final studentSections = await getDistinctStudentSections(session);
-    final mergedSections = <String>{
-      ...request.sections.map((s) => s.trim()).where((s) => s.isNotEmpty),
-      ...studentSections,
-    };
+    String normalizeSection(String value) =>
+        value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+    final requestedSections = request.sections
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    final requestedNormalized = requestedSections
+        .map(normalizeSection)
+        .where((s) => s.isNotEmpty)
+        .toSet();
+    final studentBackedSections = studentSections
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .where(
+          (s) =>
+              requestedNormalized.isEmpty ||
+              requestedNormalized.contains(normalizeSection(s)),
+        )
+        .toSet()
+        .toList();
+
+    if (studentBackedSections.isEmpty) {
+      return GenerateScheduleResponse(
+        success: false,
+        message:
+            'No student-backed sections found for this generation request. Add active students to the target sections first.',
+        totalAssigned: 0,
+        conflictsDetected: 0,
+        unassignedSubjects: request.subjectIds.length,
+      );
+    }
+
     final sanitizedRequest = request.copyWith(
       facultyIds: filteredFacultyIds,
-      sections: mergedSections.toList(),
+      sections: studentBackedSections,
     );
     var schedulingService = SchedulingService();
     return await schedulingService.generateSchedule(session, sanitizedRequest);
@@ -1247,7 +1276,10 @@ class AdminEndpoint extends Endpoint {
   Future<DashboardStats> getDashboardStats(Session session) async {
     try {
       var totalSchedules = await Schedule.db.count(session);
-      var totalFaculty = await Faculty.db.count(session);
+      var totalFaculty = await Faculty.db.count(
+        session,
+        where: (t) => t.isActive.equals(true),
+      );
       var totalStudents = await Student.db.count(session);
       var totalSubjects = await Subject.db.count(session);
       var totalRooms = await Room.db.count(session);
@@ -1255,7 +1287,10 @@ class AdminEndpoint extends Endpoint {
       // 2. Calculate Faculty Load
       print('[DEBUG] getDashboardStats: Step 2 - Fetching all data');
       var allSchedules = await Schedule.db.find(session);
-      var allFaculty = await Faculty.db.find(session);
+      var allFaculty = await Faculty.db.find(
+        session,
+        where: (t) => t.isActive.equals(true),
+      );
       var allSubjects = await Subject.db.find(session);
       print(
         '[DEBUG] getDashboardStats: Fetched ${allSchedules.length} schedules, ${allFaculty.length} faculty',

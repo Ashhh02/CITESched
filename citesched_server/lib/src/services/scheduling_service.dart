@@ -12,6 +12,8 @@ class SchedulingService {
   static const double _lectureHours = 2.0;
   static const double _labHours = 3.0;
   static const int _labEarliestStartMinutes = 9 * 60;
+  static const int _lunchStartMinutes = 12 * 60;
+  static const int _lunchEndMinutes = 13 * 60;
 
   /// Generate schedules using a greedy algorithm.
   /// Attempts to assign each subject to available timeslots while respecting
@@ -464,6 +466,13 @@ class SchedulingService {
     required List<Schedule> insertedForPair,
   }) async {
     for (final timeslot in rankedTimeslots) {
+      if (_violatesComponentDaySeparation(
+        timeslot: timeslot,
+        insertedForPair: insertedForPair,
+      )) {
+        continue;
+      }
+
       for (final room in eligibleRooms) {
         final candidate = Schedule(
           subjectId: subject.id!,
@@ -509,6 +518,23 @@ class SchedulingService {
         return true;
       }
     }
+    return false;
+  }
+
+  bool _violatesComponentDaySeparation({
+    required Timeslot timeslot,
+    required List<Schedule> insertedForPair,
+  }) {
+    if (insertedForPair.isEmpty) return false;
+
+    for (final existing in insertedForPair) {
+      if (existing.timeslotId == null) continue;
+      final existingTimeslot = existing.timeslot;
+      if (existingTimeslot != null && existingTimeslot.day == timeslot.day) {
+        return true;
+      }
+    }
+
     return false;
   }
 
@@ -629,6 +655,10 @@ class SchedulingService {
     final h = (minutes ~/ 60).clamp(0, 23).toString().padLeft(2, '0');
     final m = (minutes % 60).clamp(0, 59).toString().padLeft(2, '0');
     return '$h:$m';
+  }
+
+  bool _overlapsLunchWindow(int startMinutes, int endMinutes) {
+    return startMinutes < _lunchEndMinutes && endMinutes > _lunchStartMinutes;
   }
 
   String _timeslotKey(DayOfWeek day, String startTime, String endTime) {
@@ -850,6 +880,9 @@ class SchedulingService {
           continue;
         }
         final e = s + requiredMinutes;
+        if (_overlapsLunchWindow(s, e)) {
+          continue;
+        }
         final startTime = _formatMinutes(s);
         final endTime = _formatMinutes(e);
         final key = _timeslotKey(slot.day, startTime, endTime);
@@ -889,6 +922,9 @@ class SchedulingService {
           continue;
         }
         final e = s + requiredMinutes;
+        if (_overlapsLunchWindow(s, e)) {
+          continue;
+        }
         final startTime = _formatMinutes(s);
         final endTime = _formatMinutes(e);
         final key = _timeslotKey(avail.dayOfWeek, startTime, endTime);

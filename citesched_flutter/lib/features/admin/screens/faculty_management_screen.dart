@@ -20,7 +20,9 @@ const String kEndTimeAfterStartMessage =
 // Helper extension for conflicts (already in core/providers/conflict_provider.dart)
 
 class FacultyManagementScreen extends ConsumerStatefulWidget {
-  const FacultyManagementScreen({super.key});
+  final int? targetFacultyId;
+
+  const FacultyManagementScreen({super.key, this.targetFacultyId});
 
   @override
   ConsumerState<FacultyManagementScreen> createState() =>
@@ -35,6 +37,7 @@ class _FacultyManagementScreenState
   final TextEditingController _searchController = TextEditingController();
   final Set<int> _selectedFacultyIds = {};
   Timer? _refreshTimer;
+  bool _hasAutoOpenedTargetFaculty = false;
 
   // Color scheme matching admin sidebar
   final Color maroonColor = const Color(0xFF720045);
@@ -239,6 +242,25 @@ class _FacultyManagementScreenState
         },
       ),
     );
+  }
+
+  void _maybeAutoOpenTargetFaculty(List<Faculty> facultyList) {
+    final targetFacultyId = widget.targetFacultyId;
+    if (_hasAutoOpenedTargetFaculty || targetFacultyId == null) return;
+
+    Faculty? targetFaculty;
+    try {
+      targetFaculty = facultyList.firstWhere((f) => f.id == targetFacultyId);
+    } catch (_) {
+      targetFaculty = null;
+    }
+    if (targetFaculty == null) return;
+
+    _hasAutoOpenedTargetFaculty = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showEditFacultyModal(targetFaculty!);
+    });
   }
 
   void _archiveFaculty(Faculty faculty) async {
@@ -708,6 +730,7 @@ class _FacultyManagementScreenState
                   ),
                 ),
                 data: (facultyList) {
+                  _maybeAutoOpenTargetFaculty(facultyList);
                   final filteredFaculty = _filteredFaculty(facultyList);
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (!mounted) return;

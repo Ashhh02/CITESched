@@ -19,6 +19,7 @@ class ConflictScreen extends StatefulWidget {
 class _ConflictScreenState extends State<ConflictScreen> {
   List<ScheduleConflict> _conflicts = [];
   bool _isLoading = true;
+  final Set<String> _resolvingConflictKeys = <String>{};
 
   @override
   void initState() {
@@ -542,6 +543,8 @@ class _ConflictScreenState extends State<ConflictScreen> {
               itemBuilder: (context, index) {
                 final conflict = _filteredConflicts()[index];
                 final config = _getConfig(conflict.type);
+                final conflictKey = _conflictKey(conflict, index);
+                final isResolving = _resolvingConflictKeys.contains(conflictKey);
 
                 return Container(
                   padding: const EdgeInsets.all(20),
@@ -683,16 +686,27 @@ class _ConflictScreenState extends State<ConflictScreen> {
                             Align(
                               alignment: Alignment.centerRight,
                               child: TextButton.icon(
-                                onPressed: () => _resolveConflict(
-                                  context,
-                                  conflict,
-                                ),
-                                icon: const Icon(
-                                  Icons.auto_fix_high,
-                                  size: 16,
-                                ),
+                                onPressed: isResolving
+                                    ? null
+                                    : () => _resolveConflict(
+                                          context,
+                                          conflict,
+                                          conflictKey: conflictKey,
+                                        ),
+                                icon: isResolving
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.auto_fix_high,
+                                        size: 16,
+                                      ),
                                 label: Text(
-                                  'Resolve',
+                                  isResolving ? 'Checking...' : 'Suggest Fix',
                                   style: GoogleFonts.poppins(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -717,40 +731,430 @@ class _ConflictScreenState extends State<ConflictScreen> {
     );
   }
 
-  void _resolveConflict(BuildContext context, ScheduleConflict conflict) {
-    int index;
+  String _conflictKey(ScheduleConflict conflict, int index) {
+    return [
+      '$index',
+      conflict.type,
+      '${conflict.scheduleId ?? -1}',
+      '${conflict.conflictingScheduleId ?? -1}',
+      '${conflict.facultyId ?? -1}',
+      '${conflict.roomId ?? -1}',
+      '${conflict.subjectId ?? -1}',
+    ].join('|');
+  }
+
+  Future<void> _resolveConflict(
+    BuildContext context,
+    ScheduleConflict conflict, {
+    required String conflictKey,
+  }) async {
+    if (conflict.type == 'max_load_exceeded' && conflict.facultyId != null) {
+      final shouldContinue = await _showMaxLoadConfirmationDialog(context);
+      if (shouldContinue != true || !mounted) return;
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AdminLayout(
+            initialIndex: 1,
+            initialFacultyIdToEdit: conflict.facultyId,
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _resolvingConflictKeys.add(conflictKey));
+    try {
+      final suggestion = await _buildResolutionSuggestion(conflict);
+      if (!mounted) return;
+
+      if (suggestion == null) {
+        await _showManualResolutionDialog(context, conflict);
+        return;
+      }
+
+      final shouldApply = await _showSuggestionDialog(context, suggestion);
+      if (shouldApply != true || !mounted) return;
+
+      await client.admin.updateSchedule(suggestion.updatedSchedule);
+      await _fetchConflicts();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(suggestion.successMessage)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppErrorDialog.show(context, e);
+    } finally {
+      if (mounted) {
+        setState(() => _resolvingConflictKeys.remove(conflictKey));
+      }
+    }
+  }
+
+  Future<_ResolutionSuggestion?> _buildResolutionSuggestion(
+    ScheduleConflict conflict,
+  ) async {
+    final scheduleId = conflict.scheduleId;
+    if (scheduleId == null) return null;
+
     switch (conflict.type) {
+      case 'room_conflict':
+      case 'room_inactive':
+      case 'capacity_exceeded':
+      case 'program_mismatch':
+      case 'room_type_mismatch':
+        return await _suggestRoomOrTimeslotResolution(conflict);
+      case 'faculty_conflict':
+      case 'section_conflict':
+      case 'faculty_unavailable':
+      case 'lab_start_time':
+      case 'insufficient_block':
+        return await _suggestTimeslotResolution(conflict);
+      default:
+        return null;
+    }
+  }
+
+  Future<_ResolutionSuggestion?> _suggestRoomOrTimeslotResolution(
+    ScheduleConflict conflict,
+  ) async {
+    final schedule = await _loadSchedule(conflict.scheduleId);
+    if (schedule == null || schedule.timeslotId == null) return null;
+
+    final rooms = await client.admin.getAllRooms(isActive: true);
+    final timeslots = await client.admin.getAllTimeslots();
+
+    final currentTimeslot = _findTimeslot(timeslots, schedule.timeslotId);
+    if (currentTimeslot == null) return null;
+    final currentRoom = rooms.where((r) => r.id == schedule.roomId).firstOrNull;
+
+    final preferredRooms = rooms.where((r) => r.id != schedule.roomId).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+
+    for (final room in preferredRooms) {
+      final candidate = schedule.copyWith(
+        roomId: room.id,
+        room: room,
+        updatedAt: DateTime.now(),
+      );
+      if (await _isValidCandidate(candidate)) {
+        return _ResolutionSuggestion(
+          title: 'Suggested Room Change',
+          summary:
+              'Move this class to ${room.name} while keeping the same day and time.',
+          currentSlotLabel: _buildSlotLabel(
+            timeslot: currentTimeslot,
+            room: currentRoom,
+          ),
+          proposedSlotLabel: _buildSlotLabel(timeslot: currentTimeslot, room: room),
+          updatedSchedule: candidate,
+          successMessage: 'Conflict resolved by moving the class to ${room.name}.',
+        );
+      }
+    }
+
+    return await _findTimeslotBasedSuggestion(
+      conflict: conflict,
+      schedule: schedule,
+      timeslots: timeslots,
+      rooms: rooms,
+      title: 'Suggested Reschedule',
+    );
+  }
+
+  Future<_ResolutionSuggestion?> _suggestTimeslotResolution(
+    ScheduleConflict conflict,
+  ) async {
+    final schedule = await _loadSchedule(conflict.scheduleId);
+    if (schedule == null || schedule.timeslotId == null) return null;
+
+    final timeslots = await client.admin.getAllTimeslots();
+    final rooms = await client.admin.getAllRooms(isActive: true);
+
+    return await _findTimeslotBasedSuggestion(
+      conflict: conflict,
+      schedule: schedule,
+      timeslots: timeslots,
+      rooms: rooms,
+      title: 'Suggested Time Change',
+    );
+  }
+
+  Future<_ResolutionSuggestion?> _findTimeslotBasedSuggestion({
+    required ScheduleConflict conflict,
+    required Schedule schedule,
+    required List<Timeslot> timeslots,
+    required List<Room> rooms,
+    required String title,
+  }) async {
+    final currentTimeslot = _findTimeslot(timeslots, schedule.timeslotId);
+    if (currentTimeslot == null) return null;
+
+    final durationMinutes = _timeslotDurationMinutes(currentTimeslot);
+    final candidateTimeslots = timeslots
+        .where((t) => t.id != currentTimeslot.id)
+        .where((t) => _timeslotDurationMinutes(t) == durationMinutes)
+        .where((t) => !_overlapsLunch(t))
+        .toList()
+      ..sort((a, b) => _compareTimeslotCloseness(currentTimeslot, a, b));
+
+    final roomOptions = <Room?>[
+      rooms.where((r) => r.id == schedule.roomId).firstOrNull,
+      ...rooms.where((r) => r.id != schedule.roomId),
+    ].whereType<Room>().toList();
+
+    for (final timeslot in candidateTimeslots) {
+      for (final room in roomOptions) {
+        final candidate = schedule.copyWith(
+          timeslotId: timeslot.id,
+          timeslot: timeslot,
+          roomId: room.id,
+          room: room,
+          updatedAt: DateTime.now(),
+        );
+        if (await _isValidCandidate(candidate)) {
+          final roomChanged = room.id != schedule.roomId;
+          final summary = roomChanged
+              ? 'Move this class to ${timeslot.day.name.toUpperCase()} ${_formatTimeslot(timeslot)} in ${room.name}.'
+              : 'Move this class to ${timeslot.day.name.toUpperCase()} ${_formatTimeslot(timeslot)} and keep the same room.';
+          return _ResolutionSuggestion(
+            title: title,
+            summary: summary,
+            currentSlotLabel: _buildSlotLabel(
+              timeslot: currentTimeslot,
+              room: roomOptions
+                  .where((r) => r.id == schedule.roomId)
+                  .firstOrNull,
+            ),
+            proposedSlotLabel: _buildSlotLabel(timeslot: timeslot, room: room),
+            updatedSchedule: candidate,
+            successMessage:
+                'Conflict resolved by rescheduling to ${timeslot.day.name.toUpperCase()} ${_formatTimeslot(timeslot)}.',
+          );
+        }
+      }
+    }
+
+    return null;
+  }
+
+  Future<Schedule?> _loadSchedule(int? scheduleId) async {
+    if (scheduleId == null) return null;
+    final schedules = await client.admin.getAllSchedules(isActive: true);
+    try {
+      return schedules.firstWhere((s) => s.id == scheduleId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Timeslot? _findTimeslot(List<Timeslot> timeslots, int? timeslotId) {
+    if (timeslotId == null) return null;
+    try {
+      return timeslots.firstWhere((t) => t.id == timeslotId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> _isValidCandidate(Schedule candidate) async {
+    final conflicts = await client.admin.validateSchedule(candidate);
+    return conflicts.isEmpty;
+  }
+
+  int _timeslotDurationMinutes(Timeslot timeslot) {
+    return _parseMinutes(timeslot.endTime) - _parseMinutes(timeslot.startTime);
+  }
+
+  int _parseMinutes(String value) {
+    final parts = value.split(':');
+    if (parts.length != 2) return 0;
+    return (int.tryParse(parts[0]) ?? 0) * 60 + (int.tryParse(parts[1]) ?? 0);
+  }
+
+  bool _overlapsLunch(Timeslot timeslot) {
+    final start = _parseMinutes(timeslot.startTime);
+    final end = _parseMinutes(timeslot.endTime);
+    return start < (13 * 60) && end > (12 * 60);
+  }
+
+  int _compareTimeslotCloseness(
+    Timeslot current,
+    Timeslot a,
+    Timeslot b,
+  ) {
+    final aDay = (a.day.index - current.day.index).abs();
+    final bDay = (b.day.index - current.day.index).abs();
+    if (aDay != bDay) return aDay.compareTo(bDay);
+
+    final aStart = (_parseMinutes(a.startTime) - _parseMinutes(current.startTime))
+        .abs();
+    final bStart = (_parseMinutes(b.startTime) - _parseMinutes(current.startTime))
+        .abs();
+    return aStart.compareTo(bStart);
+  }
+
+  String _formatTimeslot(Timeslot timeslot) {
+    return '${timeslot.startTime} - ${timeslot.endTime}';
+  }
+
+  String _buildSlotLabel({
+    required Timeslot timeslot,
+    required Room? room,
+  }) {
+    final roomLabel = room?.name ?? 'No room';
+    return '${timeslot.day.name.toUpperCase()} ${_formatTimeslot(timeslot)} • $roomLabel';
+  }
+
+  Future<bool?> _showSuggestionDialog(
+    BuildContext context,
+    _ResolutionSuggestion suggestion,
+  ) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          suggestion.title,
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(suggestion.summary, style: GoogleFonts.poppins()),
+            const SizedBox(height: 16),
+            Text(
+              'Current',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              suggestion.currentSlotLabel,
+              style: GoogleFonts.poppins(fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Proposed',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              suggestion.proposedSlotLabel,
+              style: GoogleFonts.poppins(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Continue and apply this automatic fix?',
+              style: GoogleFonts.poppins(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text('Continue', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool?> _showMaxLoadConfirmationDialog(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          'Continue to Edit Max Load?',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'This conflict needs a manual update to the faculty max load. Continue to open the specific faculty edit form and update the Max Loads field?',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text('Continue', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showManualResolutionDialog(
+    BuildContext context,
+    ScheduleConflict conflict,
+  ) async {
+    final index = _manualResolutionIndex(conflict.type);
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          'Manual Resolution Needed',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'No safe automatic suggestion is available for this specific conflict yet. Would you like to open the related module and resolve it manually?',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          if (index != null)
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AdminLayout(initialIndex: index),
+                  ),
+                );
+              },
+              child: Text('Open Module', style: GoogleFonts.poppins()),
+            ),
+        ],
+      ),
+    );
+  }
+
+  int? _manualResolutionIndex(String type) {
+    switch (type) {
       case 'room_conflict':
       case 'faculty_conflict':
       case 'section_conflict':
       case 'generation_failed':
-        index = 5; // Timetable
-        break;
+      case 'lab_start_time':
+      case 'insufficient_block':
+        return 5;
       case 'capacity_exceeded':
       case 'room_inactive':
-        index = 4; // Rooms
-        break;
+      case 'room_type_mismatch':
+        return 4;
       case 'program_mismatch':
-        index = 3; // Subjects
-        break;
+        return 3;
       case 'max_load_exceeded':
       case 'faculty_unavailable':
-        index = 2; // Faculty Loading
-        break;
+        return 2;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No resolution workflow for this conflict type.'),
-          ),
-        );
-        return;
+        return null;
     }
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => AdminLayout(initialIndex: index),
-      ),
-    );
   }
 }
 
@@ -769,4 +1173,26 @@ class _ConflictTypeConfig {
     required this.color,
     required this.severity,
   });
+}
+
+class _ResolutionSuggestion {
+  final String title;
+  final String summary;
+  final String currentSlotLabel;
+  final String proposedSlotLabel;
+  final Schedule updatedSchedule;
+  final String successMessage;
+
+  const _ResolutionSuggestion({
+    required this.title,
+    required this.summary,
+    required this.currentSlotLabel,
+    required this.proposedSlotLabel,
+    required this.updatedSchedule,
+    required this.successMessage,
+  });
+}
+
+extension<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }

@@ -18,11 +18,13 @@ import 'package:flutter/material.dart';
 class AdminLayout extends StatefulWidget {
   final int initialIndex;
   final Schedule? initialEditSchedule;
+  final int? initialFacultyIdToEdit;
 
   const AdminLayout({
     super.key,
     this.initialIndex = 0,
     this.initialEditSchedule,
+    this.initialFacultyIdToEdit,
   });
 
   @override
@@ -54,7 +56,9 @@ class _AdminLayoutState extends State<AdminLayout> {
     final isDesktop = ResponsiveHelper.isDesktop(context);
     final screens = [
       const AdminDashboardScreen(),
-      const FacultyManagementScreen(),
+      FacultyManagementScreen(
+        targetFacultyId: widget.initialFacultyIdToEdit,
+      ),
       FacultyLoadingScreen(
         initialEditSchedule: widget.initialEditSchedule,
       ),

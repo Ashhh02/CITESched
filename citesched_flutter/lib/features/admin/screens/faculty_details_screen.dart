@@ -1,4 +1,5 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'package:citesched_flutter/core/providers/admin_providers.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 import 'package:citesched_flutter/features/admin/widgets/admin_header_container.dart';
 import 'package:citesched_flutter/main.dart';
@@ -22,6 +23,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheduleAsync = ref.watch(facultyScheduleProvider(faculty.id!));
+    final subjectsAsync = ref.watch(subjectsProvider);
     final currentLoad = scheduleAsync.maybeWhen(
       data: (schedules) => schedules.fold<double>(
         0,
@@ -212,6 +214,114 @@ class FacultyDetailsScreen extends ConsumerWidget {
                         cardBg,
                       ),
                     ],
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  Row(
+                    children: [
+                      Icon(Icons.menu_book_rounded, color: maroonColor),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Handled Subjects',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  subjectsAsync.when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) =>
+                        Center(child: Text('Error loading subjects: $err')),
+                    data: (subjects) {
+                      final handledSubjects = subjects
+                          .where((subject) => subject.facultyId == faculty.id)
+                          .toList()
+                        ..sort((a, b) => a.code.compareTo(b.code));
+
+                      if (handledSubjects.isEmpty) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Text(
+                              'No handled subjects assigned to this faculty.',
+                              style: GoogleFonts.poppins(color: Colors.grey),
+                            ),
+                          ),
+                        );
+                      }
+
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white10
+                                : Colors.black.withOpacity(0.05),
+                          ),
+                        ),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: handledSubjects.length,
+                          separatorBuilder: (context, index) =>
+                              const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final subject = handledSubjects[index];
+                            final subjectTypes = subject.types;
+
+                            return ListTiles(
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: maroonColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.auto_stories_rounded,
+                                  color: maroonColor,
+                                  size: 20,
+                                ),
+                              ),
+                              title: Text(
+                                '${subject.code} • ${subject.name}',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${subject.program.name.toUpperCase()} | ${subject.units} units',
+                                    style: GoogleFonts.poppins(fontSize: 12),
+                                  ),
+                                  if (subjectTypes.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: subjectTypes
+                                          .map(
+                                            (type) =>
+                                                _buildSubjectTypeBadge(type),
+                                          )
+                                          .toList(),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 32),
@@ -407,6 +517,43 @@ class FacultyDetailsScreen extends ConsumerWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubjectTypeBadge(SubjectType type) {
+    late final Color color;
+    late final String label;
+
+    switch (type) {
+      case SubjectType.lecture:
+        color = Colors.blue;
+        label = 'LECTURE';
+        break;
+      case SubjectType.laboratory:
+        color = Colors.green;
+        label = 'LABORATORY';
+        break;
+      case SubjectType.blended:
+        color = Colors.deepPurple;
+        label = 'BLENDED';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
         ),
       ),
     );
