@@ -40,7 +40,7 @@
 ## 🚀 Quick Start (5 Minutes)
 
 **Add file (citesched_server/config/passwords.yaml) and configure database password (with your actual password) and google client secret**
-
+```bash
 shared:
   mySharedPassword: "my password"
 
@@ -83,12 +83,12 @@ production:
   serverSideSessionKeyHashPepper: "5YsLzzjrvhpHeM9mJfx-K3wKFEHAmAfd"
 
 #2_HmLlxC1SzrZSUxd4La6iNo01pj_9ce
-
+```
 **Configure the docker-compose.yaml**
-change the POSTGRES_DB: temp to POSTGRES_DB: citesched and port 8090 to 8095 for the safety port
+- change the POSTGRES_DB: temp to POSTGRES_DB: citesched and port 8090 to 8095 for the safety port
 
 **Configure the development.yaml **
-change the database name temp to citesched
+- change the database name temp to citesched
 
 ### Step 1: Start Backend (Terminal 1)
 ```bash
