@@ -40,28 +40,14 @@
 ## 🚀 Quick Start (5 Minutes)
 
 ###Add file (citesched_server/config/passwords.yaml) and configure database password (with your actual password) and google client secret
-# Use this file to store passwords to services that your server you use. When
-# the server starts, the passwords will be automatically loaded and can be
-# accessed from the `session.passwords` field. If you don't have access to a
-# session object, passwords can also be accessed from
-# `Serverpod.instance.passwords`. You can provide different passwords for
-# different run configurations. If you want the same password for any
-# configuration used, place it under `shared`.
-#
-# Note that this file should not be under version control. Store it in a safe
-# place.
 
-# Save passwords used across all configurations here.
 shared:
   mySharedPassword: "my password"
 
-# These are passwords used when running the server locally in development mode
 development:
   database: "actual password of your postgreSQL"
   redis: "PkMk-n0HAWchm81BsLW_P3xxV7IyS7RA"
 
-  # The service secret is used to communicate between servers and to access the
-  # service protocol.
   serviceSecret: "nw8JbVIYq3-KkjL8P2lJAY6dK6AxqNqs"
 
   emailSecretHashPepper: "N7c37qDZQaJ4Urmq4H8IC7ueB2taQ-g2"
@@ -78,8 +64,6 @@ test:
   jwtRefreshTokenHashPepper: "Kklxi4cOJOumgvfCHP6AYH__Yhrc4H3Z"
   serverSideSessionKeyHashPepper: "h5BqLgZnoFB0_r3X-9601D7t4zhiWEsP"
 
-# Passwords used in your staging environment if you use one. The default setup
-# use a password for Redis.
 staging:
   database: "WpbR30VSDzHmICn6NtKqGYjX4isNB53-"
   serviceSecret: "V9Ym4HI3wgu6vG9RQS7q8ZTUbTdzVpc3"
@@ -89,7 +73,6 @@ staging:
   jwtRefreshTokenHashPepper: "meLfpWfisIwGBQyAiDab8hmqLxSyaRcq"
   serverSideSessionKeyHashPepper: "A97CV-4GficUFGQB7BqzyrnTG7SeLQXY"
 
-# Passwords used in production mode.
 production:
   database: "75t9ZXXxKpjki7-_ediavOrvb9-uDoT4"
   serviceSecret: "wVwqNY14XtqDlsnFmG45zj8gE_1P7gJK"
