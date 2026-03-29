@@ -1,6 +1,7 @@
 import 'package:citesched_flutter/main.dart'; // Import for client access
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -17,7 +18,9 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _idController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _secureStorage = const FlutterSecureStorage();
   late final GoogleAuthController _googleAuthController;
+  static const _googleRoleStoragePrefix = 'google_role:';
 
   bool _isFaculty = true; // Toggle state
   bool _obscurePassword = true;
@@ -134,22 +137,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _signInWithGoogle() async {
-    if (_isLoading) return;
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      await _googleAuthController.signIn();
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Google sign-in failed: $e';
-          _isLoading = false;
-        });
-      }
-    }
+  void _handleGoogleControllerChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> _handleGoogleAuthenticated() async {
@@ -161,13 +151,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       final authNotifier = ref.read(authProvider.notifier);
       final userInfo = await _loadUserInfoByEmail(email);
-      if (userInfo != null) {
-        authNotifier.updateUserInfo(userInfo);
-      }
-
-      final roles = _rolesFromScopes(userInfo?.scopeNames ?? const []);
       final selectedRole = await _resolveGoogleRoleSelection(
-        roles: roles,
+        userInfo: userInfo,
         email: email,
         displayName: displayName,
         authNotifier: authNotifier,
@@ -241,116 +226,454 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            _roleDetailsTitle(role),
-            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Full Name'),
+        final isStudent = role == 'student';
+        final accentColor = isStudent
+            ? _studentColorLight
+            : _facultyColorLight;
+
+        InputDecoration fieldDecoration(String label, IconData icon) {
+          return InputDecoration(
+            labelText: label,
+            prefixIcon: Icon(icon, size: 20),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: accentColor, width: 1.4),
+            ),
+          );
+        }
+
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 520),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.16),
+                  blurRadius: 36,
+                  offset: const Offset(0, 18),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: emailController,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: idController,
-                  decoration: InputDecoration(
-                    labelText: role == 'student'
-                        ? 'Student Number'
-                        : 'Faculty ID',
-                  ),
-                ),
-                if (role == 'student') ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: sectionController,
-                    decoration: const InputDecoration(labelText: 'Section'),
-                  ),
-                ],
               ],
             ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          accentColor,
+                          accentColor.withValues(alpha: 0.78),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          height: 52,
+                          width: 52,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.16),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isStudent ? Icons.school_rounded : Icons.badge_rounded,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _roleDetailsTitle(role),
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                isStudent
+                                    ? 'Complete your student profile once so future Google sign-ins go straight in.'
+                                    : 'Complete your faculty profile once so future Google sign-ins go straight in.',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontSize: 12,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: nameController,
+                    decoration: fieldDecoration(
+                      'Full Name',
+                      Icons.person_outline_rounded,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: emailController,
+                    decoration: fieldDecoration(
+                      'Email Address',
+                      Icons.alternate_email_rounded,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: idController,
+                    decoration: fieldDecoration(
+                      isStudent ? 'Student Number' : 'Faculty ID',
+                      isStudent
+                          ? Icons.badge_outlined
+                          : Icons.workspace_premium_outlined,
+                    ),
+                  ),
+                  if (isStudent) ...[
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: sectionController,
+                      decoration: fieldDecoration(
+                        'Section',
+                        Icons.groups_2_outlined,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context, {
+                              'name': nameController.text,
+                              'email': emailController.text,
+                              'studentId': isStudent ? idController.text : '',
+                              'facultyId': isStudent ? '' : idController.text,
+                              'section': sectionController.text,
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: accentColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: Text(
+                            'Continue',
+                            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: GoogleFonts.poppins()),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, {
-                  'name': nameController.text,
-                  'email': emailController.text,
-                  'studentId': role == 'student' ? idController.text : '',
-                  'facultyId': role == 'student' ? '' : idController.text,
-                  'section': sectionController.text,
-                });
-              },
-              child: Text('Continue', style: GoogleFonts.poppins()),
-            ),
-          ],
         );
       },
     );
   }
 
-  List<String> _rolesFromScopes(Iterable<String> scopes) {
-    final allowed = <String>{'admin', 'faculty', 'student'};
-    return scopes.where(allowed.contains).toList();
-  }
-
-  Future<String?> _showRoleSelectionDialog(List<String> roles) {
+  Future<String?> _showRoleSelectionDialog() {
     return showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            'Select Role',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: roles.map((role) {
-              final label = _roleLabel(role);
-              return Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context, role),
-                  child: Text(label, style: GoogleFonts.poppins()),
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 560),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.16),
+                  blurRadius: 36,
+                  offset: const Offset(0, 18),
                 ),
-              );
-            }).toList(),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: GoogleFonts.poppins()),
+              ],
             ),
-          ],
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          _facultyColorLight,
+                          _studentColorLight,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          height: 56,
+                          width: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.14),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.verified_user_rounded,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Choose Your Access',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Pick the role that matches your official account. Admin access is managed separately and is not available here.',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white.withValues(alpha: 0.92),
+                                  fontSize: 12,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isCompact = constraints.maxWidth < 460;
+                      final cards = [
+                        _buildRoleChoiceCard(
+                          role: 'student',
+                          title: 'Student',
+                          description:
+                              'For enrolled students viewing schedules, sections, and personal timetable details.',
+                          icon: Icons.school_rounded,
+                          color: _studentColorLight,
+                        ),
+                        _buildRoleChoiceCard(
+                          role: 'faculty',
+                          title: 'Faculty',
+                          description:
+                              'For instructors managing teaching schedules, workload, and class assignments.',
+                          icon: Icons.badge_rounded,
+                          color: _facultyColorLight,
+                        ),
+                      ];
+
+                      if (isCompact) {
+                        return Column(
+                          children: [
+                            cards[0],
+                            const SizedBox(height: 14),
+                            cards[1],
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        children: [
+                          Expanded(child: cards[0]),
+                          const SizedBox(width: 14),
+                          Expanded(child: cards[1]),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel Google Sign-In',
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         );
       },
     );
+  }
+
+  Widget _buildRoleChoiceCard({
+    required String role,
+    required String title,
+    required String description,
+    required IconData icon,
+    required Color color,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: () => Navigator.pop(context, role),
+      child: Ink(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: color.withValues(alpha: 0.18)),
+          gradient: LinearGradient(
+            colors: [
+              color.withValues(alpha: 0.12),
+              Colors.white,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 52,
+              width: 52,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 26),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF111827),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: const Color(0xFF475569),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Text(
+                  'Continue as $title',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.arrow_forward_rounded, color: color, size: 18),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _resolveExistingGoogleRole(UserInfo? userInfo) async {
+    if (userInfo?.scopeNames.contains('admin') ?? false) {
+      return 'admin';
+    }
+
+    try {
+      final studentProfile = await client.student.getMyProfile();
+      if (studentProfile != null) {
+        return 'student';
+      }
+    } catch (_) {}
+
+    try {
+      final facultyProfile = await client.faculty.getMyProfile();
+      if (facultyProfile != null) {
+        return 'faculty';
+      }
+    } catch (_) {}
+
+    return null;
   }
 
   @override
   void initState() {
     super.initState();
-    _initGoogleSignIn();
     _googleAuthController = GoogleAuthController(
       client: client,
       onAuthenticated: _handleGoogleAuthenticated,
@@ -361,11 +684,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _isLoading = false;
         });
       },
+      scopes: const [
+        ...GoogleAuthController.defaultScopes,
+        'openid',
+      ],
     );
+    _googleAuthController.addListener(_handleGoogleControllerChanged);
   }
 
   @override
   void dispose() {
+    _googleAuthController.removeListener(_handleGoogleControllerChanged);
     _googleAuthController.dispose();
     _idController.dispose();
     _passwordController.dispose();
@@ -377,6 +706,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final screenSize = MediaQuery.of(context).size;
     final isDesktop = screenSize.width > 900;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isAuthBusy = _isLoading || _googleAuthController.isLoading;
 
     // --- 1. DYNAMIC THEME COLORS ---
 
@@ -674,7 +1004,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                               // Login Button
                               ElevatedButton(
-                                onPressed: _isLoading ? null : _login,
+                                onPressed: isAuthBusy ? null : _login,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: activeThemeColor,
                                   foregroundColor: Colors.white,
@@ -686,7 +1016,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: _isLoading
+                                child: isAuthBusy
                                     ? const SizedBox(
                                         height: 20,
                                         width: 20,
@@ -710,37 +1040,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const SizedBox(height: 24),
 
                               // Google Button (uses platform-safe widget)
-                              GoogleSignInWidget(
-                                controller: _googleAuthController,
-                                theme: isDark
-                                    ? GSIButtonTheme.filledBlack
-                                    : GSIButtonTheme.outline,
-                                size: GSIButtonSize.large,
-                                text: GSIButtonText.continueWith,
-                                shape: GSIButtonShape.pill,
-                                logoAlignment: GSIButtonLogoAlignment.center,
-                                minimumWidth: 320,
-                                buttonWrapper:
-                                    ({
-                                      required GoogleSignInStyle style,
-                                      required Widget child,
-                                      required VoidCallback? onPressed,
-                                    }) {
-                                      return Container(
-                                        height: 50,
-                                        alignment: Alignment.center,
-                                        decoration: BoxDecoration(
-                                          color: googleBtnBg,
-                                          border: Border.all(
-                                            color: googleBtnBorder,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: child,
-                                      );
-                                    },
+                              IgnorePointer(
+                                ignoring: isAuthBusy,
+                                child: Opacity(
+                                  opacity: isAuthBusy ? 0.7 : 1,
+                                  child: GoogleSignInWidget(
+                                    controller: _googleAuthController,
+                                    theme: isDark
+                                        ? GSIButtonTheme.filledBlack
+                                        : GSIButtonTheme.outline,
+                                    size: GSIButtonSize.large,
+                                    text: GSIButtonText.continueWith,
+                                    shape: GSIButtonShape.pill,
+                                    logoAlignment:
+                                        GSIButtonLogoAlignment.center,
+                                    minimumWidth: 320,
+                                    buttonWrapper:
+                                        ({
+                                          required GoogleSignInStyle style,
+                                          required Widget child,
+                                          required VoidCallback? onPressed,
+                                        }) {
+                                          return Container(
+                                            height: 50,
+                                            alignment: Alignment.center,
+                                            decoration: BoxDecoration(
+                                              color: googleBtnBg,
+                                              border: Border.all(
+                                                color: googleBtnBorder,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: child,
+                                          );
+                                        },
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -755,21 +1091,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ],
       ),
     );
-  }
-
-  Future<void> _initGoogleSignIn() async {
-    try {
-      await client.auth.initializeGoogleSignIn(
-        clientId:
-            '787281029476-efu9h96a0libvk8o0ubhsluh7u09fnen.apps.googleusercontent.com',
-      );
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Google Sign-In init failed: $e';
-        });
-      }
-    }
   }
 
   Widget _buildRoleBtn(
@@ -840,24 +1161,64 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return client.setup.getUserInfoByEmail(email: email);
   }
 
+  Future<String?> _loadRememberedGoogleRole(String? email) async {
+    final normalizedEmail = email?.trim().toLowerCase();
+    if (normalizedEmail == null || normalizedEmail.isEmpty) {
+      return null;
+    }
+
+    try {
+      return await _secureStorage.read(
+        key: '$_googleRoleStoragePrefix$normalizedEmail',
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _rememberGoogleRole(String? email, String role) async {
+    final normalizedEmail = email?.trim().toLowerCase();
+    if (normalizedEmail == null || normalizedEmail.isEmpty) {
+      return;
+    }
+
+    try {
+      await _secureStorage.write(
+        key: '$_googleRoleStoragePrefix$normalizedEmail',
+        value: role,
+      );
+    } catch (_) {}
+  }
+
   Future<void> _signOutAfterGoogle(AuthNotifier authNotifier) async {
     await client.auth.signOutDevice();
     authNotifier.updateUserInfo(null);
   }
 
   Future<String?> _resolveGoogleRoleSelection({
-    required List<String> roles,
+    required UserInfo? userInfo,
     required String? email,
     required String? displayName,
     required AuthNotifier authNotifier,
   }) async {
-    if (roles.isNotEmpty) {
-      return _showRoleSelectionDialog(roles);
+    final existingRole = await _resolveExistingGoogleRole(userInfo);
+    final rememberedRole = await _loadRememberedGoogleRole(email);
+    final resolvedRole = existingRole ??
+        ((rememberedRole != null &&
+                (userInfo?.scopeNames.contains(rememberedRole) ?? true))
+            ? rememberedRole
+            : null);
+
+    if (resolvedRole != null) {
+      final resolvedUserInfo = userInfo ?? await _loadUserInfoByEmail(email);
+      if (resolvedUserInfo != null) {
+        authNotifier.updateUserInfo(resolvedUserInfo);
+      }
+      await _rememberGoogleRole(email, resolvedRole);
+      return resolvedRole;
     }
 
-    final selectedRole = await _showRoleSelectionDialog(
-      const ['faculty', 'student', 'admin'],
-    );
+    final selectedRole = await _showRoleSelectionDialog();
     if (selectedRole == null) {
       return null;
     }
@@ -882,18 +1243,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (refreshedInfo == null) {
       throw Exception('Unable to refresh user info after setup.');
     }
+    await _rememberGoogleRole(resolvedEmail, selectedRole);
     authNotifier.updateUserInfo(refreshedInfo);
     return selectedRole;
   }
 
   String _roleDetailsTitle(String role) {
     if (role == 'student') {
-      return 'Student Details';
+      return 'Complete Student Access';
     }
     if (role == 'faculty') {
-      return 'Faculty Details';
+      return 'Complete Faculty Access';
     }
-    return 'Admin Details';
+    return 'Administrator';
   }
 
   String _roleLabel(String role) {

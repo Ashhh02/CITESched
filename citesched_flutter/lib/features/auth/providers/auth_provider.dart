@@ -41,6 +41,7 @@ class AuthNotifier extends Notifier<UserInfo?> {
 
   void _onAuthStateChanged() {
     if (!client.auth.isAuthenticated) {
+      _selectedRole = null;
       state = null;
     }
     // If authenticated, we rely on manual update or init to fetch info

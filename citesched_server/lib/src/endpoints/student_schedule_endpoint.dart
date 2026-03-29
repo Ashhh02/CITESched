@@ -1,4 +1,5 @@
 import 'package:serverpod/serverpod.dart';
+import 'package:serverpod_auth_server/serverpod_auth_server.dart';
 import '../generated/protocol.dart';
 
 class StudentScheduleEndpoint extends Endpoint {
@@ -15,6 +16,18 @@ class StudentScheduleEndpoint extends Endpoint {
         where: (t) => t.userInfoId.equals(userInfoId),
       );
       if (byUserInfoId != null) return byUserInfoId;
+    }
+
+    final linkedUserInfo = await UserInfo.db.findFirstRow(
+      session,
+      where: (t) => t.userIdentifier.equals(userIdentifier),
+    );
+    if (linkedUserInfo?.id != null) {
+      final byLinkedUserInfo = await Student.db.findFirstRow(
+        session,
+        where: (t) => t.userInfoId.equals(linkedUserInfo!.id!),
+      );
+      if (byLinkedUserInfo != null) return byLinkedUserInfo;
     }
 
     return await Student.db.findFirstRow(

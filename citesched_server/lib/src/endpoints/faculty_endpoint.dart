@@ -1,4 +1,5 @@
 import 'package:serverpod/serverpod.dart';
+import 'package:serverpod_auth_server/serverpod_auth_server.dart';
 import '../generated/protocol.dart';
 import '../auth/scopes.dart';
 
@@ -16,6 +17,18 @@ class FacultyEndpoint extends Endpoint {
         where: (f) => f.userInfoId.equals(userInfoId),
       );
       if (byUserInfoId != null) return byUserInfoId;
+    }
+
+    final linkedUserInfo = await UserInfo.db.findFirstRow(
+      session,
+      where: (t) => t.userIdentifier.equals(userIdentifier),
+    );
+    if (linkedUserInfo?.id != null) {
+      final byLinkedUserInfo = await Faculty.db.findFirstRow(
+        session,
+        where: (f) => f.userInfoId.equals(linkedUserInfo!.id!),
+      );
+      if (byLinkedUserInfo != null) return byLinkedUserInfo;
     }
 
     return await Faculty.db.findFirstRow(

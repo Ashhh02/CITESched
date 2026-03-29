@@ -12,10 +12,16 @@ var client = Client('http://$localhost:8083/')
   ..connectivityMonitor = FlutterConnectivityMonitor()
   ..authSessionManager = FlutterAuthSessionManager();
 
+const _googleWebClientId =
+    '787281029476-efu9h96a0libvk8o0ubhsluh7u09fnen.apps.googleusercontent.com';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await client.auth.initialize();
+  await client.auth.initializeGoogleSignIn(
+    clientId: _googleWebClientId,
+  );
 
   runApp(
     const ProviderScope(
