@@ -39,7 +39,7 @@
 
 ## 🚀 Quick Start (5 Minutes)
 
-###Add file (citesched_server/config/passwords.yaml) and configure database password (with your actual password) and google client secret
+**Add file (citesched_server/config/passwords.yaml) and configure database password (with your actual password) and google client secret**
 
 shared:
   mySharedPassword: "my password"
@@ -84,13 +84,11 @@ production:
 
 #2_HmLlxC1SzrZSUxd4La6iNo01pj_9ce
 
-###Configure the docker-compose.yaml
+**Configure the docker-compose.yaml**
 change the POSTGRES_DB: temp to POSTGRES_DB: citesched and port 8090 to 8095 for the safety port
 
-###Configure the development.yaml 
+**Configure the development.yaml **
 change the database name temp to citesched
-
-###Delete the Existing migrations
 
 ### Step 1: Start Backend (Terminal 1)
 ```bash
@@ -101,7 +99,7 @@ serverpod generate
 dart pub get
 dart run bin/main.dart --apply-migrations
 ```
-###(OPTIONAL If you want have a existing admin) Start client(Terminal 2)
+**(OPTIONAL If you want have a existing admin) Start client(Terminal 2)**
 ```bash
 cd citesched_client
 dart pub get
