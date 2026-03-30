@@ -104,17 +104,6 @@ write_production_config() {
   mv "$PRODUCTION_CONFIG_FILE.tmp" "$PRODUCTION_CONFIG_FILE"
 }
 
-write_api_server_port() {
-  render_port="$1"
-  awk -v render_port="$render_port" '
-    /^apiServer:$/ { in_api=1; print; next }
-    /^[^ ]/ && in_api { in_api=0 }
-    in_api && $1 == "port:" { print "  port: " render_port; next }
-    { print }
-  ' "$PRODUCTION_CONFIG_FILE" > "$PRODUCTION_CONFIG_FILE.tmp"
-  mv "$PRODUCTION_CONFIG_FILE.tmp" "$PRODUCTION_CONFIG_FILE"
-}
-
 write_password_config() {
   cat > "$CONFIG_FILE" <<EOF
 shared:
@@ -138,10 +127,6 @@ EOF
 load_database_config
 write_production_config
 write_password_config
-
-if [ -n "${PORT:-}" ] && [ "$PORT" != "8080" ]; then
-  write_api_server_port "$PORT"
-fi
 
 export PORT="${PORT:-10000}"
 envsubst '${PORT}' < "$NGINX_TEMPLATE" > "$NGINX_CONFIG"
