@@ -412,6 +412,15 @@ class SetupEndpoint extends Endpoint {
     final normalizedEmail = email.trim().toLowerCase();
     if (normalizedEmail.isEmpty) return null;
 
+    final activeFaculty = await Faculty.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(normalizedEmail) & t.isActive.equals(true),
+    );
+    final activeStudent = await Student.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(normalizedEmail) & t.isActive.equals(true),
+    );
+
     final userInfo = await UserInfo.db.findFirstRow(
       session,
       where: (t) => t.email.equals(normalizedEmail),
@@ -424,30 +433,25 @@ class SetupEndpoint extends Endpoint {
         where: (t) => t.userId.equals(existingUserInfo.id!.toString()),
       );
       final explicitRole = userRole?.role.trim().toLowerCase();
-      if (explicitRole == 'admin' ||
-          explicitRole == 'faculty' ||
-          explicitRole == 'student') {
-        return explicitRole;
+      if (explicitRole == 'admin') {
+        return 'admin';
+      }
+      if (explicitRole == 'faculty' && activeFaculty != null) {
+        return 'faculty';
+      }
+      if (explicitRole == 'student' && activeStudent != null) {
+        return 'student';
       }
       final scopes = existingUserInfo.scopeNames
           .map((scope) => scope.toLowerCase())
           .toSet();
       if (scopes.contains('admin')) return 'admin';
-      if (scopes.contains('faculty')) return 'faculty';
-      if (scopes.contains('student')) return 'student';
+      if (scopes.contains('faculty') && activeFaculty != null) return 'faculty';
+      if (scopes.contains('student') && activeStudent != null) return 'student';
     }
 
-    final faculty = await Faculty.db.findFirstRow(
-      session,
-      where: (t) => t.email.equals(normalizedEmail),
-    );
-    if (faculty != null) return 'faculty';
-
-    final student = await Student.db.findFirstRow(
-      session,
-      where: (t) => t.email.equals(normalizedEmail),
-    );
-    if (student != null) return 'student';
+    if (activeFaculty != null) return 'faculty';
+    if (activeStudent != null) return 'student';
 
     return null;
   }

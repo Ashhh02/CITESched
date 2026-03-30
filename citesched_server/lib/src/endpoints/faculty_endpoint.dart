@@ -13,7 +13,7 @@ class FacultyEndpoint extends Endpoint {
     if (userInfoId != null) {
       final byUserInfoId = await Faculty.db.findFirstRow(
         session,
-        where: (f) => f.userInfoId.equals(userInfoId),
+        where: (f) => f.userInfoId.equals(userInfoId) & f.isActive.equals(true),
       );
       if (byUserInfoId != null) return byUserInfoId;
     }
@@ -26,7 +26,9 @@ class FacultyEndpoint extends Endpoint {
       final resolvedLinkedUserInfo = linkedUserInfo!;
       final byLinkedUserInfo = await Faculty.db.findFirstRow(
         session,
-        where: (f) => f.userInfoId.equals(resolvedLinkedUserInfo.id!),
+        where: (f) =>
+            f.userInfoId.equals(resolvedLinkedUserInfo.id!) &
+            f.isActive.equals(true),
       );
       if (byLinkedUserInfo != null) return byLinkedUserInfo;
 
@@ -35,7 +37,7 @@ class FacultyEndpoint extends Endpoint {
       if (linkedEmail.isNotEmpty) {
         final byLinkedEmail = await Faculty.db.findFirstRow(
           session,
-          where: (f) => f.email.equals(linkedEmail),
+          where: (f) => f.email.equals(linkedEmail) & f.isActive.equals(true),
         );
         if (byLinkedEmail != null) return byLinkedEmail;
       }
@@ -43,7 +45,7 @@ class FacultyEndpoint extends Endpoint {
 
     return await Faculty.db.findFirstRow(
       session,
-      where: (f) => f.email.equals(userIdentifier),
+      where: (f) => f.email.equals(userIdentifier) & f.isActive.equals(true),
     );
   }
 

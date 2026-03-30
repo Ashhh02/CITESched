@@ -1,8 +1,8 @@
 import 'package:citesched_flutter/features/admin/screens/admin_layout.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/features/auth/screens/login_screen.dart';
-import 'package:citesched_flutter/features/student/screens/student_dashboard_screen.dart';
 import 'package:citesched_flutter/features/faculty/screens/faculty_dashboard_screen.dart';
+import 'package:citesched_flutter/features/student/screens/student_dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,10 +15,13 @@ class RootScreen extends ConsumerWidget {
     final authNotifier = ref.read(authProvider.notifier);
     final selectedRole = authNotifier.selectedRole;
 
-    // If the session is authenticated but user info is still refreshing,
-    // keep the user on a lightweight loading state instead of bouncing
-    // them back to the login screen.
+    // Keep onboarding-capable Google sessions on the login screen instead of
+    // routing them into a stale dashboard based only on old scopes.
     if (authState == null && authNotifier.hasActiveSession) {
+      if (authNotifier.needsRoleOnboarding) {
+        return const LoginScreen();
+      }
+
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
@@ -26,12 +29,10 @@ class RootScreen extends ConsumerWidget {
       );
     }
 
-    // If not signed in, show login
     if (authState == null) {
       return const LoginScreen();
     }
 
-    // Route to specific role dashboards (honor selected role if set)
     if (selectedRole != null) {
       if (selectedRole == 'admin' && authNotifier.isAdmin) {
         return const AdminLayout();
@@ -42,13 +43,12 @@ class RootScreen extends ConsumerWidget {
       if (selectedRole == 'faculty' && authNotifier.isFaculty) {
         return const FacultyDashboardScreen();
       }
-      // Selected role invalid; clear selection and fall back to scope routing.
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         authNotifier.setSelectedRole(null);
       });
     }
 
-    // Default role routing
     if (authNotifier.isAdmin) {
       return const AdminLayout();
     }
@@ -61,7 +61,10 @@ class RootScreen extends ConsumerWidget {
       return const FacultyDashboardScreen();
     }
 
-    // Unknown role — sign out and return to login
+    if (authNotifier.needsRoleOnboarding) {
+      return const LoginScreen();
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       authNotifier.signOut();
     });

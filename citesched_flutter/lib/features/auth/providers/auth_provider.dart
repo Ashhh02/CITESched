@@ -9,6 +9,7 @@ final authProvider = NotifierProvider<AuthNotifier, UserInfo?>(() {
 
 class AuthNotifier extends Notifier<UserInfo?> {
   String? _selectedRole;
+  bool _needsRoleOnboarding = false;
 
   @override
   UserInfo? build() {
@@ -34,6 +35,29 @@ class AuthNotifier extends Notifier<UserInfo?> {
       final email = profile.email?.trim().toLowerCase();
       if (email != null && email.isNotEmpty) {
         final userInfo = await client.setup.getUserInfoByEmail(email: email);
+        if (userInfo == null) {
+          _needsRoleOnboarding = false;
+          state = null;
+          return;
+        }
+
+        final existingRole = await client.setup.getExistingAccountRoleByEmail(
+          email: email,
+        );
+        final normalizedRole = existingRole?.trim().toLowerCase();
+        final isAdminAccount =
+            userInfo.scopeNames.contains('admin') || normalizedRole == 'admin';
+
+        // Keep Google-authenticated users in onboarding if their email no
+        // longer maps to an active student / faculty profile.
+        if (!isAdminAccount &&
+            (normalizedRole != 'student' && normalizedRole != 'faculty')) {
+          _needsRoleOnboarding = true;
+          state = null;
+          return;
+        }
+
+        _needsRoleOnboarding = false;
         state = userInfo;
       }
     } catch (e) {
@@ -44,6 +68,7 @@ class AuthNotifier extends Notifier<UserInfo?> {
   void _onAuthStateChanged() {
     if (!client.auth.isAuthenticated) {
       _selectedRole = null;
+      _needsRoleOnboarding = false;
       state = null;
       return;
     }
@@ -57,6 +82,7 @@ class AuthNotifier extends Notifier<UserInfo?> {
 
   // Method to manually update user info (e.g., after custom login)
   void updateUserInfo(UserInfo? userInfo) {
+    _needsRoleOnboarding = false;
     state = userInfo;
   }
 
@@ -73,11 +99,13 @@ class AuthNotifier extends Notifier<UserInfo?> {
       await client.auth.signOutDevice();
     }
     _selectedRole = null;
+    _needsRoleOnboarding = false;
     state = null;
   }
 
   bool get isSignedIn => state != null;
   bool get hasActiveSession => client.auth.isAuthenticated;
+  bool get needsRoleOnboarding => _needsRoleOnboarding;
 
   // Helper to check roles (can be expanded later)
   bool get isAdmin => state?.scopeNames.contains('admin') ?? false;

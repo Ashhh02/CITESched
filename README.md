@@ -39,13 +39,72 @@
 
 ## 🚀 Quick Start (5 Minutes)
 
+**Add file (citesched_server/config/passwords.yaml) and configure database password (with your actual password) and google client secret**
+```bash
+shared:
+  mySharedPassword: "my password"
+
+development:
+  database: "actual password of your postgreSQL"
+  redis: "PkMk-n0HAWchm81BsLW_P3xxV7IyS7RA"
+
+  serviceSecret: "nw8JbVIYq3-KkjL8P2lJAY6dK6AxqNqs"
+
+  emailSecretHashPepper: "N7c37qDZQaJ4Urmq4H8IC7ueB2taQ-g2"
+  jwtHmacSha512PrivateKey: "k8kElilnnngmOQWiiqQVB50QGoW-2d2b"
+  jwtRefreshTokenHashPepper: "5lKnEIU6P-mh4busyLtR8m7T-_Awu9OG"
+  serverSideSessionKeyHashPepper: "eiSf9LRbsSpmwM_cX5QPegYFR5duj2ez"
+  
+test:
+  database: "C6goI_s96raJrkAVbE44QMi56F_nFT7t"
+  redis: "poC9ehBbcl5WIVa2LtSHl4zdnFc33DvB"
+
+  emailSecretHashPepper: "jqR5jh5aIfHjssfS8kGu1ZYzKSSB9So3"
+  jwtHmacSha512PrivateKey: "w8krh5vHyATKnbcFr8zom2s5rX9Nt-Pn"
+  jwtRefreshTokenHashPepper: "Kklxi4cOJOumgvfCHP6AYH__Yhrc4H3Z"
+  serverSideSessionKeyHashPepper: "h5BqLgZnoFB0_r3X-9601D7t4zhiWEsP"
+
+staging:
+  database: "WpbR30VSDzHmICn6NtKqGYjX4isNB53-"
+  serviceSecret: "V9Ym4HI3wgu6vG9RQS7q8ZTUbTdzVpc3"
+
+  emailSecretHashPepper: "zOdgL9MQ0qOXI1GhlZh44YxLMyOGK7GG"
+  jwtHmacSha512PrivateKey: "u8w4HRSKoeRKsehwJhOj_-TyOznY7Mlr"
+  jwtRefreshTokenHashPepper: "meLfpWfisIwGBQyAiDab8hmqLxSyaRcq"
+  serverSideSessionKeyHashPepper: "A97CV-4GficUFGQB7BqzyrnTG7SeLQXY"
+
+production:
+  database: "75t9ZXXxKpjki7-_ediavOrvb9-uDoT4"
+  serviceSecret: "wVwqNY14XtqDlsnFmG45zj8gE_1P7gJK"
+
+  emailSecretHashPepper: "iqaZ2S1hkYrgbE6wtO-Lk7z8PHaSNYRQ"
+  jwtHmacSha512PrivateKey: "ge3SAa82AjLhxUna3RXdDd6JTKkQXyYQ"
+  jwtRefreshTokenHashPepper: "VGL9KbwM2tP5CmQxO7o1W5bIJ6DT2iun"
+  serverSideSessionKeyHashPepper: "5YsLzzjrvhpHeM9mJfx-K3wKFEHAmAfd"
+
+#2_HmLlxC1SzrZSUxd4La6iNo01pj_9ce
+```
+**Configure the docker-compose.yaml**
+- change the POSTGRES_DB: temp to POSTGRES_DB: citesched and port 8090 to 8095 for the safety port
+
+**Configure the development.yaml **
+- change the database name temp to citesched
+
 ### Step 1: Start Backend (Terminal 1)
 ```bash
 cd "citesched\citesched_server"
+docker-compose up -d
+serverpod create-migration
+serverpod generate
 dart pub get
-dart run bin/main.dart
+dart run bin/main.dart --apply-migrations
 ```
-
+**(OPTIONAL If you want have a existing admin) Start client(Terminal 2)**
+```bash
+cd citesched_client
+dart pub get
+dart run bin/create_specific_users.dart
+```
 ### Step 2: Start Frontend (Terminal 2)
 ```bash
 cd "citesched\citesched_flutter"
