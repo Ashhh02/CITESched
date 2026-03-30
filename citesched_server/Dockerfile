@@ -1,17 +1,9 @@
 # Build stage
-FROM ghcr.io/cirruslabs/flutter:stable AS build
+FROM dart:stable AS build
 
-WORKDIR /workspace
+WORKDIR /app
+COPY . .
 
-COPY citesched_client /workspace/citesched_client
-COPY citesched_flutter /workspace/citesched_flutter
-COPY citesched_server /workspace/citesched_server
-
-WORKDIR /workspace/citesched_flutter
-RUN flutter pub get
-RUN flutter build web --release --base-href /app/ --dart-define=CITESCHED_SERVER_URL=https://citesched-server.onrender.com/ --output ../citesched_server/web/app
-
-WORKDIR /workspace/citesched_server
 RUN dart pub get
 RUN dart compile exe bin/main.dart -o bin/server
 
@@ -28,14 +20,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copy the compiled server from the build stage
-COPY --from=build /workspace/citesched_server/bin/server /app/server
+COPY --from=build /app/bin/server /app/server
 
 # Copy all necessary folders
-COPY --from=build /workspace/citesched_server/config/ /app/config/
-COPY --from=build /workspace/citesched_server/deploy/render/start.sh /app/start.sh
-COPY --from=build /workspace/citesched_server/web/ /app/web/
-COPY --from=build /workspace/citesched_server/migrations/ /app/migrations/
-COPY --from=build /workspace/citesched_server/lib/src/generated/protocol.yaml /app/lib/src/generated/protocol.yaml
+COPY --from=build /app/config/ /app/config/
+COPY --from=build /app/deploy/render/start.sh /app/start.sh
+COPY --from=build /app/web/ /app/web/
+COPY --from=build /app/migrations/ /app/migrations/
+COPY --from=build /app/lib/src/generated/protocol.yaml /app/lib/src/generated/protocol.yaml
 
 # Expose the API port
 EXPOSE 8080
