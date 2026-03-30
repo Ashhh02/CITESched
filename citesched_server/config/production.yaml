@@ -21,7 +21,7 @@ database:
   port: 5432
   name: citesched
   user: citesched_user
-  password: O2Xjok36AWdW8V9bbXmbgSbuvejMDGYN
+  password: admin@123
   requireSsl: true
 
 redis:
