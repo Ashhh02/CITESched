@@ -32,4 +32,4 @@ COPY --from=build /app/lib/src/generated/protocol.yaml /app/lib/src/generated/pr
 EXPOSE 8080
 
 # Start the server
-CMD ["/app/server", "--mode", "production", "--server-id", "default", "--logging", "normal", "--role", "monolith"]
+CMD ["/app/server", "--mode", "production", "--server-id", "default", "--logging", "normal", "--role", "monolith", "--apply-migrations"]
