@@ -17,11 +17,11 @@ webServer:
   publicScheme: https
 
 database:
-  host: dpg-d7596dnfte5s7388qoa0-a
+  host: dpg-d7596dnfte5s7388qoa0-a.ohio-postgres.render.com
   port: 5432
   name: citesched
   user: citesched_user
-  requireSsl: false
+  requireSsl: true
 
 redis:
   enabled: false
