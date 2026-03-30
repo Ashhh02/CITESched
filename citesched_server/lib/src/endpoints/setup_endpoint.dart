@@ -3,8 +3,63 @@ import 'package:serverpod_auth_server/serverpod_auth_server.dart';
 import '../generated/protocol.dart';
 
 class SetupEndpoint extends Endpoint {
+  static const List<String> _allowedCourses = ['BSIT', 'BSEMC'];
+
   @override
   bool get requireLogin => false;
+
+  String _normalizeSectionCode(String input) {
+    final match = RegExp(
+      r'^\s*(\d+)\s*([A-Za-z][A-Za-z0-9]*)\s*$',
+    ).firstMatch(input);
+    if (match == null) return input.trim().toUpperCase();
+    final year = match.group(1)!;
+    final suffix = match.group(2)!.toUpperCase();
+    return '$year$suffix';
+  }
+
+  int? _extractYearLevelFromSection(String input) {
+    final match = RegExp(
+      r'^\s*(\d+)\s*[A-Za-z][A-Za-z0-9]*\s*$',
+    ).firstMatch(input);
+    if (match == null) return null;
+    return int.tryParse(match.group(1)!);
+  }
+
+  Program _programFromCourse(String? course) {
+    final normalized = course?.trim().toUpperCase();
+    if (normalized == 'BSEMC') return Program.emc;
+    return Program.it;
+  }
+
+  EmploymentStatus _employmentStatusFromString(String? value) {
+    final normalized = value?.trim().toLowerCase();
+    if (normalized == 'parttime' || normalized == 'part_time') {
+      return EmploymentStatus.partTime;
+    }
+    return EmploymentStatus.fullTime;
+  }
+
+  FacultyShiftPreference _shiftPreferenceFromString(String? value) {
+    switch (value?.trim().toLowerCase()) {
+      case 'morning':
+        return FacultyShiftPreference.morning;
+      case 'afternoon':
+        return FacultyShiftPreference.afternoon;
+      case 'evening':
+        return FacultyShiftPreference.evening;
+      case 'custom':
+        return FacultyShiftPreference.custom;
+      default:
+        return FacultyShiftPreference.any;
+    }
+  }
+
+  Program _programFromString(String? value) {
+    final normalized = value?.trim().toLowerCase();
+    if (normalized == 'emc') return Program.emc;
+    return Program.it;
+  }
 
   Future<UserInfo?> _ensureUserInfo(
     Session session, {
@@ -80,6 +135,7 @@ class SetupEndpoint extends Endpoint {
   Future<int?> _resolveSectionId(
     Session session, {
     required String section,
+    String? course,
   }) async {
     try {
       final existingSection = await Section.db.findFirstRow(
@@ -88,11 +144,8 @@ class SetupEndpoint extends Endpoint {
       );
       if (existingSection != null) return existingSection.id;
 
-      var prog = Program.it;
+      var prog = _programFromCourse(course);
       var year = 1;
-      if (section.toUpperCase().contains('EMC')) {
-        prog = Program.emc;
-      }
       final yearMatch = RegExp(r'\d').firstMatch(section);
       if (yearMatch != null) {
         year = int.parse(yearMatch.group(0)!);
@@ -123,17 +176,46 @@ class SetupEndpoint extends Endpoint {
     required String userName,
     required String email,
     required String studentId,
+    required String course,
     required String? section,
   }) async {
     final existingStudent = await Student.db.findFirstRow(
       session,
       where: (t) => t.email.equals(email),
     );
-    if (existingStudent != null) return;
+    final normalizedCourse = _allowedCourses.contains(course.trim().toUpperCase())
+        ? course.trim().toUpperCase()
+        : 'BSIT';
+    final normalizedSection = section == null || section.trim().isEmpty
+        ? null
+        : _normalizeSectionCode(section);
+    final yearLevel = normalizedSection == null
+        ? 1
+        : (_extractYearLevelFromSection(normalizedSection) ?? 1);
 
     int? sectionId;
-    if (section != null && section.isNotEmpty) {
-      sectionId = await _resolveSectionId(session, section: section);
+    if (normalizedSection != null && normalizedSection.isNotEmpty) {
+      sectionId = await _resolveSectionId(
+        session,
+        section: normalizedSection,
+        course: normalizedCourse,
+      );
+    }
+
+    if (existingStudent != null) {
+      existingStudent
+        ..name = userName
+        ..email = email
+        ..studentNumber = studentId
+        ..course = normalizedCourse
+        ..yearLevel = yearLevel
+        ..section = normalizedSection
+        ..sectionId = sectionId
+        ..userInfoId = userInfo.id!
+        ..isActive = true
+        ..updatedAt = DateTime.now();
+      await Student.db.updateRow(session, existingStudent);
+      return;
     }
 
     await Student.db.insertRow(
@@ -142,11 +224,12 @@ class SetupEndpoint extends Endpoint {
         name: userName,
         email: email,
         studentNumber: studentId,
-        course: 'BSIT',
-        yearLevel: 1,
-        section: section,
+        course: normalizedCourse,
+        yearLevel: yearLevel,
+        section: normalizedSection,
         sectionId: sectionId,
         userInfoId: userInfo.id!,
+        isActive: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
@@ -159,24 +242,42 @@ class SetupEndpoint extends Endpoint {
     required String userName,
     required String email,
     required String facultyId,
+    required int maxLoad,
+    required EmploymentStatus employmentStatus,
+    required FacultyShiftPreference shiftPreference,
+    required Program program,
   }) async {
     final existingFaculty = await Faculty.db.findFirstRow(
       session,
       where: (t) => t.email.equals(email),
     );
-    if (existingFaculty != null) return;
+    if (existingFaculty != null) {
+      existingFaculty
+        ..name = userName
+        ..email = email
+        ..maxLoad = maxLoad
+        ..employmentStatus = employmentStatus
+        ..shiftPreference = shiftPreference
+        ..facultyId = facultyId
+        ..userInfoId = userInfo.id!
+        ..program = program
+        ..isActive = true
+        ..updatedAt = DateTime.now();
+      await Faculty.db.updateRow(session, existingFaculty);
+      return;
+    }
 
     await Faculty.db.insertRow(
       session,
       Faculty(
         name: userName,
         email: email,
-        maxLoad: 18,
-        employmentStatus: EmploymentStatus.fullTime,
-        shiftPreference: FacultyShiftPreference.any,
+        maxLoad: maxLoad,
+        employmentStatus: employmentStatus,
+        shiftPreference: shiftPreference,
         facultyId: facultyId,
         userInfoId: userInfo.id!,
-        program: Program.it, // Default
+        program: program,
         isActive: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -217,7 +318,12 @@ class SetupEndpoint extends Endpoint {
     required String role,
     String? studentId,
     String? facultyId,
+    String? course,
     String? section,
+    int? maxLoad,
+    String? employmentStatus,
+    String? shiftPreference,
+    String? program,
   }) async {
     try {
       final userInfo = await _ensureUserInfo(
@@ -244,6 +350,7 @@ class SetupEndpoint extends Endpoint {
           userName: userName,
           email: email,
           studentId: studentId,
+          course: course ?? 'BSIT',
           section: section,
         );
       } else if ((role == 'faculty' || role == 'admin') && facultyId != null) {
@@ -253,6 +360,10 @@ class SetupEndpoint extends Endpoint {
           userName: userName,
           email: email,
           facultyId: facultyId,
+          maxLoad: maxLoad ?? 18,
+          employmentStatus: _employmentStatusFromString(employmentStatus),
+          shiftPreference: _shiftPreferenceFromString(shiftPreference),
+          program: _programFromString(program),
         );
       }
 
@@ -279,5 +390,129 @@ class SetupEndpoint extends Endpoint {
       session,
       where: (t) => t.email.equals(emailLower),
     );
+  }
+
+  Future<Student?> getStudentProfileByEmail(
+    Session session, {
+    required String email,
+  }) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty) return null;
+
+    return await Student.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(normalizedEmail),
+    );
+  }
+
+  Future<String?> getExistingAccountRoleByEmail(
+    Session session, {
+    required String email,
+  }) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty) return null;
+
+    final userInfo = await UserInfo.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(normalizedEmail),
+    );
+
+    if (userInfo != null && userInfo.id != null) {
+      final existingUserInfo = userInfo;
+      final userRole = await UserRole.db.findFirstRow(
+        session,
+        where: (t) => t.userId.equals(existingUserInfo.id!.toString()),
+      );
+      final explicitRole = userRole?.role.trim().toLowerCase();
+      if (explicitRole == 'admin' ||
+          explicitRole == 'faculty' ||
+          explicitRole == 'student') {
+        return explicitRole;
+      }
+      final scopes = existingUserInfo.scopeNames
+          .map((scope) => scope.toLowerCase())
+          .toSet();
+      if (scopes.contains('admin')) return 'admin';
+      if (scopes.contains('faculty')) return 'faculty';
+      if (scopes.contains('student')) return 'student';
+    }
+
+    final faculty = await Faculty.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(normalizedEmail),
+    );
+    if (faculty != null) return 'faculty';
+
+    final student = await Student.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(normalizedEmail),
+    );
+    if (student != null) return 'student';
+
+    return null;
+  }
+
+  Future<String?> adoptExistingAccountByEmail(
+    Session session, {
+    required String email,
+  }) async {
+    final authInfo = session.authenticated;
+    if (authInfo == null) {
+      throw Exception('Unauthorized');
+    }
+
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty) return null;
+
+    final authIdentifier = authInfo.userIdentifier.toString();
+    UserInfo? currentUserInfo = await UserInfo.db.findFirstRow(
+      session,
+      where: (t) => t.userIdentifier.equals(authIdentifier),
+    );
+    currentUserInfo ??= await UserInfo.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(normalizedEmail),
+    );
+    if (currentUserInfo == null) {
+      return null;
+    }
+
+    final resolvedRole = await getExistingAccountRoleByEmail(
+      session,
+      email: normalizedEmail,
+    );
+    if (resolvedRole == null) {
+      return null;
+    }
+
+    currentUserInfo.email = normalizedEmail;
+    await _syncRoleScope(session, currentUserInfo, role: resolvedRole);
+    await _ensureUserRole(session, currentUserInfo, role: resolvedRole);
+
+    if (resolvedRole == 'student') {
+      final student = await Student.db.findFirstRow(
+        session,
+        where: (t) => t.email.equals(normalizedEmail),
+      );
+      if (student != null) {
+        student.userInfoId = currentUserInfo.id!;
+        student.isActive = true;
+        student.updatedAt = DateTime.now();
+        await Student.db.updateRow(session, student);
+      }
+    } else if (resolvedRole == 'faculty' || resolvedRole == 'admin') {
+      final faculty = await Faculty.db.findFirstRow(
+        session,
+        where: (t) => t.email.equals(normalizedEmail),
+      );
+      if (faculty != null) {
+        faculty.userInfoId = currentUserInfo.id!;
+        faculty.isActive = true;
+        faculty.updatedAt = DateTime.now();
+        await Faculty.db.updateRow(session, faculty);
+      }
+    }
+
+    return resolvedRole;
   }
 }

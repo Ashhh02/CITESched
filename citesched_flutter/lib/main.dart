@@ -3,6 +3,7 @@ import 'package:citesched_flutter/core/theme/app_theme.dart';
 import 'package:citesched_flutter/features/auth/screens/root_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:serverpod_flutter/serverpod_flutter.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
@@ -14,11 +15,23 @@ var client = Client('http://$localhost:8083/')
 
 const _googleWebClientId =
     '787281029476-efu9h96a0libvk8o0ubhsluh7u09fnen.apps.googleusercontent.com';
+const _startupStorage = FlutterSecureStorage();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await client.auth.initialize();
+  try {
+    await client.auth.initialize();
+  } catch (e) {
+    debugPrint('Recovering from invalid stored auth session: $e');
+    try {
+      await _startupStorage.deleteAll();
+    } catch (_) {}
+    try {
+      await client.auth.signOutDevice();
+    } catch (_) {}
+    await client.auth.initialize();
+  }
   await client.auth.initializeGoogleSignIn(
     clientId: _googleWebClientId,
   );

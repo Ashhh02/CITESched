@@ -27,11 +27,22 @@ class TimetableEndpoint extends Endpoint {
       where: (t) => t.userIdentifier.equals(userIdentifier),
     );
     if (linkedUserInfo?.id != null) {
+      final resolvedLinkedUserInfo = linkedUserInfo!;
       final byLinkedUserInfo = await Student.db.findFirstRow(
         session,
-        where: (t) => t.userInfoId.equals(linkedUserInfo!.id!),
+        where: (t) => t.userInfoId.equals(resolvedLinkedUserInfo.id!),
       );
       if (byLinkedUserInfo != null) return byLinkedUserInfo;
+
+      final linkedEmail =
+          (resolvedLinkedUserInfo.email ?? '').trim().toLowerCase();
+      if (linkedEmail.isNotEmpty) {
+        final byLinkedEmail = await Student.db.findFirstRow(
+          session,
+          where: (t) => t.email.equals(linkedEmail),
+        );
+        if (byLinkedEmail != null) return byLinkedEmail;
+      }
     }
 
     return await Student.db.findFirstRow(
@@ -60,11 +71,22 @@ class TimetableEndpoint extends Endpoint {
       where: (t) => t.userIdentifier.equals(userIdentifier),
     );
     if (linkedUserInfo?.id != null) {
+      final resolvedLinkedUserInfo = linkedUserInfo!;
       final byLinkedUserInfo = await Faculty.db.findFirstRow(
         session,
-        where: (t) => t.userInfoId.equals(linkedUserInfo!.id!),
+        where: (t) => t.userInfoId.equals(resolvedLinkedUserInfo.id!),
       );
       if (byLinkedUserInfo != null) return byLinkedUserInfo;
+
+      final linkedEmail =
+          (resolvedLinkedUserInfo.email ?? '').trim().toLowerCase();
+      if (linkedEmail.isNotEmpty) {
+        final byLinkedEmail = await Faculty.db.findFirstRow(
+          session,
+          where: (t) => t.email.equals(linkedEmail),
+        );
+        if (byLinkedEmail != null) return byLinkedEmail;
+      }
     }
 
     return await Faculty.db.findFirstRow(
@@ -152,12 +174,21 @@ class TimetableEndpoint extends Endpoint {
       throw Exception('Authentication required');
     }
 
-    // Check scopes/roles to determine if Student or Faculty
     final scopes = authInfo.scopes;
     if (scopes.contains(AppScopes.student)) {
       return await _getStudentPersonalSchedule(session, authInfo);
     }
     if (scopes.contains(AppScopes.faculty)) {
+      return await _getFacultyPersonalSchedule(session, authInfo);
+    }
+
+    final student = await _findCurrentStudent(session, authInfo);
+    if (student != null) {
+      return await _getStudentPersonalSchedule(session, authInfo);
+    }
+
+    final faculty = await _findCurrentFaculty(session, authInfo);
+    if (faculty != null) {
       return await _getFacultyPersonalSchedule(session, authInfo);
     }
 

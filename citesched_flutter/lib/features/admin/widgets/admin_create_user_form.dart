@@ -122,6 +122,9 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
         password: _passwordController.text,
         role: _selectedRole,
         studentId: isStudent ? _studentNumberController.text.trim() : null,
+        course: isStudent
+            ? (_selectedCourse ?? _courseController.text).trim().toUpperCase()
+            : null,
         section: isStudent && _sectionController.text.trim().isNotEmpty
             ? _normalizeSectionCode(_sectionController.text)
             : null,

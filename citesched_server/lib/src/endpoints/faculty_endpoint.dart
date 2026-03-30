@@ -1,7 +1,6 @@
 import 'package:serverpod/serverpod.dart';
 import 'package:serverpod_auth_server/serverpod_auth_server.dart';
 import '../generated/protocol.dart';
-import '../auth/scopes.dart';
 
 class FacultyEndpoint extends Endpoint {
   Future<Faculty?> _findCurrentFaculty(
@@ -24,11 +23,22 @@ class FacultyEndpoint extends Endpoint {
       where: (t) => t.userIdentifier.equals(userIdentifier),
     );
     if (linkedUserInfo?.id != null) {
+      final resolvedLinkedUserInfo = linkedUserInfo!;
       final byLinkedUserInfo = await Faculty.db.findFirstRow(
         session,
-        where: (f) => f.userInfoId.equals(linkedUserInfo!.id!),
+        where: (f) => f.userInfoId.equals(resolvedLinkedUserInfo.id!),
       );
       if (byLinkedUserInfo != null) return byLinkedUserInfo;
+
+      final linkedEmail =
+          (resolvedLinkedUserInfo.email ?? '').trim().toLowerCase();
+      if (linkedEmail.isNotEmpty) {
+        final byLinkedEmail = await Faculty.db.findFirstRow(
+          session,
+          where: (f) => f.email.equals(linkedEmail),
+        );
+        if (byLinkedEmail != null) return byLinkedEmail;
+      }
     }
 
     return await Faculty.db.findFirstRow(
@@ -38,7 +48,7 @@ class FacultyEndpoint extends Endpoint {
   }
 
   @override
-  Set<Scope> get requiredScopes => {AppScopes.faculty};
+  bool get requireLogin => true;
 
   /// Fetches the schedule for the logged-in faculty.
   Future<List<Schedule>> getMySchedule(Session session) async {

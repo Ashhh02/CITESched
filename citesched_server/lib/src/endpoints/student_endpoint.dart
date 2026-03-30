@@ -1,11 +1,10 @@
 import 'package:serverpod/serverpod.dart';
 import 'package:serverpod_auth_server/serverpod_auth_server.dart';
 
-import '../auth/scopes.dart';
 import '../generated/protocol.dart';
 
-/// Student-only endpoint for viewing schedules and managing own profile.
-/// Only users with the 'student' scope can access these methods.
+/// Student endpoint for viewing schedules and managing the logged-in user's
+/// linked student profile.
 class StudentEndpoint extends Endpoint {
   Future<Student?> _findCurrentStudent(
     Session session,
@@ -27,11 +26,22 @@ class StudentEndpoint extends Endpoint {
       where: (t) => t.userIdentifier.equals(userIdentifier),
     );
     if (linkedUserInfo?.id != null) {
+      final resolvedLinkedUserInfo = linkedUserInfo!;
       final byLinkedUserInfo = await Student.db.findFirstRow(
         session,
-        where: (t) => t.userInfoId.equals(linkedUserInfo!.id!),
+        where: (t) => t.userInfoId.equals(resolvedLinkedUserInfo.id!),
       );
       if (byLinkedUserInfo != null) return byLinkedUserInfo;
+
+      final linkedEmail =
+          (resolvedLinkedUserInfo.email ?? '').trim().toLowerCase();
+      if (linkedEmail.isNotEmpty) {
+        final byLinkedEmail = await Student.db.findFirstRow(
+          session,
+          where: (t) => t.email.equals(linkedEmail),
+        );
+        if (byLinkedEmail != null) return byLinkedEmail;
+      }
     }
 
     return await Student.db.findFirstRow(
@@ -41,7 +51,7 @@ class StudentEndpoint extends Endpoint {
   }
 
   @override
-  Set<Scope> get requiredScopes => {AppScopes.student};
+  bool get requireLogin => true;
 
   // ─── Schedule Viewing ────────────────────────────────────────────────
 

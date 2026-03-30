@@ -23,19 +23,21 @@ class AuthNotifier extends Notifier<UserInfo?> {
 
     // Check initial state
     if (client.auth.isAuthenticated) {
-      try {
-        final profile = await client.modules.serverpod_auth_core.userProfileInfo
-            .get();
-        final email = profile.email;
-        if (email != null && email.isNotEmpty) {
-          final userInfo = await client.setup.getUserInfoByEmail(email: email);
-          if (userInfo != null) {
-            state = userInfo;
-          }
-        }
-      } catch (e) {
-        print('Failed to fetch user info: $e');
+      await _refreshCurrentUser();
+    }
+  }
+
+  Future<void> _refreshCurrentUser() async {
+    try {
+      final profile = await client.modules.serverpod_auth_core.userProfileInfo
+          .get();
+      final email = profile.email?.trim().toLowerCase();
+      if (email != null && email.isNotEmpty) {
+        final userInfo = await client.setup.getUserInfoByEmail(email: email);
+        state = userInfo;
       }
+    } catch (e) {
+      print('Failed to fetch user info: $e');
     }
   }
 
@@ -43,9 +45,14 @@ class AuthNotifier extends Notifier<UserInfo?> {
     if (!client.auth.isAuthenticated) {
       _selectedRole = null;
       state = null;
+      return;
     }
-    // If authenticated, we rely on manual update or init to fetch info
-    // to avoid async issues in listener
+
+    _refreshCurrentUser();
+  }
+
+  Future<void> refreshCurrentUser() async {
+    await _refreshCurrentUser();
   }
 
   // Method to manually update user info (e.g., after custom login)
@@ -60,12 +67,17 @@ class AuthNotifier extends Notifier<UserInfo?> {
   String? get selectedRole => _selectedRole;
 
   Future<void> signOut() async {
-    await client.auth.signOutDevice();
+    try {
+      await client.auth.disconnectGoogleAccount();
+    } catch (_) {
+      await client.auth.signOutDevice();
+    }
     _selectedRole = null;
     state = null;
   }
 
   bool get isSignedIn => state != null;
+  bool get hasActiveSession => client.auth.isAuthenticated;
 
   // Helper to check roles (can be expanded later)
   bool get isAdmin => state?.scopeNames.contains('admin') ?? false;

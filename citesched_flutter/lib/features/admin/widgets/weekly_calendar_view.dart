@@ -859,6 +859,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
     ].join(' - ');
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         FittedBox(
@@ -868,23 +869,23 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               fontWeight: FontWeight.w800,
-              fontSize: 11,
+              fontSize: 10,
               color: isStudentView ? Colors.black : Colors.white,
             ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(
           classType,
           textAlign: TextAlign.center,
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
-            fontSize: 10,
+            fontSize: 9,
             color: isStudentView ? Colors.black87 : Colors.white70,
             letterSpacing: 0.8,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Flexible(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -896,20 +897,22 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w700,
-                  fontSize: 11,
+                  fontSize: 10,
                   color: isStudentView ? Colors.black : Colors.white,
+                  height: 1.0,
                 ),
               ),
               Text(
                 subjectLine.isEmpty ? 'Subject TBA' : subjectLine,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
-                  fontSize: 10,
+                  fontSize: 9,
                   fontWeight: FontWeight.w600,
                   color: isStudentView
                       ? Colors.black87
                       : Colors.white.withOpacity(0.85),
+                  height: 1.0,
                 ),
               ),
               Text(
@@ -917,8 +920,9 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
-                  fontSize: 9,
+                  fontSize: 8,
                   color: isStudentView ? Colors.black87 : Colors.white70,
+                  height: 1.0,
                 ),
               ),
               Text(
@@ -926,8 +930,9 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
-                  fontSize: 9,
+                  fontSize: 8,
                   color: isStudentView ? Colors.black87 : Colors.white70,
+                  height: 1.0,
                 ),
               ),
             ],

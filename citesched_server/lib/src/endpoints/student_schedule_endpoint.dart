@@ -23,11 +23,22 @@ class StudentScheduleEndpoint extends Endpoint {
       where: (t) => t.userIdentifier.equals(userIdentifier),
     );
     if (linkedUserInfo?.id != null) {
+      final resolvedLinkedUserInfo = linkedUserInfo!;
       final byLinkedUserInfo = await Student.db.findFirstRow(
         session,
-        where: (t) => t.userInfoId.equals(linkedUserInfo!.id!),
+        where: (t) => t.userInfoId.equals(resolvedLinkedUserInfo.id!),
       );
       if (byLinkedUserInfo != null) return byLinkedUserInfo;
+
+      final linkedEmail =
+          (resolvedLinkedUserInfo.email ?? '').trim().toLowerCase();
+      if (linkedEmail.isNotEmpty) {
+        final byLinkedEmail = await Student.db.findFirstRow(
+          session,
+          where: (t) => t.email.equals(linkedEmail),
+        );
+        if (byLinkedEmail != null) return byLinkedEmail;
+      }
     }
 
     return await Student.db.findFirstRow(

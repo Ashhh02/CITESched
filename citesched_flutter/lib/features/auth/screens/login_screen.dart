@@ -1,6 +1,7 @@
 import 'package:citesched_flutter/main.dart'; // Import for client access
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
+import 'package:citesched_client/citesched_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  static const List<String> _allowedCourses = ['BSIT', 'BSEMC'];
   final _idController = TextEditingController();
   final _passwordController = TextEditingController();
   final _secureStorage = const FlutterSecureStorage();
@@ -85,10 +87,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         print('Login Successful. KeyID: ${result.keyId}, Key: ${result.key}');
         print('UserInfo: ${result.userInfo}');
 
-        // Create a fake UUID from the integer keyId to satisfy AuthSuccess (v3) requirements
-        // userIdentifier is not strictly used for session key validation in some configs
+        // Create a syntactically valid RFC4122 UUID from the integer keyId so
+        // the auth session can be serialized safely on web.
         var fakeUuid = UuidValue.fromString(
-          "00000000-0000-0000-0000-${result.keyId.toString().padLeft(12, '0')}",
+          "00000000-0000-4000-8000-${result.keyId.toString().padLeft(12, '0')}",
         );
 
         // Serverpod typically expects "keyId:key" as the token for integer-based IDs
@@ -143,13 +145,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleGoogleAuthenticated() async {
+    final authNotifier = ref.read(authProvider.notifier);
     try {
+      authNotifier.updateUserInfo(null);
+      authNotifier.setSelectedRole(null);
+
       final profile = await client.modules.serverpod_auth_core.userProfileInfo
           .get();
       final email = profile.email;
       final displayName = profile.fullName ?? profile.userName;
 
-      final authNotifier = ref.read(authProvider.notifier);
       final userInfo = await _loadUserInfoByEmail(email);
       final selectedRole = await _resolveGoogleRoleSelection(
         userInfo: userInfo,
@@ -162,6 +167,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return;
       }
 
+      await authNotifier.refreshCurrentUser();
       authNotifier.setSelectedRole(selectedRole);
     } catch (e) {
       if (mounted) {
@@ -169,7 +175,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _errorMessage = e.toString();
         });
       }
-      await _signOutAfterGoogle(ref.read(authProvider.notifier));
+      await _signOutAfterGoogle(authNotifier);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -193,7 +199,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final effectiveEmail = details['email'] ?? email ?? '';
     final studentId = details['studentId'];
     final facultyId = details['facultyId'];
+    final course = details['course'];
     final section = details['section'];
+    final maxLoad = int.tryParse(details['maxLoad'] ?? '');
+    final employmentStatus = details['employmentStatus'];
+    final shiftPreference = details['shiftPreference'];
+    final program = details['program'];
 
     if (name.trim().isEmpty || effectiveEmail.trim().isEmpty) {
       return false;
@@ -208,8 +219,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       role: role,
       studentId: studentId?.trim().isEmpty == true ? null : studentId?.trim(),
       facultyId: facultyId?.trim().isEmpty == true ? null : facultyId?.trim(),
+      course: role == 'student' ? course?.trim().toUpperCase() : null,
       section: section?.trim().isEmpty == true ? null : section?.trim(),
+      maxLoad: role == 'faculty' ? maxLoad : null,
+      employmentStatus: role == 'faculty' ? employmentStatus : null,
+      shiftPreference: role == 'faculty' ? shiftPreference : null,
+      program: role == 'faculty' ? program : null,
     );
+  }
+
+  String _normalizeSectionCode(String input) {
+    final match = RegExp(
+      r'^\s*(\d+)\s*([A-Za-z][A-Za-z0-9]*)\s*$',
+    ).firstMatch(input);
+    if (match == null) return input.trim().toUpperCase();
+    final year = match.group(1)!;
+    final suffix = match.group(2)!.toUpperCase();
+    return '$year$suffix';
+  }
+
+  int? _extractYearLevelFromSection(String input) {
+    final match = RegExp(
+      r'^\s*(\d+)\s*[A-Za-z][A-Za-z0-9]*\s*$',
+    ).firstMatch(input);
+    if (match == null) return null;
+    return int.tryParse(match.group(1)!);
   }
 
   Future<Map<String, String>?> _showRoleDetailsDialog(
@@ -217,114 +251,551 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     String? email,
     String? displayName,
   }) {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: displayName ?? '');
     final emailController = TextEditingController(text: email ?? '');
     final idController = TextEditingController();
     final sectionController = TextEditingController();
+    final maxLoadController = TextEditingController(text: '21');
 
     return showDialog<Map<String, String>>(
       context: context,
       barrierDismissible: false,
       builder: (context) {
         final isStudent = role == 'student';
-        final accentColor = isStudent
-            ? _studentColorLight
+        final primaryPurple = isStudent
+            ? const Color(0xFF720045)
             : _facultyColorLight;
+        const bgBody = Color(0xFFEEF1F6);
+        const textPrimary = Color(0xFF333333);
+        const textMuted = Color(0xFF666666);
+        String selectedCourse = _allowedCourses.first;
+        EmploymentStatus selectedEmploymentStatus = EmploymentStatus.fullTime;
+        FacultyShiftPreference selectedShiftPreference =
+            FacultyShiftPreference.any;
+        Program selectedProgram = Program.it;
 
-        InputDecoration fieldDecoration(String label, IconData icon) {
+        InputDecoration fieldDecoration(String hint) {
           return InputDecoration(
-            labelText: label,
-            prefixIcon: Icon(icon, size: 20),
+            hintText: hint,
+            hintStyle: GoogleFonts.poppins(
+              color: textMuted.withValues(alpha: 0.6),
+              fontSize: 14,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
             filled: true,
-            fillColor: Colors.grey.shade50,
+            fillColor: bgBody,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: accentColor, width: 1.4),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: primaryPurple, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 1.5),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
             ),
           );
         }
 
-        return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          backgroundColor: Colors.transparent,
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 520),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.16),
-                  blurRadius: 36,
-                  offset: const Offset(0, 18),
-                ),
-              ],
-            ),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(28),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          accentColor,
-                          accentColor.withValues(alpha: 0.78),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(22),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Dialog(
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 32,
+              ),
+              backgroundColor: Colors.transparent,
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 560),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(19),
+                  border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryPurple.withValues(alpha: 0.15),
+                      blurRadius: 30,
+                      offset: const Offset(0, 15),
                     ),
-                    child: Row(
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Container(
-                          height: 52,
-                          width: 52,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.16),
-                            shape: BoxShape.circle,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 28,
+                            vertical: 24,
                           ),
-                          child: Icon(
-                            isStudent ? Icons.school_rounded : Icons.badge_rounded,
-                            color: Colors.white,
-                            size: 26,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                primaryPurple,
+                                isStudent
+                                    ? const Color(0xFFb5179e)
+                                    : const Color(0xFF7C3AED),
+                              ],
+                            ),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(19),
+                            ),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.1),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  isStudent
+                                      ? Icons.school_rounded
+                                      : Icons.badge_rounded,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _roleDetailsTitle(role),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      isStudent
+                                          ? 'Complete your student profile once so future Google sign-ins go straight in.'
+                                          : 'Complete your faculty profile once so future Google sign-ins go straight in.',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: Colors.white.withValues(
+                                          alpha: 0.85,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
+                        Padding(
+                          padding: const EdgeInsets.all(28),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                _roleDetailsTitle(role),
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w700,
+                              if (isStudent) ...[
+                                _buildModalLabel(
+                                  'Student Number',
+                                  Icons.badge_rounded,
                                 ),
+                                TextFormField(
+                                  controller: idController,
+                                  decoration: fieldDecoration('107690'),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15,
+                                    color: textPrimary,
+                                  ),
+                                  validator: (value) =>
+                                      value == null || value.trim().isEmpty
+                                      ? 'Required'
+                                      : null,
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+                              _buildModalLabel(
+                                'Full Name',
+                                Icons.person_outline_rounded,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                isStudent
-                                    ? 'Complete your student profile once so future Google sign-ins go straight in.'
-                                    : 'Complete your faculty profile once so future Google sign-ins go straight in.',
+                              TextFormField(
+                                controller: nameController,
+                                decoration: fieldDecoration('Nash Andrew'),
                                 style: GoogleFonts.poppins(
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  fontSize: 12,
-                                  height: 1.4,
+                                  fontSize: 15,
+                                  color: textPrimary,
                                 ),
+                                validator: (value) =>
+                                    value == null || value.trim().isEmpty
+                                    ? 'Required'
+                                    : null,
+                              ),
+                              const SizedBox(height: 20),
+                              _buildModalLabel(
+                                'JMC Account or Any Email',
+                                Icons.email_outlined,
+                              ),
+                              TextFormField(
+                                controller: emailController,
+                                decoration: fieldDecoration(
+                                  'nash.cabillon@jmc.edu.ph',
+                                ),
+                                keyboardType: TextInputType.emailAddress,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 15,
+                                  color: textPrimary,
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Required';
+                                  }
+                                  if (!value.contains('@')) {
+                                    return 'Invalid email';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              if (isStudent) ...[
+                                const SizedBox(height: 20),
+                                _buildModalLabel(
+                                  'Course',
+                                  Icons.school_outlined,
+                                ),
+                                DropdownButtonFormField<String>(
+                                  initialValue: selectedCourse,
+                                  decoration: fieldDecoration('Select program'),
+                                  items: _allowedCourses
+                                      .map(
+                                        (course) => DropdownMenuItem<String>(
+                                          value: course,
+                                          child: Text(
+                                            course,
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 15,
+                                              color: textPrimary,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    setModalState(() {
+                                      selectedCourse = value;
+                                    });
+                                  },
+                                  validator: (value) =>
+                                      value == null || value.isEmpty
+                                      ? 'Required'
+                                      : null,
+                                ),
+                                const SizedBox(height: 20),
+                                _buildModalLabel(
+                                  'Year & Section',
+                                  Icons.group_rounded,
+                                ),
+                                TextFormField(
+                                  controller: sectionController,
+                                  decoration: fieldDecoration(
+                                    'e.g. 3A, 3B, 2A, 2B',
+                                  ),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15,
+                                    color: textPrimary,
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Required';
+                                    }
+                                    final normalized = _normalizeSectionCode(
+                                      value,
+                                    );
+                                    if (_extractYearLevelFromSection(
+                                          normalized,
+                                        ) ==
+                                        null) {
+                                      return 'Use format like 3A, 3B, 2A, 2B';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ] else ...[
+                                const SizedBox(height: 20),
+                                _buildModalLabel(
+                                  'Faculty ID',
+                                  Icons.badge_rounded,
+                                ),
+                                TextFormField(
+                                  controller: idController,
+                                  decoration: fieldDecoration('Faculty ID'),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15,
+                                    color: textPrimary,
+                                  ),
+                                  validator: (value) =>
+                                      value == null || value.trim().isEmpty
+                                      ? 'Required'
+                                      : null,
+                                ),
+                                const SizedBox(height: 20),
+                                _buildModalLabel(
+                                  'Max Loads (hours)',
+                                  Icons.access_time_rounded,
+                                ),
+                                TextFormField(
+                                  controller: maxLoadController,
+                                  decoration: fieldDecoration('21'),
+                                  keyboardType: TextInputType.number,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15,
+                                    color: textPrimary,
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Required';
+                                    }
+                                    if (int.tryParse(value.trim()) == null) {
+                                      return 'Invalid number';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 24),
+                                _buildModalLabel(
+                                  'Employment Status',
+                                  Icons.work_outline_rounded,
+                                ),
+                                DropdownButtonFormField<EmploymentStatus>(
+                                  initialValue: selectedEmploymentStatus,
+                                  decoration: fieldDecoration('Select Status'),
+                                  items: EmploymentStatus.values
+                                      .map(
+                                        (status) =>
+                                            DropdownMenuItem<EmploymentStatus>(
+                                              value: status,
+                                              child: Text(
+                                                status ==
+                                                        EmploymentStatus
+                                                            .fullTime
+                                                    ? 'Full-Time'
+                                                    : 'Part-Time',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 15,
+                                                  color: textPrimary,
+                                                ),
+                                              ),
+                                            ),
+                                      )
+                                      .toList(),
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    setModalState(() {
+                                      selectedEmploymentStatus = value;
+                                    });
+                                  },
+                                  validator: (value) =>
+                                      value == null ? 'Required' : null,
+                                ),
+                                const SizedBox(height: 20),
+                                _buildModalLabel(
+                                  'Shift Preference',
+                                  Icons.schedule_rounded,
+                                ),
+                                DropdownButtonFormField<FacultyShiftPreference>(
+                                  initialValue: selectedShiftPreference,
+                                  decoration: fieldDecoration('Select Shift'),
+                                  items: FacultyShiftPreference.values
+                                      .map(
+                                        (pref) =>
+                                            DropdownMenuItem<
+                                              FacultyShiftPreference
+                                            >(
+                                              value: pref,
+                                              child: Text(
+                                                switch (pref) {
+                                                  FacultyShiftPreference.any =>
+                                                    'Any Time (Flexible)',
+                                                  FacultyShiftPreference
+                                                          .morning =>
+                                                    'Morning (7:00 AM to 12:00 PM)',
+                                                  FacultyShiftPreference
+                                                          .afternoon =>
+                                                    'Afternoon (1:00 PM to 6:00 PM)',
+                                                  FacultyShiftPreference
+                                                          .evening =>
+                                                    'Evening (6:00 PM to 9:00 PM)',
+                                                  FacultyShiftPreference
+                                                          .custom =>
+                                                    'Custom',
+                                                },
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 15,
+                                                  color: textPrimary,
+                                                ),
+                                              ),
+                                            ),
+                                      )
+                                      .toList(),
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    setModalState(() {
+                                      selectedShiftPreference = value;
+                                    });
+                                  },
+                                  validator: (value) =>
+                                      value == null ? 'Required' : null,
+                                ),
+                                const SizedBox(height: 24),
+                                _buildModalLabel(
+                                  'Program Assignment',
+                                  Icons.school_outlined,
+                                ),
+                                DropdownButtonFormField<Program>(
+                                  initialValue: selectedProgram,
+                                  decoration: fieldDecoration('Select Program'),
+                                  items: Program.values
+                                      .map(
+                                        (program) => DropdownMenuItem<Program>(
+                                          value: program,
+                                          child: Text(
+                                            program.name.toUpperCase(),
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 15,
+                                              color: textPrimary,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    setModalState(() {
+                                      selectedProgram = value;
+                                    });
+                                  },
+                                  validator: (value) =>
+                                      value == null ? 'Required' : null,
+                                ),
+                              ],
+                              const SizedBox(height: 32),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: textMuted,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          side: BorderSide(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Cancel',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 2,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        if (!formKey.currentState!.validate()) {
+                                          return;
+                                        }
+
+                                        final normalizedSection = isStudent
+                                            ? _normalizeSectionCode(
+                                                sectionController.text,
+                                              )
+                                            : '';
+
+                                        Navigator.pop(context, {
+                                          'name': nameController.text.trim(),
+                                          'email': emailController.text.trim(),
+                                          'studentId': isStudent
+                                              ? idController.text.trim()
+                                              : '',
+                                          'facultyId': isStudent
+                                              ? ''
+                                              : idController.text.trim(),
+                                          'course': isStudent
+                                              ? selectedCourse
+                                              : '',
+                                          'section': normalizedSection,
+                                          'maxLoad': isStudent
+                                              ? ''
+                                              : maxLoadController.text.trim(),
+                                          'employmentStatus': isStudent
+                                              ? ''
+                                              : selectedEmploymentStatus.name,
+                                          'shiftPreference': isStudent
+                                              ? ''
+                                              : selectedShiftPreference.name,
+                                          'program': isStudent
+                                              ? ''
+                                              : selectedProgram.name,
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: primaryPurple,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      child: Text(
+                                        isStudent
+                                            ? 'Complete Student Access'
+                                            : 'Complete Faculty Access',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -332,94 +803,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  TextField(
-                    controller: nameController,
-                    decoration: fieldDecoration(
-                      'Full Name',
-                      Icons.person_outline_rounded,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: emailController,
-                    decoration: fieldDecoration(
-                      'Email Address',
-                      Icons.alternate_email_rounded,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: idController,
-                    decoration: fieldDecoration(
-                      isStudent ? 'Student Number' : 'Faculty ID',
-                      isStudent
-                          ? Icons.badge_outlined
-                          : Icons.workspace_premium_outlined,
-                    ),
-                  ),
-                  if (isStudent) ...[
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: sectionController,
-                      decoration: fieldDecoration(
-                        'Section',
-                        Icons.groups_2_outlined,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: Text(
-                            'Cancel',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context, {
-                              'name': nameController.text,
-                              'email': emailController.text,
-                              'studentId': isStudent ? idController.text : '',
-                              'facultyId': isStudent ? '' : idController.text,
-                              'section': sectionController.text,
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: accentColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: Text(
-                            'Continue',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _buildModalLabel(String text, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFF333333).withValues(alpha: 0.7)),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF333333),
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1161,6 +1570,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return client.setup.getUserInfoByEmail(email: email);
   }
 
+  Future<String?> _loadExistingRoleByEmail(String? email) async {
+    final normalizedEmail = email?.trim();
+    if (normalizedEmail == null || normalizedEmail.isEmpty) {
+      return null;
+    }
+
+    final role = await client.setup.getExistingAccountRoleByEmail(
+      email: normalizedEmail,
+    );
+    if (role == null) {
+      return null;
+    }
+
+    final normalizedRole = role.trim().toLowerCase();
+    if (normalizedRole == 'admin' ||
+        normalizedRole == 'faculty' ||
+        normalizedRole == 'student') {
+      return normalizedRole;
+    }
+
+    return null;
+  }
+
+  Future<String?> _adoptExistingGoogleAccount(String? email) async {
+    final normalizedEmail = email?.trim();
+    if (normalizedEmail == null || normalizedEmail.isEmpty) {
+      return null;
+    }
+
+    try {
+      return await client.setup.adoptExistingAccountByEmail(
+        email: normalizedEmail,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<String?> _loadRememberedGoogleRole(String? email) async {
     final normalizedEmail = email?.trim().toLowerCase();
     if (normalizedEmail == null || normalizedEmail.isEmpty) {
@@ -1191,8 +1638,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _signOutAfterGoogle(AuthNotifier authNotifier) async {
-    await client.auth.signOutDevice();
-    authNotifier.updateUserInfo(null);
+    await authNotifier.signOut();
+  }
+
+  Future<String> _finalizeResolvedGoogleRole(
+    String resolvedRole, {
+    required UserInfo? userInfo,
+    required String? email,
+    required AuthNotifier authNotifier,
+  }) async {
+    final resolvedUserInfo = userInfo ?? await _loadUserInfoByEmail(email);
+    if (resolvedUserInfo != null) {
+      authNotifier.updateUserInfo(resolvedUserInfo);
+    }
+    await _rememberGoogleRole(email, resolvedRole);
+    return resolvedRole;
   }
 
   Future<String?> _resolveGoogleRoleSelection({
@@ -1201,21 +1661,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     required String? displayName,
     required AuthNotifier authNotifier,
   }) async {
-    final existingRole = await _resolveExistingGoogleRole(userInfo);
-    final rememberedRole = await _loadRememberedGoogleRole(email);
-    final resolvedRole = existingRole ??
-        ((rememberedRole != null &&
-                (userInfo?.scopeNames.contains(rememberedRole) ?? true))
-            ? rememberedRole
-            : null);
+    final adoptedRole = await _adoptExistingGoogleAccount(email);
+    final roleFromEmail = adoptedRole ?? await _loadExistingRoleByEmail(email);
+    final existingRole =
+        roleFromEmail ?? await _resolveExistingGoogleRole(userInfo);
 
-    if (resolvedRole != null) {
-      final resolvedUserInfo = userInfo ?? await _loadUserInfoByEmail(email);
-      if (resolvedUserInfo != null) {
-        authNotifier.updateUserInfo(resolvedUserInfo);
-      }
-      await _rememberGoogleRole(email, resolvedRole);
-      return resolvedRole;
+    if (existingRole == 'admin') {
+      return _finalizeResolvedGoogleRole(
+        existingRole!,
+        userInfo: userInfo,
+        email: email,
+        authNotifier: authNotifier,
+      );
     }
 
     final selectedRole = await _showRoleSelectionDialog();
@@ -1243,6 +1700,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (refreshedInfo == null) {
       throw Exception('Unable to refresh user info after setup.');
     }
+    await _adoptExistingGoogleAccount(resolvedEmail);
     await _rememberGoogleRole(resolvedEmail, selectedRole);
     authNotifier.updateUserInfo(refreshedInfo);
     return selectedRole;

@@ -13,8 +13,54 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
 import 'package:citesched_flutter/core/widgets/full_screen_calendar_scaffold.dart';
 
+final currentSignedInEmailProvider = FutureProvider<String?>((ref) async {
+  try {
+    final liveProfile = await client.modules.serverpod_auth_core.userProfileInfo
+        .get();
+    final email = liveProfile.email?.trim().toLowerCase();
+    if (email != null && email.isNotEmpty) {
+      return email;
+    }
+  } catch (_) {}
+
+  final fallbackEmail = ref.watch(authProvider)?.email?.trim().toLowerCase();
+  if (fallbackEmail == null || fallbackEmail.isEmpty) {
+    return null;
+  }
+  return fallbackEmail;
+});
+
+final currentSignedInNameProvider = FutureProvider<String?>((ref) async {
+  try {
+    final liveProfile = await client.modules.serverpod_auth_core.userProfileInfo
+        .get();
+    final liveName = (liveProfile.fullName ?? liveProfile.userName)?.trim();
+    if (liveName != null && liveName.isNotEmpty) {
+      return liveName;
+    }
+  } catch (_) {}
+
+  final fallbackName = ref.watch(authProvider)?.userName?.trim();
+  if (fallbackName == null || fallbackName.isEmpty) {
+    return null;
+  }
+  return fallbackName;
+});
+
 final myProfileProvider = FutureProvider<Student?>((ref) async {
-  return await client.student.getMyProfile();
+  try {
+    final profile = await client.student.getMyProfile();
+    if (profile != null) {
+      return profile;
+    }
+  } catch (_) {}
+
+  final email = await ref.watch(currentSignedInEmailProvider.future);
+  if (email == null || email.isEmpty) {
+    return null;
+  }
+
+  return await client.setup.getStudentProfileByEmail(email: email);
 });
 
 final myScheduleProvider = FutureProvider<List<ScheduleInfo>>((ref) async {
@@ -29,6 +75,7 @@ class StudentDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheduleAsync = ref.watch(myScheduleProvider);
     final profileAsync = ref.watch(myProfileProvider);
+    final signedInNameAsync = ref.watch(currentSignedInNameProvider);
     final historyAsync = ref.watch(chatHistoryProvider(20));
     final user = ref.watch(authProvider);
     final isMobile = ResponsiveHelper.isMobile(context);
@@ -138,8 +185,9 @@ class StudentDashboardScreen extends ConsumerWidget {
                                             ),
                                           ),
                                           const SizedBox(height: 4),
-                                          Text(
+                                        Text(
                                             profileAsync.value?.name ??
+                                                signedInNameAsync.value ??
                                                 user?.userName ??
                                                 'Student',
                                             maxLines: 2,
@@ -250,6 +298,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                                       const SizedBox(height: 4),
                                       Text(
                                         profileAsync.value?.name ??
+                                            signedInNameAsync.value ??
                                             user?.userName ??
                                             'Student',
                                         style: GoogleFonts.poppins(

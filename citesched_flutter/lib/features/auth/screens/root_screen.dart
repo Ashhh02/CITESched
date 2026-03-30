@@ -15,6 +15,17 @@ class RootScreen extends ConsumerWidget {
     final authNotifier = ref.read(authProvider.notifier);
     final selectedRole = authNotifier.selectedRole;
 
+    // If the session is authenticated but user info is still refreshing,
+    // keep the user on a lightweight loading state instead of bouncing
+    // them back to the login screen.
+    if (authState == null && authNotifier.hasActiveSession) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     // If not signed in, show login
     if (authState == null) {
       return const LoginScreen();

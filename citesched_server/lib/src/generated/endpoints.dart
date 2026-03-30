@@ -1449,8 +1449,33 @@ class Endpoints extends _i1.EndpointDispatch {
               type: _i1.getType<String?>(),
               nullable: true,
             ),
+            'course': _i1.ParameterDescription(
+              name: 'course',
+              type: _i1.getType<String?>(),
+              nullable: true,
+            ),
             'section': _i1.ParameterDescription(
               name: 'section',
+              type: _i1.getType<String?>(),
+              nullable: true,
+            ),
+            'maxLoad': _i1.ParameterDescription(
+              name: 'maxLoad',
+              type: _i1.getType<int?>(),
+              nullable: true,
+            ),
+            'employmentStatus': _i1.ParameterDescription(
+              name: 'employmentStatus',
+              type: _i1.getType<String?>(),
+              nullable: true,
+            ),
+            'shiftPreference': _i1.ParameterDescription(
+              name: 'shiftPreference',
+              type: _i1.getType<String?>(),
+              nullable: true,
+            ),
+            'program': _i1.ParameterDescription(
+              name: 'program',
               type: _i1.getType<String?>(),
               nullable: true,
             ),
@@ -1468,7 +1493,12 @@ class Endpoints extends _i1.EndpointDispatch {
                     role: params['role'],
                     studentId: params['studentId'],
                     facultyId: params['facultyId'],
+                    course: params['course'],
                     section: params['section'],
+                    maxLoad: params['maxLoad'],
+                    employmentStatus: params['employmentStatus'],
+                    shiftPreference: params['shiftPreference'],
+                    program: params['program'],
                   ),
         ),
         'getUserInfoByEmail': _i1.MethodConnector(
@@ -1486,6 +1516,63 @@ class Endpoints extends _i1.EndpointDispatch {
                 Map<String, dynamic> params,
               ) async =>
                   (endpoints['setup'] as _i11.SetupEndpoint).getUserInfoByEmail(
+                    session,
+                    email: params['email'],
+                  ),
+        ),
+        'getStudentProfileByEmail': _i1.MethodConnector(
+          name: 'getStudentProfileByEmail',
+          params: {
+            'email': _i1.ParameterDescription(
+              name: 'email',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['setup'] as _i11.SetupEndpoint)
+                  .getStudentProfileByEmail(
+                    session,
+                    email: params['email'],
+                  ),
+        ),
+        'getExistingAccountRoleByEmail': _i1.MethodConnector(
+          name: 'getExistingAccountRoleByEmail',
+          params: {
+            'email': _i1.ParameterDescription(
+              name: 'email',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['setup'] as _i11.SetupEndpoint)
+                  .getExistingAccountRoleByEmail(
+                    session,
+                    email: params['email'],
+                  ),
+        ),
+        'adoptExistingAccountByEmail': _i1.MethodConnector(
+          name: 'adoptExistingAccountByEmail',
+          params: {
+            'email': _i1.ParameterDescription(
+              name: 'email',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['setup'] as _i11.SetupEndpoint)
+                  .adoptExistingAccountByEmail(
                     session,
                     email: params['email'],
                   ),

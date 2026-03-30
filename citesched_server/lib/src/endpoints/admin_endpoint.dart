@@ -254,9 +254,69 @@ class AdminEndpoint extends Endpoint {
     Session session, {
     bool isActive = true,
   }) async {
-    return await Faculty.db.find(
+    final faculty = await Faculty.db.find(
       session,
       where: (t) => t.isActive.equals(isActive),
+    );
+
+    if (!isActive) return faculty;
+
+    final allFacultyRows = await Faculty.db.find(session);
+    final presentUserInfoIds = allFacultyRows.map((f) => f.userInfoId).toSet();
+    final roleRows = await UserRole.db.find(
+      session,
+      where: (t) => t.role.equals('faculty') | t.role.equals('admin'),
+    );
+    final missingRoleUserIds = roleRows
+        .map((row) => int.tryParse(row.userId))
+        .whereType<int>()
+        .where((id) => !presentUserInfoIds.contains(id))
+        .toList();
+
+    if (missingRoleUserIds.isNotEmpty) {
+      final missingRoleUserIdSet = missingRoleUserIds.toSet();
+      final fallbackUserInfos = await UserInfo.db.find(
+        session,
+        where: (t) => t.id.inSet(missingRoleUserIdSet),
+      );
+
+      for (final userInfo in fallbackUserInfos) {
+        if (userInfo.blocked || userInfo.id == null) continue;
+
+        final normalizedEmail =
+            (userInfo.email ?? userInfo.userIdentifier).trim().toLowerCase();
+        final existingFaculty = await Faculty.db.findFirstRow(
+          session,
+          where: (t) =>
+              t.userInfoId.equals(userInfo.id!) | t.email.equals(normalizedEmail),
+        );
+
+        if (existingFaculty != null) {
+          continue;
+        }
+
+        await Faculty.db.insertRow(
+          session,
+          Faculty(
+            name: userInfo.userName ?? normalizedEmail,
+            email: normalizedEmail,
+            maxLoad: 21,
+            employmentStatus: EmploymentStatus.fullTime,
+            shiftPreference: FacultyShiftPreference.any,
+            facultyId: userInfo.userIdentifier,
+            userInfoId: userInfo.id!,
+            program: Program.it,
+            isActive: true,
+            createdAt: userInfo.created,
+            updatedAt: DateTime.now(),
+          ),
+        );
+      }
+    }
+
+    return await Faculty.db.find(
+      session,
+      where: (t) => t.isActive.equals(true),
     );
   }
 
@@ -278,7 +338,9 @@ class AdminEndpoint extends Endpoint {
       session,
       where: (t) => t.email.equals(faculty.email),
     );
-    if (emailConflict != null && emailConflict.id != faculty.id) {
+    if (emailConflict != null &&
+        emailConflict.id != faculty.id &&
+        emailConflict.userInfoId != faculty.userInfoId) {
       throw Exception('Faculty with email ${faculty.email} already exists');
     }
 
@@ -439,7 +501,63 @@ class AdminEndpoint extends Endpoint {
       }
     }
 
-    return students;
+    if (!isActive) return students;
+
+    final allStudentRows = await Student.db.find(session);
+    final presentUserInfoIds = allStudentRows.map((s) => s.userInfoId).toSet();
+    final roleRows = await UserRole.db.find(
+      session,
+      where: (t) => t.role.equals('student'),
+    );
+    final missingRoleUserIds = roleRows
+        .map((row) => int.tryParse(row.userId))
+        .whereType<int>()
+        .where((id) => !presentUserInfoIds.contains(id))
+        .toList();
+
+    if (missingRoleUserIds.isNotEmpty) {
+      final missingRoleUserIdSet = missingRoleUserIds.toSet();
+      final fallbackUserInfos = await UserInfo.db.find(
+        session,
+        where: (t) => t.id.inSet(missingRoleUserIdSet),
+      );
+
+      for (final userInfo in fallbackUserInfos) {
+        if (userInfo.blocked || userInfo.id == null) continue;
+
+        final normalizedEmail =
+            (userInfo.email ?? userInfo.userIdentifier).trim().toLowerCase();
+        final existingStudent = await Student.db.findFirstRow(
+          session,
+          where: (t) =>
+              t.userInfoId.equals(userInfo.id!) | t.email.equals(normalizedEmail),
+        );
+
+        if (existingStudent != null) {
+          continue;
+        }
+
+        await Student.db.insertRow(
+          session,
+          Student(
+            name: userInfo.userName ?? normalizedEmail,
+            email: normalizedEmail,
+            studentNumber: userInfo.userIdentifier,
+            course: 'BSIT',
+            yearLevel: 1,
+            userInfoId: userInfo.id!,
+            isActive: true,
+            createdAt: userInfo.created,
+            updatedAt: DateTime.now(),
+          ),
+        );
+      }
+    }
+
+    return await Student.db.find(
+      session,
+      where: (t) => t.isActive.equals(true),
+    );
   }
 
   /// Update a student with validation and section synchronization.
@@ -460,7 +578,9 @@ class AdminEndpoint extends Endpoint {
       session,
       where: (t) => t.email.equals(student.email),
     );
-    if (emailConflict != null && emailConflict.id != student.id) {
+    if (emailConflict != null &&
+        emailConflict.id != student.id &&
+        emailConflict.userInfoId != student.userInfoId) {
       throw Exception('Student with email ${student.email} already exists');
     }
 
@@ -469,7 +589,9 @@ class AdminEndpoint extends Endpoint {
       session,
       where: (t) => t.studentNumber.equals(student.studentNumber),
     );
-    if (numberConflict != null && numberConflict.id != student.id) {
+    if (numberConflict != null &&
+        numberConflict.id != student.id &&
+        numberConflict.userInfoId != student.userInfoId) {
       throw Exception(
         'Student with number ${student.studentNumber} already exists',
       );

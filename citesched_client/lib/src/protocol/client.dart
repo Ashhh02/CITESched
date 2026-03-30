@@ -877,7 +877,12 @@ class EndpointSetup extends _i2.EndpointRef {
     required String role,
     String? studentId,
     String? facultyId,
+    String? course,
     String? section,
+    int? maxLoad,
+    String? employmentStatus,
+    String? shiftPreference,
+    String? program,
   }) => caller.callServerEndpoint<bool>(
     'setup',
     'createAccount',
@@ -888,7 +893,12 @@ class EndpointSetup extends _i2.EndpointRef {
       'role': role,
       'studentId': studentId,
       'facultyId': facultyId,
+      'course': course,
       'section': section,
+      'maxLoad': maxLoad,
+      'employmentStatus': employmentStatus,
+      'shiftPreference': shiftPreference,
+      'program': program,
     },
   );
 
@@ -897,6 +907,27 @@ class EndpointSetup extends _i2.EndpointRef {
       caller.callServerEndpoint<_i24.UserInfo?>(
         'setup',
         'getUserInfoByEmail',
+        {'email': email},
+      );
+
+  _i3.Future<_i7.Student?> getStudentProfileByEmail({required String email}) =>
+      caller.callServerEndpoint<_i7.Student?>(
+        'setup',
+        'getStudentProfileByEmail',
+        {'email': email},
+      );
+
+  _i3.Future<String?> getExistingAccountRoleByEmail({required String email}) =>
+      caller.callServerEndpoint<String?>(
+        'setup',
+        'getExistingAccountRoleByEmail',
+        {'email': email},
+      );
+
+  _i3.Future<String?> adoptExistingAccountByEmail({required String email}) =>
+      caller.callServerEndpoint<String?>(
+        'setup',
+        'adoptExistingAccountByEmail',
         {'email': email},
       );
 }
