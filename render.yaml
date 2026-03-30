@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: citesched-server
+    runtime: docker
+    dockerfilePath: citesched_server/Dockerfile
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /startupz
+    envVars:
+      - key: SERVERPOD_DATABASE_PASSWORD
+        sync: false
+      - key: SERVERPOD_SERVICE_SECRET
+        sync: false
+      - key: SERVERPOD_EMAIL_SECRET_HASH_PEPPER
+        sync: false
+      - key: SERVERPOD_JWT_HMAC_SHA512_PRIVATE_KEY
+        sync: false
+      - key: SERVERPOD_JWT_REFRESH_TOKEN_HASH_PEPPER
+        sync: false
+      - key: SERVERPOD_SERVER_SIDE_SESSION_KEY_HASH_PEPPER
+        sync: false
+      - key: SERVERPOD_SHARED_PASSWORD
+        sync: false
+      - key: SERVERPOD_GOOGLE_CLIENT_SECRET_JSON
+        sync: false

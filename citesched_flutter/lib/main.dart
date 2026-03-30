@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/core/theme/app_theme.dart';
 import 'package:citesched_flutter/features/auth/screens/root_screen.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -8,10 +11,11 @@ import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:serverpod_flutter/serverpod_flutter.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
 
-// Global client definition
-var client = Client('http://$localhost:8083/')
-  ..connectivityMonitor = FlutterConnectivityMonitor()
-  ..authSessionManager = FlutterAuthSessionManager();
+const _defaultServerUrl = 'http://localhost:8083/';
+const _serverUrlDefine = String.fromEnvironment('CITESCHED_SERVER_URL');
+const _configAssetPath = 'assets/config.json';
+
+late final Client client;
 
 const _googleWebClientId =
     '787281029476-efu9h96a0libvk8o0ubhsluh7u09fnen.apps.googleusercontent.com';
@@ -19,6 +23,10 @@ const _startupStorage = FlutterSecureStorage();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final serverUrl = await _resolveServerUrl();
+  client = Client(serverUrl)
+    ..connectivityMonitor = FlutterConnectivityMonitor()
+    ..authSessionManager = FlutterAuthSessionManager();
 
   try {
     await client.auth.initialize();
@@ -41,6 +49,33 @@ void main() async {
       child: MyApp(),
     ),
   );
+}
+
+Future<String> _resolveServerUrl() async {
+  if (_serverUrlDefine.isNotEmpty) {
+    return _normalizeServerUrl(_serverUrlDefine);
+  }
+
+  try {
+    final rawConfig = await rootBundle.loadString(_configAssetPath);
+    final decoded = jsonDecode(rawConfig);
+    if (decoded is Map<String, dynamic>) {
+      final apiUrl = decoded['apiUrl'];
+      if (apiUrl is String && apiUrl.trim().isNotEmpty) {
+        return _normalizeServerUrl(apiUrl);
+      }
+    }
+  } catch (_) {
+    // Fall back to the local development server if the asset is missing.
+  }
+
+  return _normalizeServerUrl(_defaultServerUrl);
+}
+
+String _normalizeServerUrl(String value) {
+  final trimmed = value.trim();
+  if (trimmed.endsWith('/')) return trimmed;
+  return '$trimmed/';
 }
 
 class MyApp extends StatelessWidget {
