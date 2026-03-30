@@ -13,8 +13,10 @@ FROM debian:stable-slim
 # Install necessary libraries for Dart and SSL
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    gettext-base \
     libc6 \
     libstdc++6 \
+    nginx \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -25,6 +27,7 @@ COPY --from=build /app/bin/server /app/server
 # Copy all necessary folders
 COPY --from=build /app/config/ /app/config/
 COPY --from=build /app/deploy/render/start.sh /app/start.sh
+COPY --from=build /app/deploy/render/nginx.conf.template /app/nginx.conf.template
 COPY --from=build /app/web/ /app/web/
 COPY --from=build /app/migrations/ /app/migrations/
 COPY --from=build /app/lib/src/generated/protocol.yaml /app/lib/src/generated/protocol.yaml

@@ -4,6 +4,8 @@ set -eu
 
 CONFIG_FILE="/app/config/passwords.yaml"
 PRODUCTION_CONFIG_FILE="/app/config/production.yaml"
+NGINX_TEMPLATE="/app/nginx.conf.template"
+NGINX_CONFIG="/etc/nginx/nginx.conf"
 
 first_non_empty() {
   for value in "$@"; do
@@ -141,9 +143,22 @@ if [ -n "${PORT:-}" ] && [ "$PORT" != "8080" ]; then
   write_api_server_port "$PORT"
 fi
 
-exec /app/server \
+export PORT="${PORT:-10000}"
+envsubst '${PORT}' < "$NGINX_TEMPLATE" > "$NGINX_CONFIG"
+
+/app/server \
   --mode production \
   --server-id default \
   --logging normal \
   --role monolith \
-  --apply-migrations
+  --apply-migrations &
+
+server_pid=$!
+
+cleanup() {
+  kill "$server_pid" 2>/dev/null || true
+}
+
+trap cleanup INT TERM EXIT
+
+exec nginx -g 'daemon off;'
