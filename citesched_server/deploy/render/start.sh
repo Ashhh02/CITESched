@@ -24,9 +24,7 @@ EOF
   fi
 }
 
-if [ ! -f "$CONFIG_FILE" ]; then
-  write_password_config
-fi
+write_password_config
 
 if [ -n "${PORT:-}" ] && [ "$PORT" != "8080" ]; then
   sed -i "0,/port: 8080/s//port: $PORT/" /app/config/production.yaml
