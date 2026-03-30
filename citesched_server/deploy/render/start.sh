@@ -15,6 +15,11 @@ first_non_empty() {
   return 0
 }
 
+current_config_value() {
+  key="$1"
+  sed -n "s/^  $key: //p" "$PRODUCTION_CONFIG_FILE" | head -n 1
+}
+
 DB_HOST=""
 DB_PORT=""
 DB_NAME=""
@@ -57,19 +62,25 @@ load_database_config() {
   fi
 
   DB_HOST="$(first_non_empty "${SERVERPOD_DATABASE_HOST:-}")"
-  DB_PORT="$(first_non_empty "${SERVERPOD_DATABASE_PORT:-}" "5432")"
+  DB_PORT="$(first_non_empty "${SERVERPOD_DATABASE_PORT:-}")"
   DB_NAME="$(first_non_empty "${SERVERPOD_DATABASE_NAME:-}")"
   DB_USER="$(first_non_empty "${SERVERPOD_DATABASE_USER:-}")"
   DB_PASSWORD="$(first_non_empty "${SERVERPOD_DATABASE_PASSWORD:-}")"
-  DB_REQUIRE_SSL="$(first_non_empty "${SERVERPOD_DATABASE_REQUIRE_SSL:-}" "false")"
+  DB_REQUIRE_SSL="$(first_non_empty "${SERVERPOD_DATABASE_REQUIRE_SSL:-}")"
+
+  DB_HOST="$(first_non_empty "$DB_HOST" "$(current_config_value host)")"
+  DB_PORT="$(first_non_empty "$DB_PORT" "$(current_config_value port)" "5432")"
+  DB_NAME="$(first_non_empty "$DB_NAME" "$(current_config_value name)")"
+  DB_USER="$(first_non_empty "$DB_USER" "$(current_config_value user)")"
+  DB_REQUIRE_SSL="$(first_non_empty "$DB_REQUIRE_SSL" "$(current_config_value requireSsl)" "false")"
 }
 
 write_production_config() {
-  sed -i "s/^  host: .*/  host: $DB_HOST/" "$PRODUCTION_CONFIG_FILE"
-  sed -i "s/^  port: .*/  port: $DB_PORT/" "$PRODUCTION_CONFIG_FILE"
-  sed -i "s/^  name: .*/  name: $DB_NAME/" "$PRODUCTION_CONFIG_FILE"
-  sed -i "s/^  user: .*/  user: $DB_USER/" "$PRODUCTION_CONFIG_FILE"
-  sed -i "s/^  requireSsl: .*/  requireSsl: $DB_REQUIRE_SSL/" "$PRODUCTION_CONFIG_FILE"
+  [ -n "$DB_HOST" ] && sed -i "s/^  host: .*/  host: $DB_HOST/" "$PRODUCTION_CONFIG_FILE"
+  [ -n "$DB_PORT" ] && sed -i "s/^  port: .*/  port: $DB_PORT/" "$PRODUCTION_CONFIG_FILE"
+  [ -n "$DB_NAME" ] && sed -i "s/^  name: .*/  name: $DB_NAME/" "$PRODUCTION_CONFIG_FILE"
+  [ -n "$DB_USER" ] && sed -i "s/^  user: .*/  user: $DB_USER/" "$PRODUCTION_CONFIG_FILE"
+  [ -n "$DB_REQUIRE_SSL" ] && sed -i "s/^  requireSsl: .*/  requireSsl: $DB_REQUIRE_SSL/" "$PRODUCTION_CONFIG_FILE"
 }
 
 write_password_config() {
