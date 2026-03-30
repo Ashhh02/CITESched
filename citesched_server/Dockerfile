@@ -2,17 +2,15 @@
 FROM dart:3.8.0 AS build
 
 WORKDIR /app
-# Copy all files (including your new migrations folder)
 COPY . .
 
-# Install dependencies and compile the server executable
 RUN dart pub get
 RUN dart compile exe bin/main.dart -o bin/server
 
-# Final stage - Use debian-slim instead of alpine for compatibility
+# Final stage
 FROM debian:stable-slim
 
-# Install CA certificates (required for HTTPS/SSL connections to Render DB)
+# Install CA certificates for SSL
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Environment variables
@@ -23,19 +21,19 @@ ENV role=monolith
 
 WORKDIR /app
 
-# Copy runtime dependencies from the build stage
-COPY --from=build /runtime/ /
+# --- FIXED RUNTIME COPY ---
+# Instead of copying /runtime/ to /, we copy the specific dart runtime 
+# to a location where it won't conflict with system libs.
+COPY --from=build /runtime/ /runtime/
+# --------------------------
 
 # Copy compiled server executable
 COPY --from=build /app/bin/server server
 
-# Copy configuration files and resources
-# These MUST exist in your GitHub repo for these lines to work
+# Copy configuration and resources
 COPY --from=build /app/config/ config/
 COPY --from=build /app/web/ web/
 COPY --from=build /app/migrations/ migrations/
-
-# This file is required to enable the endpoint log filter in Insights.
 COPY --from=build /app/lib/src/generated/protocol.yaml lib/src/generated/protocol.yaml
 
 # Expose ports
@@ -43,5 +41,5 @@ EXPOSE 8080
 EXPOSE 8081
 EXPOSE 8082
 
-# Define the entrypoint command
-ENTRYPOINT ./server --mode=$runmode --server-id=$serverid --logging=$logging --role=$role
+# We point to the specific runtime linker provided by the Dart image
+ENTRYPOINT ["/runtime/lib/ld-linux-x86-64.so.2", "--library-path", "/runtime/lib", "./server", "--mode=production", "--server-id=default", "--logging=normal", "--role=monolith"]
