@@ -15,17 +15,9 @@ first_non_empty() {
   return 0
 }
 
-current_database_config_value() {
+current_config_value() {
   key="$1"
-  awk -v target="$key" '
-    /^database:$/ { in_db=1; next }
-    /^[^ ]/ && in_db { exit }
-    in_db && $1 == target ":" {
-      sub($1 FS, "")
-      print
-      exit
-    }
-  ' "$PRODUCTION_CONFIG_FILE"
+  sed -n "s/^  $key: //p" "$PRODUCTION_CONFIG_FILE" | head -n 1
 }
 
 DB_HOST=""
@@ -76,11 +68,11 @@ load_database_config() {
   DB_PASSWORD="$(first_non_empty "${SERVERPOD_DATABASE_PASSWORD:-}")"
   DB_REQUIRE_SSL="$(first_non_empty "${SERVERPOD_DATABASE_REQUIRE_SSL:-}")"
 
-  DB_HOST="$(first_non_empty "$DB_HOST" "$(current_database_config_value host)")"
-  DB_PORT="$(first_non_empty "$DB_PORT" "$(current_database_config_value port)" "5432")"
-  DB_NAME="$(first_non_empty "$DB_NAME" "$(current_database_config_value name)")"
-  DB_USER="$(first_non_empty "$DB_USER" "$(current_database_config_value user)")"
-  DB_REQUIRE_SSL="$(first_non_empty "$DB_REQUIRE_SSL" "$(current_database_config_value requireSsl)" "false")"
+  DB_HOST="$(first_non_empty "$DB_HOST" "$(current_config_value host)")"
+  DB_PORT="$(first_non_empty "$DB_PORT" "$(current_config_value port)" "5432")"
+  DB_NAME="$(first_non_empty "$DB_NAME" "$(current_config_value name)")"
+  DB_USER="$(first_non_empty "$DB_USER" "$(current_config_value user)")"
+  DB_REQUIRE_SSL="$(first_non_empty "$DB_REQUIRE_SSL" "$(current_config_value requireSsl)" "false")"
 }
 
 write_production_config() {
