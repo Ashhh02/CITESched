@@ -84,11 +84,33 @@ load_database_config() {
 }
 
 write_production_config() {
-  [ -n "$DB_HOST" ] && sed -i "s/^  host: .*/  host: $DB_HOST/" "$PRODUCTION_CONFIG_FILE"
-  [ -n "$DB_PORT" ] && sed -i "s/^  port: .*/  port: $DB_PORT/" "$PRODUCTION_CONFIG_FILE"
-  [ -n "$DB_NAME" ] && sed -i "s/^  name: .*/  name: $DB_NAME/" "$PRODUCTION_CONFIG_FILE"
-  [ -n "$DB_USER" ] && sed -i "s/^  user: .*/  user: $DB_USER/" "$PRODUCTION_CONFIG_FILE"
-  [ -n "$DB_REQUIRE_SSL" ] && sed -i "s/^  requireSsl: .*/  requireSsl: $DB_REQUIRE_SSL/" "$PRODUCTION_CONFIG_FILE"
+  awk \
+    -v db_host="$DB_HOST" \
+    -v db_port="$DB_PORT" \
+    -v db_name="$DB_NAME" \
+    -v db_user="$DB_USER" \
+    -v db_require_ssl="$DB_REQUIRE_SSL" '
+    /^database:$/ { in_db=1; print; next }
+    /^[^ ]/ && in_db { in_db=0 }
+    in_db && $1 == "host:" && db_host != "" { print "  host: " db_host; next }
+    in_db && $1 == "port:" && db_port != "" { print "  port: " db_port; next }
+    in_db && $1 == "name:" && db_name != "" { print "  name: " db_name; next }
+    in_db && $1 == "user:" && db_user != "" { print "  user: " db_user; next }
+    in_db && $1 == "requireSsl:" && db_require_ssl != "" { print "  requireSsl: " db_require_ssl; next }
+    { print }
+  ' "$PRODUCTION_CONFIG_FILE" > "$PRODUCTION_CONFIG_FILE.tmp"
+  mv "$PRODUCTION_CONFIG_FILE.tmp" "$PRODUCTION_CONFIG_FILE"
+}
+
+write_api_server_port() {
+  render_port="$1"
+  awk -v render_port="$render_port" '
+    /^apiServer:$/ { in_api=1; print; next }
+    /^[^ ]/ && in_api { in_api=0 }
+    in_api && $1 == "port:" { print "  port: " render_port; next }
+    { print }
+  ' "$PRODUCTION_CONFIG_FILE" > "$PRODUCTION_CONFIG_FILE.tmp"
+  mv "$PRODUCTION_CONFIG_FILE.tmp" "$PRODUCTION_CONFIG_FILE"
 }
 
 write_password_config() {
@@ -116,7 +138,7 @@ write_production_config
 write_password_config
 
 if [ -n "${PORT:-}" ] && [ "$PORT" != "8080" ]; then
-  sed -i "0,/port: 8080/s//port: $PORT/" /app/config/production.yaml
+  write_api_server_port "$PORT"
 fi
 
 exec /app/server \
