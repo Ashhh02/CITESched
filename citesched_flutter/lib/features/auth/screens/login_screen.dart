@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:serverpod_auth_client/serverpod_auth_client.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
+import 'package:serverpod_auth_idp_flutter/src/common/exceptions.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -23,6 +24,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _secureStorage = const FlutterSecureStorage();
   late final GoogleAuthController _googleAuthController;
   static const _googleRoleStoragePrefix = 'google_role:';
+
+  String _describeGoogleError(Object error) {
+    if (error is UserFacingException && error.originalException != null) {
+      return '${error.message}\n${error.originalException}';
+    }
+    return error.toString();
+  }
 
   bool _isFaculty = true; // Toggle state
   bool _obscurePassword = true;
@@ -1089,7 +1097,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       onError: (error) {
         if (!mounted) return;
         setState(() {
-          _errorMessage = error.toString();
+          _errorMessage = _describeGoogleError(error);
           _isLoading = false;
         });
       },
