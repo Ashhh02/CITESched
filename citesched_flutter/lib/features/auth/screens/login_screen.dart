@@ -1093,10 +1093,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _isLoading = false;
         });
       },
-      scopes: const [
-        ...GoogleAuthController.defaultScopes,
-        'openid',
-      ],
+      // We only need the Google ID token for Serverpod sign-in.
+      // Avoid requesting additional OAuth scopes on web, as that adds an
+      // extra access-token authorization step that has been unreliable in the
+      // deployed popup flow.
+      scopes: const [],
     );
     _googleAuthController.addListener(_handleGoogleControllerChanged);
   }
