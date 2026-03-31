@@ -2,7 +2,6 @@ import 'package:citesched_flutter/main.dart'; // Import for client access
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:citesched_client/citesched_client.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1123,6 +1122,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    final localeTag = Localizations.maybeLocaleOf(
+      context,
+    )?.toLanguageTag();
     final isDesktop = screenSize.width > 900;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isAuthBusy = _isLoading || _googleAuthController.isLoading;
@@ -1463,78 +1465,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ignoring: isAuthBusy,
                                 child: Opacity(
                                   opacity: isAuthBusy ? 0.7 : 1,
-                                  child: kIsWeb
-                                      ? GoogleSignInWebButton(
-                                          theme: isDark
-                                              ? GSIButtonTheme.filledBlack
-                                              : GSIButtonTheme.outline,
-                                          size: GSIButtonSize.large,
-                                          text: GSIButtonText.continueWith,
-                                          shape: GSIButtonShape.pill,
-                                          logoAlignment:
-                                              GSIButtonLogoAlignment.center,
-                                          minimumWidth: 320,
-                                          buttonWrapper:
-                                              ({
-                                                required
-                                                GoogleSignInStyle style,
-                                                required Widget child,
-                                                required
-                                                VoidCallback? onPressed,
-                                              }) {
-                                                return Container(
-                                                  height: 50,
-                                                  alignment: Alignment.center,
-                                                  decoration: BoxDecoration(
-                                                    color: googleBtnBg,
-                                                    border: Border.all(
-                                                      color: googleBtnBorder,
-                                                    ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                  ),
-                                                  child: child,
-                                                );
-                                              },
-                                        )
-                                      : GoogleSignInWidget(
-                                          controller: _googleAuthController,
-                                          theme: isDark
-                                              ? GSIButtonTheme.filledBlack
-                                              : GSIButtonTheme.outline,
-                                          size: GSIButtonSize.large,
-                                          text: GSIButtonText.continueWith,
-                                          shape: GSIButtonShape.pill,
-                                          logoAlignment:
-                                              GSIButtonLogoAlignment.center,
-                                          minimumWidth: 320,
-                                          buttonWrapper:
-                                              ({
-                                                required
-                                                GoogleSignInStyle style,
-                                                required Widget child,
-                                                required
-                                                VoidCallback? onPressed,
-                                              }) {
-                                                return Container(
-                                                  height: 50,
-                                                  alignment: Alignment.center,
-                                                  decoration: BoxDecoration(
-                                                    color: googleBtnBg,
-                                                    border: Border.all(
-                                                      color: googleBtnBorder,
-                                                    ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                  ),
-                                                  child: child,
-                                                );
-                                              },
-                                        ),
+                                  child: GoogleSignInWidget(
+                                    controller: _googleAuthController,
+                                    theme: isDark
+                                        ? GSIButtonTheme.filledBlack
+                                        : GSIButtonTheme.outline,
+                                    size: GSIButtonSize.large,
+                                    text: GSIButtonText.continueWith,
+                                    shape: GSIButtonShape.pill,
+                                    logoAlignment:
+                                        GSIButtonLogoAlignment.center,
+                                    minimumWidth: 320,
+                                    locale: localeTag ?? 'en',
+                                    buttonWrapper:
+                                        ({
+                                          required GoogleSignInStyle style,
+                                          required Widget child,
+                                          required VoidCallback? onPressed,
+                                        }) {
+                                          return Container(
+                                            height: 50,
+                                            alignment: Alignment.center,
+                                            decoration: BoxDecoration(
+                                              color: googleBtnBg,
+                                              border: Border.all(
+                                                color: googleBtnBorder,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: child,
+                                          );
+                                        },
+                                  ),
                                 ),
                               ),
                             ],
