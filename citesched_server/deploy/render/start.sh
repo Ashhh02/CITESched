@@ -148,4 +148,26 @@ cleanup() {
 
 trap cleanup INT TERM EXIT
 
+wait_for_port() {
+  host="$1"
+  port="$2"
+  name="$3"
+  attempts="${4:-90}"
+  count=0
+
+  while [ "$count" -lt "$attempts" ]; do
+    if nc -z "$host" "$port" >/dev/null 2>&1; then
+      return 0
+    fi
+    count=$((count + 1))
+    sleep 1
+  done
+
+  echo "Timed out waiting for $name on $host:$port" >&2
+  return 1
+}
+
+wait_for_port 127.0.0.1 8080 "Serverpod API"
+wait_for_port 127.0.0.1 8082 "Serverpod web"
+
 exec nginx -g 'daemon off;'

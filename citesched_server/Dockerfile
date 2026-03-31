@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gettext-base \
     libc6 \
     libstdc++6 \
+    netcat-openbsd \
     nginx \
     && rm -rf /var/lib/apt/lists/*
 
