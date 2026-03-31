@@ -118,9 +118,11 @@ production:
   serverSideSessionKeyHashPepper: "$(first_non_empty "${SERVERPOD_SERVER_SIDE_SESSION_KEY_HASH_PEPPER:-}" "${SERVERPOD_PASSWORD_serverSideSessionKeyHashPepper:-}")"
 EOF
 
-  if [ -n "${SERVERPOD_GOOGLE_CLIENT_SECRET_JSON:-}" ]; then
+  google_client_secret="$(first_non_empty "${SERVERPOD_GOOGLE_CLIENT_SECRET_JSON:-}" "${SERVERPOD_PASSWORD_googleClientSecret:-}")"
+
+  if [ -n "$google_client_secret" ]; then
     printf '  googleClientSecret: |\n' >> "$CONFIG_FILE"
-    printf '%s\n' "$SERVERPOD_GOOGLE_CLIENT_SECRET_JSON" | sed 's/^/    /' >> "$CONFIG_FILE"
+    printf '%s\n' "$google_client_secret" | sed 's/^/    /' >> "$CONFIG_FILE"
   fi
 }
 
