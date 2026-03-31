@@ -21,6 +21,8 @@ http {
   server {
     listen ${PORT};
     server_name _;
+    add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
+    add_header Cross-Origin-Embedder-Policy "unsafe-none" always;
 
     location /app/ {
       proxy_pass http://serverpod_web;
