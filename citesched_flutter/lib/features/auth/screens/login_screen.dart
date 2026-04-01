@@ -168,6 +168,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       final userInfo = await _loadUserInfoByEmail(email);
+      final existingRole = await _loadExistingRoleByEmail(email);
+      final emailVerified = await _runGoogleEmailVerification(
+        email: email,
+        hasExistingAccount: userInfo != null || existingRole != null,
+      );
+      if (!emailVerified) {
+        await _signOutAfterGoogle(authNotifier);
+        return;
+      }
+
       final selectedRole = await _resolveGoogleRoleSelection(
         userInfo: userInfo,
         email: email,
@@ -193,6 +203,228 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<bool> _runGoogleEmailVerification({
+    required String email,
+    required bool hasExistingAccount,
+  }) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty) return false;
+
+    final initialChallenge = await _issueGoogleEmailVerificationChallenge(
+      email: normalizedEmail,
+      preferPasswordResetFlow: hasExistingAccount,
+    );
+
+    if (!mounted) return false;
+
+    final verified = await _showGoogleEmailVerificationDialog(
+      email: normalizedEmail,
+      initialChallenge: initialChallenge,
+    );
+
+    return verified ?? false;
+  }
+
+  Future<_GoogleEmailCodeChallenge> _issueGoogleEmailVerificationChallenge({
+    required String email,
+    required bool preferPasswordResetFlow,
+  }) async {
+    if (preferPasswordResetFlow) {
+      try {
+        final requestId = await client.emailIdp.startPasswordReset(email: email);
+        return _GoogleEmailCodeChallenge(
+          requestId: requestId,
+          passwordResetFlow: true,
+        );
+      } catch (_) {
+        // Fall back to registration flow if the account has no password-reset route yet.
+      }
+    }
+
+    try {
+      final requestId = await client.emailIdp.startRegistration(email: email);
+      return _GoogleEmailCodeChallenge(
+        requestId: requestId,
+        passwordResetFlow: false,
+      );
+    } catch (e) {
+      if (!preferPasswordResetFlow) {
+        final requestId = await client.emailIdp.startPasswordReset(email: email);
+        return _GoogleEmailCodeChallenge(
+          requestId: requestId,
+          passwordResetFlow: true,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _verifyGoogleEmailCode({
+    required _GoogleEmailCodeChallenge challenge,
+    required String code,
+  }) async {
+    final normalizedCode = code.trim();
+    if (normalizedCode.isEmpty) {
+      throw Exception('Please enter the verification code.');
+    }
+
+    if (challenge.passwordResetFlow) {
+      await client.emailIdp.verifyPasswordResetCode(
+        passwordResetRequestId: challenge.requestId,
+        verificationCode: normalizedCode,
+      );
+      return;
+    }
+
+    await client.emailIdp.verifyRegistrationCode(
+      accountRequestId: challenge.requestId,
+      verificationCode: normalizedCode,
+    );
+  }
+
+  Future<bool?> _showGoogleEmailVerificationDialog({
+    required String email,
+    required _GoogleEmailCodeChallenge initialChallenge,
+  }) {
+    final codeController = TextEditingController();
+    String? inlineError;
+    bool isVerifying = false;
+    bool isResending = false;
+    var currentChallenge = initialChallenge;
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            Future<void> verifyCode() async {
+              final rawCode = codeController.text.trim();
+              if (rawCode.isEmpty) {
+                setModalState(() {
+                  inlineError = 'Enter the verification code sent to your email.';
+                });
+                return;
+              }
+
+              setModalState(() {
+                inlineError = null;
+                isVerifying = true;
+              });
+
+              try {
+                await _verifyGoogleEmailCode(
+                  challenge: currentChallenge,
+                  code: rawCode,
+                );
+                if (context.mounted) {
+                  Navigator.of(context).pop(true);
+                }
+              } catch (_) {
+                setModalState(() {
+                  inlineError = 'Invalid or expired code. Please try again.';
+                });
+              } finally {
+                if (context.mounted) {
+                  setModalState(() => isVerifying = false);
+                }
+              }
+            }
+
+            Future<void> resendCode() async {
+              setModalState(() {
+                inlineError = null;
+                isResending = true;
+              });
+
+              try {
+                currentChallenge = await _issueGoogleEmailVerificationChallenge(
+                  email: email,
+                  preferPasswordResetFlow: currentChallenge.passwordResetFlow,
+                );
+              } catch (_) {
+                setModalState(() {
+                  inlineError = 'Unable to resend code right now. Please try again.';
+                });
+              } finally {
+                if (context.mounted) {
+                  setModalState(() => isResending = false);
+                }
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('Email Verification'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Enter the verification code sent to $email before continuing with Google sign-in.',
+                    style: GoogleFonts.poppins(fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: codeController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 8,
+                    decoration: const InputDecoration(
+                      labelText: 'Verification Code',
+                      counterText: '',
+                    ),
+                    onSubmitted: (_) {
+                      if (!isVerifying && !isResending) {
+                        verifyCode();
+                      }
+                    },
+                  ),
+                  if (inlineError != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      inlineError!,
+                      style: GoogleFonts.poppins(
+                        color: Colors.red,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isVerifying || isResending
+                      ? null
+                      : () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: isVerifying || isResending ? null : resendCode,
+                  child: isResending
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Resend'),
+                ),
+                ElevatedButton(
+                  onPressed: isVerifying || isResending ? null : verifyCode,
+                  child: isVerifying
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Verify'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).whenComplete(codeController.dispose);
   }
 
   Future<bool> _completeGoogleProfile(
@@ -1372,13 +1604,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                               // Inputs
                               _buildLabel(
-                                _isFaculty ? 'Username' : 'Student ID',
+                                _isFaculty ? 'Faculty ID' : 'Student ID',
                                 textPrimary,
                               ),
                               const SizedBox(height: 8),
                               buildCustomField(
                                 controller: _idController,
-                                hintText: 'Enter ID number',
+                                hintText: _isFaculty
+                                    ? 'Enter Faculty ID'
+                                    : 'Enter Student ID',
                               ),
 
                               const SizedBox(height: 16),
@@ -1749,4 +1983,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
     return _isFaculty ? _facultyColorLight : _studentColorLight;
   }
+}
+
+class _GoogleEmailCodeChallenge {
+  final UuidValue requestId;
+  final bool passwordResetFlow;
+
+  const _GoogleEmailCodeChallenge({
+    required this.requestId,
+    required this.passwordResetFlow,
+  });
 }
