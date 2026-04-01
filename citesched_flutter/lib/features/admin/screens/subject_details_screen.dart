@@ -21,6 +21,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheduleAsync = ref.watch(subjectScheduleProvider(subject.id!));
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     final maroonColor = const Color(0xFF720045);
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
@@ -41,128 +42,267 @@ class SubjectDetailsScreen extends ConsumerWidget {
                 offset: const Offset(0, 12),
               ),
             ],
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white,
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const SizedBox(width: 16),
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          subject.code[0].toUpperCase(),
-                          style: GoogleFonts.poppins(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compactHeader = constraints.maxWidth < 920;
+                if (compactHeader) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: () => Navigator.pop(context),
                           ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          subject.name,
-                          style: GoogleFonts.poppins(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: -1,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text(
-                              subject.code,
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                color: Colors.white.withValues(alpha: 0.8),
-                                fontWeight: FontWeight.w600,
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                ),
-                              ),
+                            child: Center(
                               child: Text(
-                                'YR ${subject.yearLevel ?? "N/A"}',
+                                subject.code[0].toUpperCase(),
                                 style: GoogleFonts.poppins(
-                                  fontSize: 11,
+                                  fontSize: 22,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.school_rounded,
-                        color: Colors.white,
-                        size: 18,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  subject.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 6,
+                                  children: [
+                                    Text(
+                                      subject.code,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: Colors.white.withValues(alpha: 0.85),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.white.withValues(alpha: 0.2),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'YR ${subject.yearLevel ?? "N/A"}',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Text(
-                        subject.program.name.toUpperCase(),
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.school_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              subject.program.name.toUpperCase(),
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ],
+                  );
+                }
+
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                          const SizedBox(width: 16),
+                          Container(
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                subject.code[0].toUpperCase(),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  subject.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -1,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(
+                                      subject.code,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        color: Colors.white.withValues(alpha: 0.8),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.white.withValues(alpha: 0.2),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'YR ${subject.yearLevel ?? "N/A"}',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.school_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            subject.program.name.toUpperCase(),
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
+              padding: EdgeInsets.all(isMobile ? 16 : 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -177,10 +317,12 @@ class SubjectDetailsScreen extends ConsumerWidget {
                         color: maroonColor.withValues(alpha: 0.2),
                       ),
                     ),
-                    child: Row(
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Icon(Icons.category_rounded, color: maroonColor),
-                        const SizedBox(width: 12),
                         Text(
                           'SUBJECT TYPES:',
                           style: GoogleFonts.poppins(
@@ -189,7 +331,6 @@ class SubjectDetailsScreen extends ConsumerWidget {
                             color: Colors.grey,
                           ),
                         ),
-                        const SizedBox(width: 12),
                         Text(
                           subject.types
                               .map((t) => t.name.toUpperCase())
@@ -205,47 +346,88 @@ class SubjectDetailsScreen extends ConsumerWidget {
                   ),
 
                   // Stats Row
-                  Row(
-                    children: [
-                      _buildSimpleStatCard(
-                        'Units',
-                        '${subject.units}',
-                        Icons.format_list_numbered_rtl_rounded,
-                        Colors.blue,
-                        cardBg,
-                      ),
-                      const SizedBox(width: 16),
-                      _buildSimpleStatCard(
-                        'Year Level',
-                        subject.yearLevel != null
-                            ? 'Year ${subject.yearLevel}'
-                            : 'N/A',
-                        Icons.grade_rounded,
-                        Colors.green,
-                        cardBg,
-                      ),
-                      const SizedBox(width: 16),
-                      _buildSimpleStatCard(
-                        'Students',
-                        '${subject.studentsCount}',
-                        Icons.people_alt_rounded,
-                        Colors.orange,
-                        cardBg,
-                      ),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, c) {
+                      final compactStats = c.maxWidth < 860;
+                      if (compactStats) {
+                        return Column(
+                          children: [
+                            _buildSimpleStatCard(
+                              'Units',
+                              '${subject.units}',
+                              Icons.format_list_numbered_rtl_rounded,
+                              Colors.blue,
+                              cardBg,
+                              compact: true,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildSimpleStatCard(
+                              'Year Level',
+                              subject.yearLevel != null
+                                  ? 'Year ${subject.yearLevel}'
+                                  : 'N/A',
+                              Icons.grade_rounded,
+                              Colors.green,
+                              cardBg,
+                              compact: true,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildSimpleStatCard(
+                              'Students',
+                              '${subject.studentsCount}',
+                              Icons.people_alt_rounded,
+                              Colors.orange,
+                              cardBg,
+                              compact: true,
+                            ),
+                          ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          _buildSimpleStatCard(
+                            'Units',
+                            '${subject.units}',
+                            Icons.format_list_numbered_rtl_rounded,
+                            Colors.blue,
+                            cardBg,
+                          ),
+                          const SizedBox(width: 16),
+                          _buildSimpleStatCard(
+                            'Year Level',
+                            subject.yearLevel != null
+                                ? 'Year ${subject.yearLevel}'
+                                : 'N/A',
+                            Icons.grade_rounded,
+                            Colors.green,
+                            cardBg,
+                          ),
+                          const SizedBox(width: 16),
+                          _buildSimpleStatCard(
+                            'Students',
+                            '${subject.studentsCount}',
+                            Icons.people_alt_rounded,
+                            Colors.orange,
+                            cardBg,
+                          ),
+                        ],
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 32),
 
                   // Class Schedule Section
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Icon(Icons.calendar_today_rounded, color: maroonColor),
-                      const SizedBox(width: 12),
                       Text(
                         'Assigned Class Schedules',
                         style: GoogleFonts.poppins(
-                          fontSize: 20,
+                          fontSize: isMobile ? 18 : 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -333,56 +515,66 @@ class SubjectDetailsScreen extends ConsumerWidget {
     IconData icon,
     Color color,
     Color cardBg,
+    {bool compact = false}
   ) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    final card = Container(
+      padding: EdgeInsets.all(compact ? 16 : 20),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(compact ? 10 : 12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Column(
+            child: Icon(icon, color: color, size: compact ? 22 : 24),
+          ),
+          SizedBox(width: compact ? 12 : 16),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
-                    fontSize: 12,
+                    fontSize: compact ? 11 : 12,
                     color: Colors.grey,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
                   value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
-                    fontSize: 18,
+                    fontSize: compact ? 16 : 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+
+    if (compact) return card;
+    return Expanded(
+      child: card,
     );
   }
 }

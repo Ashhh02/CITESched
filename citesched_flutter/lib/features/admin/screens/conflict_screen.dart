@@ -579,7 +579,10 @@ class _ConflictScreenState extends State<ConflictScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Type badge + source badge
-                            Row(
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -620,8 +623,6 @@ class _ConflictScreenState extends State<ConflictScreen> {
                                     ),
                                   ),
                                 ),
-                                const Spacer(),
-                                // Severity badge
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 8,

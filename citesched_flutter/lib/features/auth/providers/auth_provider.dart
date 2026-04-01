@@ -33,35 +33,48 @@ class AuthNotifier extends Notifier<UserInfo?> {
     try {
       final sessionContext = await fetchSessionContext();
       final email = sessionContext.email?.trim().toLowerCase();
-      if (email != null && email.isNotEmpty) {
-        final userInfo = await client.setup.getUserInfoByEmail(email: email);
-        if (userInfo == null) {
-          _needsRoleOnboarding = false;
-          state = null;
-          return;
-        }
-
-        final existingRole = await client.setup.getExistingAccountRoleByEmail(
-          email: email,
-        );
-        final normalizedRole = existingRole?.trim().toLowerCase();
-        final isAdminAccount =
-            userInfo.scopeNames.contains('admin') || normalizedRole == 'admin';
-
-        // Keep Google-authenticated users in onboarding if their email no
-        // longer maps to an active student / faculty profile.
-        if (!isAdminAccount &&
-            (normalizedRole != 'student' && normalizedRole != 'faculty')) {
-          _needsRoleOnboarding = true;
-          state = null;
-          return;
-        }
-
-        _needsRoleOnboarding = false;
-        state = userInfo;
+      if (email == null || email.isEmpty) {
+        // Keep existing signed-in state if backend debug lookup is temporarily
+        // unavailable (prevents unexpected auto-logout loops).
+        if (state != null) return;
+        _needsRoleOnboarding = true;
+        state = null;
+        return;
       }
+
+      final userInfo = await client.setup.getUserInfoByEmail(email: email);
+      if (userInfo == null) {
+        if (state != null) return;
+        _needsRoleOnboarding = true;
+        state = null;
+        return;
+      }
+
+      final existingRole = await client.setup.getExistingAccountRoleByEmail(
+        email: email,
+      );
+      final normalizedRole = existingRole?.trim().toLowerCase();
+      final isAdminAccount =
+          userInfo.scopeNames.contains('admin') || normalizedRole == 'admin';
+
+      // Keep Google-authenticated users in onboarding if their email no
+      // longer maps to an active student / faculty profile.
+      if (!isAdminAccount &&
+          (normalizedRole != 'student' && normalizedRole != 'faculty')) {
+        _needsRoleOnboarding = true;
+        state = null;
+        return;
+      }
+
+      _needsRoleOnboarding = false;
+      state = userInfo;
     } catch (e) {
       print('Failed to fetch user info: $e');
+      // Fail-safe: don't destroy existing auth state on transient backend
+      // errors (for example /debug temporary 500).
+      if (state != null) return;
+      _needsRoleOnboarding = true;
+      state = null;
     }
   }
 

@@ -20,7 +20,12 @@ class DebugEndpoint extends Endpoint {
     if (userId != null) {
       final userIdentifier = userId.toString();
       final legacyUserInfoId = int.tryParse(userIdentifier);
-      final authUserId = UuidValue.withValidation(userIdentifier);
+      UuidValue? authUserId;
+      try {
+        authUserId = UuidValue.withValidation(userIdentifier);
+      } catch (_) {
+        authUserId = null;
+      }
 
       if (legacyUserInfoId != null) {
         userInfo = await UserInfo.db.findById(session, legacyUserInfoId);
@@ -71,8 +76,8 @@ class DebugEndpoint extends Endpoint {
     final resolvedScopeNames = userInfo?.scopeNames ?? scopes ?? const [];
 
     final info = {
-      'authenticatedUserId': userId,
-      'scopes': scopes,
+      'authenticatedUserId': userId?.toString(),
+      'scopes': scopes ?? const <String>[],
       'authCoreProfileEmail': authCoreProfile?.email,
       'authCoreProfileFullName': authCoreProfile?.fullName,
       'userInfoId': userInfo?.id,

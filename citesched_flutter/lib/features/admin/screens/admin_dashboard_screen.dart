@@ -19,6 +19,25 @@ final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
   return await client.admin.getDashboardStats();
 });
 
+final pendingFacultyRequestsProvider = FutureProvider<List<Faculty>>((ref) async {
+  final inactiveFaculty = await client.admin.getAllFaculty(isActive: false);
+  if (inactiveFaculty.isEmpty) return const <Faculty>[];
+
+  final roleRows = await client.admin.getAllUserRoles();
+  final pendingUserIds = roleRows
+      .where((r) => r.role.trim().toLowerCase() == 'faculty_pending')
+      .map((r) => int.tryParse(r.userId))
+      .whereType<int>()
+      .toSet();
+
+  final pending = inactiveFaculty
+      .where((f) => pendingUserIds.contains(f.userInfoId))
+      .toList();
+
+  pending.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  return pending;
+});
+
 class _StatCardConfig {
   final String label;
   final String value;
@@ -56,6 +75,7 @@ class _AdminDashboardScreenState
     super.initState();
     _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(pendingFacultyRequestsProvider);
     });
   }
 
@@ -65,10 +85,226 @@ class _AdminDashboardScreenState
     super.dispose();
   }
 
+  Future<void> _approvePendingFaculty(Faculty faculty) async {
+    try {
+      await client.admin.updateFaculty(
+        faculty.copyWith(isActive: true, updatedAt: DateTime.now()),
+      );
+      await client.admin.assignRole(
+        userId: faculty.userInfoId.toString(),
+        role: 'faculty',
+      );
+
+      ref.invalidate(pendingFacultyRequestsProvider);
+      ref.invalidate(dashboardStatsProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Approved faculty: ${faculty.name}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Approval failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _declinePendingFaculty(Faculty faculty) async {
+    try {
+      await client.admin.assignRole(
+        userId: faculty.userInfoId.toString(),
+        role: 'faculty_declined',
+      );
+      await client.admin.updateFaculty(
+        faculty.copyWith(isActive: false, updatedAt: DateTime.now()),
+      );
+
+      ref.invalidate(pendingFacultyRequestsProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Declined faculty request: ${faculty.name}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Decline failed: $e')),
+      );
+    }
+  }
+
+  void _openPendingFacultyDialog(List<Faculty> requests) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      builder: (dialogContext) => Dialog(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 760),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 28,
+                spreadRadius: 2,
+                offset: Offset(0, 16),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF5A0033),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.verified_user_rounded,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Faculty Approval Requests',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      icon: const Icon(Icons.close_rounded, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: requests.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: Text(
+                            'No pending faculty requests.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFF475569),
+                              fontSize: 14,
+                            ),
+                          ),
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: requests.map((item) {
+                            return Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    item.email,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: const Color(0xFF475569),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Wrap(
+                                    spacing: 10,
+                                    runSpacing: 10,
+                                    children: [
+                                      SizedBox(
+                                        height: 40,
+                                        child: ElevatedButton.icon(
+                                          onPressed: () async {
+                                            await _approvePendingFaculty(item);
+                                            if (dialogContext.mounted) {
+                                              Navigator.of(dialogContext).pop();
+                                            }
+                                          },
+                                          icon: const Icon(Icons.check_rounded),
+                                          label: const Text('Accept'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF15803D,
+                                            ),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 18,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        height: 40,
+                                        child: ElevatedButton.icon(
+                                          onPressed: () async {
+                                            await _declinePendingFaculty(item);
+                                            if (dialogContext.mounted) {
+                                              Navigator.of(dialogContext).pop();
+                                            }
+                                          },
+                                          icon: const Icon(Icons.close_rounded),
+                                          label: const Text('Decline'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFFB91C1C,
+                                            ),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 18,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userInfo = ref.watch(authProvider);
     final statsAsync = ref.watch(dashboardStatsProvider);
+    final pendingFacultyAsync = ref.watch(pendingFacultyRequestsProvider);
 
     // Colors — adapt to theme
     const primaryPurple = Color(0xFF720045);
@@ -150,8 +386,54 @@ class _AdminDashboardScreenState
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
-                        children: const [
-                          ThemeModeToggle(compact: true),
+                        children: [
+                          pendingFacultyAsync.when(
+                            data: (pending) {
+                              final count = pending.length;
+                              return Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  IconButton(
+                                    tooltip: 'Faculty approvals',
+                                    onPressed: () =>
+                                        _openPendingFacultyDialog(pending),
+                                    icon: const Icon(
+                                      Icons.notifications_active_rounded,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  if (count > 0)
+                                    Positioned(
+                                      right: 2,
+                                      top: 2,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                          '$count',
+                                          style: GoogleFonts.poppins(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, __) => const SizedBox.shrink(),
+                          ),
+                          const SizedBox(width: 8),
+                          const ThemeModeToggle(compact: true),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -220,14 +502,17 @@ class _AdminDashboardScreenState
                                 size: 40,
                               ),
                             ),
-                            const SizedBox(width: 28),
-                            Column(
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   'CITESched • Admin Dashboard',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.poppins(
-                                    fontSize: 36,
+                                    fontSize: 30,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                     letterSpacing: -1,
@@ -236,6 +521,8 @@ class _AdminDashboardScreenState
                                 const SizedBox(height: 4),
                                 Text(
                                   'Welcome back, ${userInfo?.userName ?? "Administrator"}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.poppins(
                                     fontSize: 18,
                                     color: Colors.white.withValues(alpha: 0.8),
@@ -244,11 +531,15 @@ class _AdminDashboardScreenState
                                 ),
                               ],
                             ),
+                            ),
                           ],
                         ),
                       const SizedBox(height: 32),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        runAlignment: WrapAlignment.center,
+                        spacing: 16,
+                        runSpacing: 12,
                         children: [
                           ElevatedButton.icon(
                             onPressed: () {
@@ -277,7 +568,6 @@ class _AdminDashboardScreenState
                             ),
                           ),
                           if (!isMobile) ...[
-                            const SizedBox(width: 16),
                             OutlinedButton.icon(
                               onPressed: () {
                                 showDialog(

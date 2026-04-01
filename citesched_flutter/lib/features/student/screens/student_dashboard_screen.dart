@@ -428,34 +428,45 @@ class StudentDashboardScreen extends ConsumerWidget {
                             color: cardBg,
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(
-                                maroonColor.withOpacity(0.08),
-                              ),
-                              columnSpacing: 16,
-                              columns: [
-                                _tableHeader('STUDENT ID'),
-                                _tableHeader('NAME'),
-                                _tableHeader('PROGRAM'),
-                                _tableHeader('SECTION'),
-                                _tableHeader('YEAR LEVEL'),
-                              ],
-                              rows: [
-                                DataRow(
-                                  cells: [
-                                    DataCell(Text(profile.studentNumber)),
-                                    DataCell(Text(profile.name)),
-                                    DataCell(Text(profile.course)),
-                                    DataCell(
-                                      Text(profile.section ?? 'Unassigned'),
+                          child: LayoutBuilder(
+                            builder: (context, tableConstraints) {
+                              final minTableWidth = tableConstraints.maxWidth;
+                              return SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minWidth: minTableWidth,
+                                  ),
+                                  child: DataTable(
+                                    headingRowColor: WidgetStateProperty.all(
+                                      maroonColor.withOpacity(0.08),
                                     ),
-                                    DataCell(Text('${profile.yearLevel}')),
-                                  ],
+                                    horizontalMargin: 12,
+                                    columnSpacing: 24,
+                                    columns: [
+                                      _tableHeader('STUDENT ID'),
+                                      _tableHeader('NAME'),
+                                      _tableHeader('PROGRAM'),
+                                      _tableHeader('SECTION'),
+                                      _tableHeader('YEAR LEVEL'),
+                                    ],
+                                    rows: [
+                                      DataRow(
+                                        cells: [
+                                          DataCell(Text(profile.studentNumber)),
+                                          DataCell(Text(profile.name)),
+                                          DataCell(Text(profile.course)),
+                                          DataCell(
+                                            Text(profile.section ?? 'Unassigned'),
+                                          ),
+                                          DataCell(Text('${profile.yearLevel}')),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
-                            ),
+                              );
+                            },
                           ),
                         );
                       },

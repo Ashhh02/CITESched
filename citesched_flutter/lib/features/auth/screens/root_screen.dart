@@ -15,20 +15,6 @@ class RootScreen extends ConsumerWidget {
     final authNotifier = ref.read(authProvider.notifier);
     final selectedRole = authNotifier.selectedRole;
 
-    // Keep onboarding-capable Google sessions on the login screen instead of
-    // routing them into a stale dashboard based only on old scopes.
-    if (authState == null && authNotifier.hasActiveSession) {
-      if (authNotifier.needsRoleOnboarding) {
-        return const LoginScreen();
-      }
-
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
     if (authState == null) {
       return const LoginScreen();
     }
@@ -65,9 +51,6 @@ class RootScreen extends ConsumerWidget {
       return const LoginScreen();
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      authNotifier.signOut();
-    });
     return const LoginScreen();
   }
 }

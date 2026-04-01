@@ -246,6 +246,7 @@ class SetupEndpoint extends Endpoint {
     required EmploymentStatus employmentStatus,
     required FacultyShiftPreference shiftPreference,
     required Program program,
+    required bool isActive,
   }) async {
     final existingFaculty = await Faculty.db.findFirstRow(
       session,
@@ -261,7 +262,7 @@ class SetupEndpoint extends Endpoint {
         ..facultyId = facultyId
         ..userInfoId = userInfo.id!
         ..program = program
-        ..isActive = true
+        ..isActive = isActive
         ..updatedAt = DateTime.now();
       await Faculty.db.updateRow(session, existingFaculty);
       return;
@@ -278,7 +279,7 @@ class SetupEndpoint extends Endpoint {
         facultyId: facultyId,
         userInfoId: userInfo.id!,
         program: program,
-        isActive: true,
+        isActive: isActive,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
@@ -326,6 +327,9 @@ class SetupEndpoint extends Endpoint {
     String? program,
   }) async {
     try {
+      final normalizedRole = role.trim().toLowerCase();
+      final needsFacultyApproval = normalizedRole == 'faculty';
+
       final userInfo = await _ensureUserInfo(
         session,
         userName: userName,
@@ -340,10 +344,14 @@ class SetupEndpoint extends Endpoint {
         email: email,
         password: password,
       );
-      await _syncRoleScope(session, userInfo, role: role);
+
+      // Do not grant immediate faculty scope for self-registered faculty.
+      if (!needsFacultyApproval) {
+        await _syncRoleScope(session, userInfo, role: normalizedRole);
+      }
 
       // Create linked profile based on role
-      if (role == 'student' && studentId != null) {
+      if (normalizedRole == 'student' && studentId != null) {
         await _ensureStudentProfile(
           session,
           userInfo,
@@ -353,7 +361,8 @@ class SetupEndpoint extends Endpoint {
           course: course ?? 'BSIT',
           section: section,
         );
-      } else if ((role == 'faculty' || role == 'admin') && facultyId != null) {
+      } else if ((normalizedRole == 'faculty' || normalizedRole == 'admin') &&
+          facultyId != null) {
         await _ensureFacultyProfile(
           session,
           userInfo,
@@ -364,14 +373,19 @@ class SetupEndpoint extends Endpoint {
           employmentStatus: _employmentStatusFromString(employmentStatus),
           shiftPreference: _shiftPreferenceFromString(shiftPreference),
           program: _programFromString(program),
+          isActive: normalizedRole == 'admin' ? true : !needsFacultyApproval,
         );
       }
 
       // Add UserRole entry to ensure authenticationHandler picks it up
-      await _ensureUserRole(session, userInfo, role: role);
+      await _ensureUserRole(
+        session,
+        userInfo,
+        role: needsFacultyApproval ? 'faculty_pending' : normalizedRole,
+      );
 
       session.log(
-        'Created user $email with role $role and ID ${studentId ?? facultyId}',
+        'Created user $email with role ${needsFacultyApproval ? "faculty_pending" : normalizedRole} and ID ${studentId ?? facultyId}',
       );
       return true;
     } catch (e) {
@@ -436,6 +450,12 @@ class SetupEndpoint extends Endpoint {
       if (explicitRole == 'admin') {
         return 'admin';
       }
+      if (explicitRole == 'faculty_pending') {
+        return 'faculty_pending';
+      }
+      if (explicitRole == 'faculty_declined') {
+        return 'faculty_declined';
+      }
       if (explicitRole == 'faculty' && activeFaculty != null) {
         return 'faculty';
       }
@@ -487,6 +507,9 @@ class SetupEndpoint extends Endpoint {
     );
     if (resolvedRole == null) {
       return null;
+    }
+    if (resolvedRole == 'faculty_pending' || resolvedRole == 'faculty_declined') {
+      return resolvedRole;
     }
 
     currentUserInfo.email = normalizedEmail;

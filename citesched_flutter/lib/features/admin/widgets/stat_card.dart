@@ -105,23 +105,32 @@ class _StatCardState extends State<StatCard> {
               ),
               if (widget.onTap != null) ...[
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text(
-                      'View Details',
-                      style: GoogleFonts.poppins(
-                        fontSize: isMobile ? 10 : 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_forward_rounded,
-                      size: isMobile ? 12 : 14,
-                      color: Colors.black87,
-                    ),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isVeryNarrow = constraints.maxWidth < 120;
+                    return Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            isVeryNarrow ? 'Details' : 'View Details',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: isMobile ? 10 : 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: isMobile ? 12 : 14,
+                          color: Colors.black87,
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ],

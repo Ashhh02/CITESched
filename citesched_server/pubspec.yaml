@@ -12,6 +12,7 @@ dependencies:
   serverpod_auth_server: ^3.2.3
 
   http: any
+  mailer: ^6.4.1
 dev_dependencies:
   coverage: ^1.8.0
   lints: '>=3.0.0 <7.0.0'

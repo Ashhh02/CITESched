@@ -21,6 +21,7 @@ class RoomDetailsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheduleAsync = ref.watch(roomScheduleProvider(room.id!));
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     final maroonColor = const Color(0xFF720045);
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
@@ -33,7 +34,7 @@ class RoomDetailsScreen extends ConsumerWidget {
           // Header (Standardized Maroon Gradient Banner)
           AdminHeaderContainer(
             primaryColor: maroonColor,
-            padding: const EdgeInsets.all(32),
+            padding: EdgeInsets.all(isMobile ? 16 : 32),
             boxShadow: [
               BoxShadow(
                 color: maroonColor.withValues(alpha: 0.3),
@@ -41,98 +42,202 @@ class RoomDetailsScreen extends ConsumerWidget {
                 offset: const Offset(0, 12),
               ),
             ],
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compactHeader = constraints.maxWidth < 920;
+                if (compactHeader) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 10,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                room.type == RoomType.laboratory
+                                    ? Icons.computer_rounded
+                                    : Icons.meeting_room_rounded,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: constraints.maxWidth > 260
+                                ? constraints.maxWidth - 140
+                                : 120,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  room.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                _buildStatusChip(room.isActive, inverted: true),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const SizedBox(width: 16),
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
                         ),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          room.type == RoomType.laboratory
-                              ? Icons.computer_rounded
-                              : Icons.meeting_room_rounded,
-                          color: Colors.white,
-                          size: 32,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          room.name,
-                          style: GoogleFonts.poppins(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: -1,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Row(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            _buildStatusChip(room.isActive, inverted: true),
+                            const Icon(
+                              Icons.school_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              room.program.name.toUpperCase(),
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.school_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        room.program.name.toUpperCase(),
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ],
+                  );
+                }
+
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                          const SizedBox(width: 16),
+                          Container(
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                room.type == RoomType.laboratory
+                                    ? Icons.computer_rounded
+                                    : Icons.meeting_room_rounded,
+                                color: Colors.white,
+                                size: 32,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  room.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -1,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                _buildStatusChip(room.isActive, inverted: true),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.school_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            room.program.name.toUpperCase(),
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
+              padding: EdgeInsets.all(isMobile ? 16 : 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -147,10 +252,12 @@ class RoomDetailsScreen extends ConsumerWidget {
                         color: maroonColor.withValues(alpha: 0.2),
                       ),
                     ),
-                    child: Row(
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Icon(Icons.category_rounded, color: maroonColor),
-                        const SizedBox(width: 12),
                         Text(
                           'ROOM CATEGORY:',
                           style: GoogleFonts.poppins(
@@ -159,7 +266,6 @@ class RoomDetailsScreen extends ConsumerWidget {
                             color: Colors.grey,
                           ),
                         ),
-                        const SizedBox(width: 12),
                         Text(
                           room.type.name.toUpperCase(),
                           style: GoogleFonts.poppins(
@@ -173,57 +279,104 @@ class RoomDetailsScreen extends ConsumerWidget {
                   ),
 
                   // Stats Row
-                  Row(
-                    children: [
-                      _buildSimpleStatCard(
-                        'Capacity',
-                        '${room.capacity} students',
-                        Icons.groups_rounded,
-                        Colors.blue,
-                        cardBg,
-                      ),
-                      const SizedBox(width: 16),
-                      const SizedBox(width: 16),
-                      scheduleAsync.when(
-                        loading: () => _buildSimpleStatCard(
-                          'Occupancy',
-                          '...',
-                          Icons.pie_chart_rounded,
-                          Colors.orange,
-                          cardBg,
-                        ),
-                        error: (e, s) => _buildSimpleStatCard(
-                          'Occupancy',
-                          'Error',
-                          Icons.pie_chart_rounded,
-                          Colors.orange,
-                          cardBg,
-                        ),
-                        data: (schedules) => _buildSimpleStatCard(
-                          'Schedules',
-                          '${schedules.length} periods',
-                          Icons.calendar_view_week_rounded,
-                          Colors.orange,
-                          cardBg,
-                        ),
-                      ),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, c) {
+                      final compactStats = c.maxWidth < 860;
+                      if (compactStats) {
+                        return Column(
+                          children: [
+                            _buildSimpleStatCard(
+                              'Capacity',
+                              '${room.capacity} students',
+                              Icons.groups_rounded,
+                              Colors.blue,
+                              cardBg,
+                              compact: true,
+                            ),
+                            const SizedBox(height: 12),
+                            scheduleAsync.when(
+                              loading: () => _buildSimpleStatCard(
+                                'Occupancy',
+                                '...',
+                                Icons.pie_chart_rounded,
+                                Colors.orange,
+                                cardBg,
+                                compact: true,
+                              ),
+                              error: (e, s) => _buildSimpleStatCard(
+                                'Occupancy',
+                                'Error',
+                                Icons.pie_chart_rounded,
+                                Colors.orange,
+                                cardBg,
+                                compact: true,
+                              ),
+                              data: (schedules) => _buildSimpleStatCard(
+                                'Schedules',
+                                '${schedules.length} periods',
+                                Icons.calendar_view_week_rounded,
+                                Colors.orange,
+                                cardBg,
+                                compact: true,
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          _buildSimpleStatCard(
+                            'Capacity',
+                            '${room.capacity} students',
+                            Icons.groups_rounded,
+                            Colors.blue,
+                            cardBg,
+                          ),
+                          const SizedBox(width: 16),
+                          scheduleAsync.when(
+                            loading: () => _buildSimpleStatCard(
+                              'Occupancy',
+                              '...',
+                              Icons.pie_chart_rounded,
+                              Colors.orange,
+                              cardBg,
+                            ),
+                            error: (e, s) => _buildSimpleStatCard(
+                              'Occupancy',
+                              'Error',
+                              Icons.pie_chart_rounded,
+                              Colors.orange,
+                              cardBg,
+                            ),
+                            data: (schedules) => _buildSimpleStatCard(
+                              'Schedules',
+                              '${schedules.length} periods',
+                              Icons.calendar_view_week_rounded,
+                              Colors.orange,
+                              cardBg,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 32),
 
                   // Room Schedule Section
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Icon(
                         Icons.access_time_filled_rounded,
                         color: maroonColor,
                       ),
-                      const SizedBox(width: 12),
                       Text(
                         'Room Utilization Schedule',
                         style: GoogleFonts.poppins(
-                          fontSize: 20,
+                          fontSize: isMobile ? 18 : 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -339,56 +492,66 @@ class RoomDetailsScreen extends ConsumerWidget {
     IconData icon,
     Color color,
     Color cardBg,
+    {bool compact = false}
   ) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    final card = Container(
+      padding: EdgeInsets.all(compact ? 16 : 20),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(compact ? 10 : 12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Column(
+            child: Icon(icon, color: color, size: compact ? 22 : 24),
+          ),
+          SizedBox(width: compact ? 12 : 16),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
-                    fontSize: 12,
+                    fontSize: compact ? 11 : 12,
                     color: Colors.grey,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
                   value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
-                    fontSize: 18,
+                    fontSize: compact ? 16 : 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+
+    if (compact) return card;
+    return Expanded(
+      child: card,
     );
   }
 }

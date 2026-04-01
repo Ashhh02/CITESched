@@ -1,5 +1,8 @@
 import 'dart:io';
+import 'dart:async';
 
+import 'package:mailer/mailer.dart' as mailer;
+import 'package:mailer/smtp_server.dart';
 import 'package:serverpod/serverpod.dart';
 import 'package:serverpod_auth_server/serverpod_auth_server.dart'
     as auth_legacy;
@@ -155,9 +158,14 @@ void _sendRegistrationCode(
   required String verificationCode,
   required Transaction? transaction,
 }) {
-  // NOTE: Here you call your mail service to send the verification code to
-  // the user. For testing, we will just log the verification code.
-  session.log('[EmailIdp] Registration code ($email): $verificationCode');
+  unawaited(
+    _dispatchVerificationEmail(
+      session,
+      email: email,
+      verificationCode: verificationCode,
+      purpose: 'Registration',
+    ),
+  );
 }
 
 void _sendPasswordResetCode(
@@ -167,9 +175,134 @@ void _sendPasswordResetCode(
   required String verificationCode,
   required Transaction? transaction,
 }) {
-  // NOTE: Here you call your mail service to send the verification code to
-  // the user. For testing, we will just log the verification code.
-  session.log('[EmailIdp] Password reset code ($email): $verificationCode');
+  unawaited(
+    _dispatchVerificationEmail(
+      session,
+      email: email,
+      verificationCode: verificationCode,
+      purpose: 'Password reset',
+    ),
+  );
+}
+
+Future<void> _dispatchVerificationEmail(
+  Session session, {
+  required String email,
+  required String verificationCode,
+  required String purpose,
+}) async {
+  final smtpResult = await _sendVerificationEmailViaSmtp(
+    email: email,
+    subject: 'CITESched $purpose Verification Code',
+    plainTextBody: '''
+Hello,
+
+Your CITESched $purpose verification code is: $verificationCode
+
+If you did not request this code, you can safely ignore this email.
+''',
+  );
+
+  if (smtpResult.sent) {
+    session.log('[EmailIdp] $purpose code email sent to $email');
+    return;
+  }
+
+  if (smtpResult.reason != null && smtpResult.reason!.isNotEmpty) {
+    session.log('[EmailIdp] SMTP send skipped/failed: ${smtpResult.reason}');
+  }
+
+  // Fallback for local/dev when SMTP is not configured.
+  session.log('[EmailIdp] $purpose code ($email): $verificationCode');
+}
+
+Future<_SmtpSendResult> _sendVerificationEmailViaSmtp({
+  required String email,
+  required String subject,
+  required String plainTextBody,
+}) async {
+  final host = _smtpConfigValue('SMTP_HOST', 'smtpHost')?.trim();
+  final username = _smtpConfigValue('SMTP_USERNAME', 'smtpUsername')?.trim();
+  final password = _smtpConfigValue('SMTP_PASSWORD', 'smtpPassword');
+  final fromEmail =
+      _smtpConfigValue('SMTP_FROM_EMAIL', 'smtpFromEmail')?.trim() ?? username;
+  final fromName =
+      _smtpConfigValue('SMTP_FROM_NAME', 'smtpFromName')?.trim() ?? 'CITESched';
+  final port =
+      int.tryParse(_smtpConfigValue('SMTP_PORT', 'smtpPort')?.trim() ?? '') ??
+      587;
+  final ssl = ((_smtpConfigValue('SMTP_SSL', 'smtpSsl') ?? 'false')
+              .toLowerCase() ==
+          'true');
+  final ignoreBadCertificate =
+      ((_smtpConfigValue('SMTP_IGNORE_BAD_CERT', 'smtpIgnoreBadCert') ??
+                      'false')
+                  .toLowerCase() ==
+              'true');
+
+  if (host == null ||
+      host.isEmpty ||
+      username == null ||
+      username.isEmpty ||
+      password == null ||
+      password.isEmpty ||
+      fromEmail == null ||
+      fromEmail.isEmpty) {
+    return const _SmtpSendResult(
+      sent: false,
+      reason:
+          'Missing SMTP config. Set SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, and SMTP_FROM_EMAIL (or smtpHost/smtpUsername/smtpPassword/smtpFromEmail in passwords.yaml).',
+    );
+  }
+
+  try {
+    final smtpServer = SmtpServer(
+      host,
+      port: port,
+      username: username,
+      password: password,
+      ssl: ssl,
+      ignoreBadCertificate: ignoreBadCertificate,
+    );
+
+    final message = mailer.Message()
+      ..from = mailer.Address(fromEmail, fromName)
+      ..recipients.add(email)
+      ..subject = subject
+      ..text = plainTextBody;
+
+    await mailer.send(message, smtpServer);
+    return const _SmtpSendResult(sent: true);
+  } catch (e) {
+    return _SmtpSendResult(
+      sent: false,
+      reason: 'SMTP exception: $e',
+    );
+  }
+}
+
+String? _smtpConfigValue(String envKey, String passwordKey) {
+  final envValue = Platform.environment[envKey];
+  if (envValue != null && envValue.trim().isNotEmpty) return envValue;
+
+  try {
+    final fromPasswords = Serverpod.instance.getPassword(passwordKey);
+    if (fromPasswords != null && fromPasswords.trim().isNotEmpty) {
+      return fromPasswords;
+    }
+  } catch (_) {}
+
+  return null;
+}
+
+class _SmtpSendResult {
+  final bool sent;
+  final String? reason;
+
+  const _SmtpSendResult({
+    required this.sent,
+    this.reason,
+  });
 }
 
 /// Called after a new email account is created.

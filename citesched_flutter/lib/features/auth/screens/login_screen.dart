@@ -168,15 +168,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       final userInfo = await _loadUserInfoByEmail(email);
-      final existingRole = await _loadExistingRoleByEmail(email);
-      final emailVerified = await _runGoogleEmailVerification(
-        email: email,
-        hasExistingAccount: userInfo != null || existingRole != null,
-      );
-      if (!emailVerified) {
-        await _signOutAfterGoogle(authNotifier);
-        return;
-      }
 
       final selectedRole = await _resolveGoogleRoleSelection(
         userInfo: userInfo,
@@ -185,7 +176,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         authNotifier: authNotifier,
       );
       if (selectedRole == null) {
-        await _signOutAfterGoogle(authNotifier);
+        if (mounted) {
+          setState(() {
+            _errorMessage =
+                'Unable to resolve account role for this Google sign-in.';
+          });
+        }
+        return;
+      }
+      if (selectedRole == 'faculty_pending') {
+        await _showAccountStatusModal(
+          title: 'Faculty Approval Pending',
+          message:
+              'Your faculty registration is waiting for admin approval. You can sign in after approval.',
+        );
+        await authNotifier.signOut();
+        return;
+      }
+      if (selectedRole == 'faculty_declined') {
+        await _showAccountStatusModal(
+          title: 'Faculty Request Declined',
+          message:
+              'Your faculty request was declined by admin. Please contact admin for assistance.',
+        );
+        await authNotifier.signOut();
         return;
       }
 
@@ -197,234 +211,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _errorMessage = e.toString();
         });
       }
-      await _signOutAfterGoogle(authNotifier);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
-  }
-
-  Future<bool> _runGoogleEmailVerification({
-    required String email,
-    required bool hasExistingAccount,
-  }) async {
-    final normalizedEmail = email.trim().toLowerCase();
-    if (normalizedEmail.isEmpty) return false;
-
-    final initialChallenge = await _issueGoogleEmailVerificationChallenge(
-      email: normalizedEmail,
-      preferPasswordResetFlow: hasExistingAccount,
-    );
-
-    if (!mounted) return false;
-
-    final verified = await _showGoogleEmailVerificationDialog(
-      email: normalizedEmail,
-      initialChallenge: initialChallenge,
-    );
-
-    return verified ?? false;
-  }
-
-  Future<_GoogleEmailCodeChallenge> _issueGoogleEmailVerificationChallenge({
-    required String email,
-    required bool preferPasswordResetFlow,
-  }) async {
-    if (preferPasswordResetFlow) {
-      try {
-        final requestId = await client.emailIdp.startPasswordReset(email: email);
-        return _GoogleEmailCodeChallenge(
-          requestId: requestId,
-          passwordResetFlow: true,
-        );
-      } catch (_) {
-        // Fall back to registration flow if the account has no password-reset route yet.
-      }
-    }
-
-    try {
-      final requestId = await client.emailIdp.startRegistration(email: email);
-      return _GoogleEmailCodeChallenge(
-        requestId: requestId,
-        passwordResetFlow: false,
-      );
-    } catch (e) {
-      if (!preferPasswordResetFlow) {
-        final requestId = await client.emailIdp.startPasswordReset(email: email);
-        return _GoogleEmailCodeChallenge(
-          requestId: requestId,
-          passwordResetFlow: true,
-        );
-      }
-      rethrow;
-    }
-  }
-
-  Future<void> _verifyGoogleEmailCode({
-    required _GoogleEmailCodeChallenge challenge,
-    required String code,
-  }) async {
-    final normalizedCode = code.trim();
-    if (normalizedCode.isEmpty) {
-      throw Exception('Please enter the verification code.');
-    }
-
-    if (challenge.passwordResetFlow) {
-      await client.emailIdp.verifyPasswordResetCode(
-        passwordResetRequestId: challenge.requestId,
-        verificationCode: normalizedCode,
-      );
-      return;
-    }
-
-    await client.emailIdp.verifyRegistrationCode(
-      accountRequestId: challenge.requestId,
-      verificationCode: normalizedCode,
-    );
-  }
-
-  Future<bool?> _showGoogleEmailVerificationDialog({
-    required String email,
-    required _GoogleEmailCodeChallenge initialChallenge,
-  }) {
-    final codeController = TextEditingController();
-    String? inlineError;
-    bool isVerifying = false;
-    bool isResending = false;
-    var currentChallenge = initialChallenge;
-
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            Future<void> verifyCode() async {
-              final rawCode = codeController.text.trim();
-              if (rawCode.isEmpty) {
-                setModalState(() {
-                  inlineError = 'Enter the verification code sent to your email.';
-                });
-                return;
-              }
-
-              setModalState(() {
-                inlineError = null;
-                isVerifying = true;
-              });
-
-              try {
-                await _verifyGoogleEmailCode(
-                  challenge: currentChallenge,
-                  code: rawCode,
-                );
-                if (context.mounted) {
-                  Navigator.of(context).pop(true);
-                }
-              } catch (_) {
-                setModalState(() {
-                  inlineError = 'Invalid or expired code. Please try again.';
-                });
-              } finally {
-                if (context.mounted) {
-                  setModalState(() => isVerifying = false);
-                }
-              }
-            }
-
-            Future<void> resendCode() async {
-              setModalState(() {
-                inlineError = null;
-                isResending = true;
-              });
-
-              try {
-                currentChallenge = await _issueGoogleEmailVerificationChallenge(
-                  email: email,
-                  preferPasswordResetFlow: currentChallenge.passwordResetFlow,
-                );
-              } catch (_) {
-                setModalState(() {
-                  inlineError = 'Unable to resend code right now. Please try again.';
-                });
-              } finally {
-                if (context.mounted) {
-                  setModalState(() => isResending = false);
-                }
-              }
-            }
-
-            return AlertDialog(
-              title: const Text('Email Verification'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Enter the verification code sent to $email before continuing with Google sign-in.',
-                    style: GoogleFonts.poppins(fontSize: 13),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: codeController,
-                    keyboardType: TextInputType.number,
-                    maxLength: 8,
-                    decoration: const InputDecoration(
-                      labelText: 'Verification Code',
-                      counterText: '',
-                    ),
-                    onSubmitted: (_) {
-                      if (!isVerifying && !isResending) {
-                        verifyCode();
-                      }
-                    },
-                  ),
-                  if (inlineError != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      inlineError!,
-                      style: GoogleFonts.poppins(
-                        color: Colors.red,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isVerifying || isResending
-                      ? null
-                      : () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: isVerifying || isResending ? null : resendCode,
-                  child: isResending
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Resend'),
-                ),
-                ElevatedButton(
-                  onPressed: isVerifying || isResending ? null : verifyCode,
-                  child: isVerifying
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Verify'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    ).whenComplete(codeController.dispose);
   }
 
   Future<bool> _completeGoogleProfile(
@@ -469,6 +260,96 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       employmentStatus: role == 'faculty' ? employmentStatus : null,
       shiftPreference: role == 'faculty' ? shiftPreference : null,
       program: role == 'faculty' ? program : null,
+    );
+  }
+
+  Future<void> _showAccountStatusModal({
+    required String title,
+    required String message,
+    bool showWaitingLoader = false,
+  }) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF720045).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      showWaitingLoader
+                          ? Icons.hourglass_top_rounded
+                          : Icons.info_outline_rounded,
+                      color: const Color(0xFF720045),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              if (showWaitingLoader) ...[
+                Row(
+                  children: [
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2.4),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Waiting for admin decision...',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: const Color(0xFF6B7280),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
+              Text(
+                message,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: const Color(0xFF374151),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1410,6 +1291,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: TextField(
             controller: controller,
             obscureText: isPassword && _obscurePassword,
+            autocorrect: false,
+            enableSuggestions: false,
+            textCapitalization: TextCapitalization.none,
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
             cursorColor: textPrimary, // Cursor matches text color
             style: GoogleFonts.poppins(
               color: inputTextColor, // Typing text color (White/Black)
@@ -1492,13 +1378,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               color: bgRight,
               child: Stack(
                 children: [
-                  // Theme Toggle
-                  const Positioned(
-                    top: 25,
-                    right: 25,
-                    child: ThemeModeToggle(compact: true),
-                  ),
-
                   // Login Form Center
                   Center(
                     child: SingleChildScrollView(
@@ -1744,6 +1623,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                   ),
+
+                  // Keep theme toggle above the login card layer
+                  const Positioned(
+                    top: 25,
+                    right: 25,
+                    child: SafeArea(child: ThemeModeToggle(compact: true)),
+                  ),
                 ],
               ),
             ),
@@ -1837,7 +1723,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final normalizedRole = role.trim().toLowerCase();
     if (normalizedRole == 'admin' ||
         normalizedRole == 'faculty' ||
-        normalizedRole == 'student') {
+        normalizedRole == 'student' ||
+        normalizedRole == 'faculty_pending' ||
+        normalizedRole == 'faculty_declined') {
       return normalizedRole;
     }
 
@@ -1888,10 +1776,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (_) {}
   }
 
-  Future<void> _signOutAfterGoogle(AuthNotifier authNotifier) async {
-    await authNotifier.signOut();
-  }
-
   Future<String> _finalizeResolvedGoogleRole(
     String resolvedRole, {
     required UserInfo? userInfo,
@@ -1914,10 +1798,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }) async {
     final adoptedRole = await _adoptExistingGoogleAccount(email);
     final roleFromEmail = adoptedRole ?? await _loadExistingRoleByEmail(email);
+    if (roleFromEmail == 'faculty_pending' ||
+        roleFromEmail == 'faculty_declined') {
+      return roleFromEmail;
+    }
     final existingRole =
         roleFromEmail ?? await _resolveExistingGoogleRole(userInfo);
 
-    if (existingRole == 'admin') {
+    if (existingRole == 'admin' ||
+        existingRole == 'faculty' ||
+        existingRole == 'student') {
       return _finalizeResolvedGoogleRole(
         existingRole!,
         userInfo: userInfo,
@@ -1944,6 +1834,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (resolvedEmail == null || resolvedEmail.isEmpty) {
       throw Exception('Missing email from Google profile.');
     }
+
+    if (selectedRole == 'faculty') return 'faculty_pending';
 
     final refreshedInfo = await client.setup.getUserInfoByEmail(
       email: resolvedEmail,
@@ -1983,14 +1875,4 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
     return _isFaculty ? _facultyColorLight : _studentColorLight;
   }
-}
-
-class _GoogleEmailCodeChallenge {
-  final UuidValue requestId;
-  final bool passwordResetFlow;
-
-  const _GoogleEmailCodeChallenge({
-    required this.requestId,
-    required this.passwordResetFlow,
-  });
 }
