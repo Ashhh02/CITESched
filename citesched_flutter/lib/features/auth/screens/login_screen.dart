@@ -415,11 +415,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             fillColor: bgBody,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
+              borderSide: BorderSide(
+                color: Colors.black.withValues(alpha: 0.05),
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
+              borderSide: BorderSide(
+                color: Colors.black.withValues(alpha: 0.05),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -449,7 +453,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(19),
-                  border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+                  border: Border.all(
+                    color: Colors.black.withValues(alpha: 0.05),
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: primaryPurple.withValues(alpha: 0.15),
@@ -716,21 +722,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   decoration: fieldDecoration('Select Status'),
                                   items: EmploymentStatus.values
                                       .map(
-                                        (status) =>
-                                            DropdownMenuItem<EmploymentStatus>(
-                                              value: status,
-                                              child: Text(
-                                                status ==
-                                                        EmploymentStatus
-                                                            .fullTime
-                                                    ? 'Full-Time'
-                                                    : 'Part-Time',
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 15,
-                                                  color: textPrimary,
-                                                ),
-                                              ),
+                                        (
+                                          status,
+                                        ) => DropdownMenuItem<EmploymentStatus>(
+                                          value: status,
+                                          child: Text(
+                                            status == EmploymentStatus.fullTime
+                                                ? 'Full-Time'
+                                                : 'Part-Time',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 15,
+                                              color: textPrimary,
                                             ),
+                                          ),
+                                        ),
                                       )
                                       .toList(),
                                   onChanged: (value) {
@@ -752,34 +757,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   decoration: fieldDecoration('Select Shift'),
                                   items: FacultyShiftPreference.values
                                       .map(
-                                        (pref) =>
-                                            DropdownMenuItem<
+                                        (
+                                          pref,
+                                        ) => DropdownMenuItem<FacultyShiftPreference>(
+                                          value: pref,
+                                          child: Text(
+                                            switch (pref) {
+                                              FacultyShiftPreference.any =>
+                                                'Any Time (Flexible)',
+                                              FacultyShiftPreference.morning =>
+                                                'Morning (7:00 AM to 12:00 PM)',
                                               FacultyShiftPreference
-                                            >(
-                                              value: pref,
-                                              child: Text(
-                                                switch (pref) {
-                                                  FacultyShiftPreference.any =>
-                                                    'Any Time (Flexible)',
-                                                  FacultyShiftPreference
-                                                          .morning =>
-                                                    'Morning (7:00 AM to 12:00 PM)',
-                                                  FacultyShiftPreference
-                                                          .afternoon =>
-                                                    'Afternoon (1:00 PM to 6:00 PM)',
-                                                  FacultyShiftPreference
-                                                          .evening =>
-                                                    'Evening (6:00 PM to 9:00 PM)',
-                                                  FacultyShiftPreference
-                                                          .custom =>
-                                                    'Custom',
-                                                },
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 15,
-                                                  color: textPrimary,
-                                                ),
-                                              ),
+                                                  .afternoon =>
+                                                'Afternoon (1:00 PM to 6:00 PM)',
+                                              FacultyShiftPreference.evening =>
+                                                'Evening (6:00 PM to 9:00 PM)',
+                                              FacultyShiftPreference.custom =>
+                                                'Custom',
+                                            },
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 15,
+                                              color: textPrimary,
                                             ),
+                                          ),
+                                        ),
                                       )
                                       .toList(),
                                   onChanged: (value) {
@@ -942,7 +943,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: const Color(0xFF333333).withValues(alpha: 0.7)),
+          Icon(
+            icon,
+            size: 16,
+            color: const Color(0xFF333333).withValues(alpha: 0.7),
+          ),
           const SizedBox(width: 8),
           Text(
             text,
@@ -963,7 +968,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       barrierDismissible: false,
       builder: (context) {
         return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 32,
+          ),
           backgroundColor: Colors.transparent,
           child: Container(
             constraints: const BoxConstraints(maxWidth: 560),
@@ -1876,3 +1884,4 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return _isFaculty ? _facultyColorLight : _studentColorLight;
   }
 }
+//testing
