@@ -1,4 +1,5 @@
 import 'package:citesched_flutter/main.dart';
+import 'package:citesched_flutter/core/utils/session_context.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:serverpod_auth_client/serverpod_auth_client.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
@@ -30,9 +31,8 @@ class AuthNotifier extends Notifier<UserInfo?> {
 
   Future<void> _refreshCurrentUser() async {
     try {
-      final profile = await client.modules.serverpod_auth_core.userProfileInfo
-          .get();
-      final email = profile.email?.trim().toLowerCase();
+      final sessionContext = await fetchSessionContext();
+      final email = sessionContext.email?.trim().toLowerCase();
       if (email != null && email.isNotEmpty) {
         final userInfo = await client.setup.getUserInfoByEmail(email: email);
         if (userInfo == null) {

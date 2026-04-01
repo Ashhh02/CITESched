@@ -3,6 +3,7 @@ import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/core/utils/schedule_export_service.dart';
+import 'package:citesched_flutter/core/utils/session_context.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/features/auth/widgets/logout_confirmation_dialog.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
@@ -14,14 +15,11 @@ import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.da
 import 'package:citesched_flutter/core/widgets/full_screen_calendar_scaffold.dart';
 
 final currentSignedInEmailProvider = FutureProvider<String?>((ref) async {
-  try {
-    final liveProfile = await client.modules.serverpod_auth_core.userProfileInfo
-        .get();
-    final email = liveProfile.email?.trim().toLowerCase();
-    if (email != null && email.isNotEmpty) {
-      return email;
-    }
-  } catch (_) {}
+  final sessionContext = await fetchSessionContext();
+  final email = sessionContext.email?.trim().toLowerCase();
+  if (email != null && email.isNotEmpty) {
+    return email;
+  }
 
   final fallbackEmail = ref.watch(authProvider)?.email?.trim().toLowerCase();
   if (fallbackEmail == null || fallbackEmail.isEmpty) {
@@ -31,14 +29,11 @@ final currentSignedInEmailProvider = FutureProvider<String?>((ref) async {
 });
 
 final currentSignedInNameProvider = FutureProvider<String?>((ref) async {
-  try {
-    final liveProfile = await client.modules.serverpod_auth_core.userProfileInfo
-        .get();
-    final liveName = (liveProfile.fullName ?? liveProfile.userName)?.trim();
-    if (liveName != null && liveName.isNotEmpty) {
-      return liveName;
-    }
-  } catch (_) {}
+  final sessionContext = await fetchSessionContext();
+  final liveName = sessionContext.userName?.trim();
+  if (liveName != null && liveName.isNotEmpty) {
+    return liveName;
+  }
 
   final fallbackName = ref.watch(authProvider)?.userName?.trim();
   if (fallbackName == null || fallbackName.isEmpty) {

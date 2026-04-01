@@ -6,8 +6,9 @@ services:
       - "8090:5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_DB: citesched
-      POSTGRES_PASSWORD: "admin123"
+      POSTGRES_DB: temp
+      POSTGRES_PASSWORD: "4Shyn.zyyy20"
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - citesched_data:/var/lib/postgresql/data
 

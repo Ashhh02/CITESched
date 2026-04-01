@@ -1,4 +1,7 @@
 import 'package:serverpod/serverpod.dart';
+import 'package:serverpod_auth_server/serverpod_auth_server.dart';
+import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
+    as auth_core;
 import '../generated/protocol.dart';
 
 class DebugEndpoint extends Endpoint {
@@ -6,23 +9,78 @@ class DebugEndpoint extends Endpoint {
   bool get requireLogin => false; // Allow public access to debug why auth fails
 
   Future<String> getSessionInfo(Session session) async {
-    var authInfo = session.authenticated;
-    var userId = authInfo?.userIdentifier;
-    var scopes = authInfo?.scopes.map((s) => s.name).toList();
+    final authInfo = session.authenticated;
+    final userId = authInfo?.userIdentifier;
+    final scopes = authInfo?.scopes.map((s) => s.name).toList();
 
-    String? userRoleEntry;
+    UserInfo? userInfo;
+    UserRole? userRole;
+    auth_core.UserProfile? authCoreProfile;
+
     if (userId != null) {
-      var userRole = await UserRole.db.findFirstRow(
+      final userIdentifier = userId.toString();
+      final legacyUserInfoId = int.tryParse(userIdentifier);
+      final authUserId = UuidValue.withValidation(userIdentifier);
+
+      if (legacyUserInfoId != null) {
+        userInfo = await UserInfo.db.findById(session, legacyUserInfoId);
+      }
+
+      if (authUserId != null) {
+        authCoreProfile = await auth_core.UserProfile.db.findFirstRow(
+          session,
+          where: (t) => t.authUserId.equals(authUserId),
+        );
+      }
+
+      userInfo ??= await UserInfo.db.findFirstRow(
         session,
-        where: (t) => t.userId.equals(userId.toString()),
+        where: (t) => t.userIdentifier.equals(userIdentifier),
       );
-      userRoleEntry = userRole?.toString();
+
+      userInfo ??= await UserInfo.db.findFirstRow(
+        session,
+        where: (t) => t.email.equals(userIdentifier.toLowerCase()),
+      );
+
+      if (userInfo == null && authCoreProfile?.email != null) {
+        userInfo = await UserInfo.db.findFirstRow(
+          session,
+          where: (t) => t.email.equals(authCoreProfile!.email!.toLowerCase()),
+        );
+      }
+
+      if (userInfo?.id != null) {
+        userRole = await UserRole.db.findFirstRow(
+          session,
+          where: (t) => t.userId.equals(userInfo!.id!.toString()),
+        );
+      }
+
+      userRole ??= await UserRole.db.findFirstRow(
+        session,
+        where: (t) => t.userId.equals(userIdentifier),
+      );
     }
 
-    var info = {
+    final resolvedEmail = userInfo?.email ?? authCoreProfile?.email;
+    final resolvedUserName =
+        userInfo?.userName ??
+        authCoreProfile?.fullName ??
+        resolvedEmail?.split('@').first;
+    final resolvedScopeNames = userInfo?.scopeNames ?? scopes ?? const [];
+
+    final info = {
       'authenticatedUserId': userId,
       'scopes': scopes,
-      'userRoleTableEntry': userRoleEntry,
+      'authCoreProfileEmail': authCoreProfile?.email,
+      'authCoreProfileFullName': authCoreProfile?.fullName,
+      'userInfoId': userInfo?.id,
+      'email': resolvedEmail,
+      'userName': resolvedUserName,
+      'scopeNames': resolvedScopeNames,
+      'resolvedRole': userRole?.role,
+      'userRoleTableEntry': userRole?.toString(),
       'sessionDetails':
           'Session is ${authInfo == null ? "NOT" : ""} authenticated',
     };

@@ -1,5 +1,6 @@
 import 'package:citesched_flutter/main.dart'; // Import for client access
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
+import 'package:citesched_flutter/core/utils/session_context.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:citesched_client/citesched_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -158,10 +159,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       authNotifier.updateUserInfo(null);
       authNotifier.setSelectedRole(null);
 
-      final profile = await client.modules.serverpod_auth_core.userProfileInfo
-          .get();
-      final email = profile.email;
-      final displayName = profile.fullName ?? profile.userName;
+      final sessionContext = await fetchSessionContext();
+      final email = sessionContext.email;
+      final displayName = sessionContext.userName;
+
+      if (email == null || email.trim().isEmpty) {
+        throw Exception('Unable to resolve Google account email.');
+      }
 
       final userInfo = await _loadUserInfoByEmail(email);
       final selectedRole = await _resolveGoogleRoleSelection(
