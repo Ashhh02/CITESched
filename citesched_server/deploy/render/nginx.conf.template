@@ -22,6 +22,12 @@ http {
     listen ${PORT};
     server_name _;
 
+    # Google Identity Services popup flow can fail (white gsi/transform page)
+    # if opener/embedder policies are too strict in production.
+    add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
+    add_header Cross-Origin-Embedder-Policy "unsafe-none" always;
+    add_header Cross-Origin-Resource-Policy "cross-origin" always;
+
     location /app/ {
       proxy_pass http://serverpod_web;
       proxy_http_version 1.1;

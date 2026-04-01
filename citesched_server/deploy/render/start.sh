@@ -36,6 +36,9 @@ DB_NAME=""
 DB_USER=""
 DB_PASSWORD=""
 DB_REQUIRE_SSL=""
+PUBLIC_HOST=""
+PUBLIC_PORT=""
+PUBLIC_SCHEME=""
 
 load_database_config() {
   db_url="$(first_non_empty "${SERVERPOD_DATABASE_URL:-}" "${DATABASE_URL:-}" "${RENDER_DATABASE_URL:-}")"
@@ -85,13 +88,27 @@ load_database_config() {
   DB_REQUIRE_SSL="$(first_non_empty "$DB_REQUIRE_SSL" "$(current_database_config_value requireSsl)" "false")"
 }
 
+load_public_url_config() {
+  PUBLIC_HOST="$(first_non_empty "${SERVERPOD_PUBLIC_HOST:-}")"
+  PUBLIC_PORT="$(first_non_empty "${SERVERPOD_PUBLIC_PORT:-}" "443")"
+  PUBLIC_SCHEME="$(first_non_empty "${SERVERPOD_PUBLIC_SCHEME:-}" "https")"
+}
+
 write_production_config() {
   awk \
     -v db_host="$DB_HOST" \
     -v db_port="$DB_PORT" \
     -v db_name="$DB_NAME" \
     -v db_user="$DB_USER" \
-    -v db_require_ssl="$DB_REQUIRE_SSL" '
+    -v db_require_ssl="$DB_REQUIRE_SSL" \
+    -v public_host="$PUBLIC_HOST" \
+    -v public_port="$PUBLIC_PORT" \
+    -v public_scheme="$PUBLIC_SCHEME" '
+    /^(apiServer|insightsServer|webServer):$/ { in_server=1; print; next }
+    /^[^ ]/ && in_server { in_server=0 }
+    in_server && $1 == "publicHost:" && public_host != "" { print "  publicHost: " public_host; next }
+    in_server && $1 == "publicPort:" && public_port != "" { print "  publicPort: " public_port; next }
+    in_server && $1 == "publicScheme:" && public_scheme != "" { print "  publicScheme: " public_scheme; next }
     /^database:$/ { in_db=1; print; next }
     /^[^ ]/ && in_db { in_db=0 }
     in_db && $1 == "host:" && db_host != "" { print "  host: " db_host; next }
@@ -127,6 +144,7 @@ EOF
 }
 
 load_database_config
+load_public_url_config
 write_production_config
 write_password_config
 
