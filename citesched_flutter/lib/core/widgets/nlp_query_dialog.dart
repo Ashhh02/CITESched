@@ -165,112 +165,82 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
                       top: Radius.circular(24),
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.auto_awesome_rounded,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compactHeader = constraints.maxWidth < 700;
+                      final actionButtons = _buildHeaderActions(auth);
+
+                      if (compactHeader) {
+                        return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'CITESched AI',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.auto_awesome_rounded,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildHeaderTitle()),
+                                IconButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
                             ),
-                            Text(
-                              'Powered by NLP Service',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                color: Colors.white70,
+                            const SizedBox(height: 12),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: actionButtons,
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
+                        );
+                      }
+
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          TextButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _showHistory = !_showHistory;
-                                _selectedSessionId = null;
-                              });
-                            },
-                            icon: Icon(
-                              _showHistory ? Icons.chat_bubble : Icons.history,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                            label: Text(
-                              _showHistory ? 'Chat' : _historyLabel(auth),
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                          const Icon(
+                            Icons.auto_awesome_rounded,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(child: _buildHeaderTitle()),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Wrap(
+                                alignment: WrapAlignment.end,
+                                spacing: 6,
+                                runSpacing: 6,
+                                crossAxisAlignment:
+                                    WrapCrossAlignment.center,
+                                children: [
+                                  ...actionButtons,
+                                  IconButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                          TextButton.icon(
-                            onPressed: _showSuggestions,
-                            icon: const Icon(
-                              Icons.lightbulb_outline,
-                              color: Colors.white,
-                            ),
-                            label: Text(
-                              'Suggest',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          TextButton.icon(
-                            onPressed: () {
-                              ref
-                                  .read(nlpQueryChatProvider.notifier)
-                                  .clearChat();
-                              setState(() {
-                                _showHistory = false;
-                                _selectedSessionId = null;
-                              });
-                            },
-                            icon: const Icon(
-                              Icons.add_comment,
-                              color: Colors.white,
-                            ),
-                            label: Text(
-                              'New Chat',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close, color: Colors.white),
                           ),
                         ],
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
 
@@ -478,6 +448,95 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
         ),
       ),
     );
+  }
+
+  Widget _buildHeaderTitle() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'CITESched AI',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        Text(
+          'Powered by NLP Service',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            color: Colors.white70,
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildHeaderActions(UserInfo? auth) {
+    return [
+      TextButton.icon(
+        onPressed: () {
+          setState(() {
+            _showHistory = !_showHistory;
+            _selectedSessionId = null;
+          });
+        },
+        icon: Icon(
+          _showHistory ? Icons.chat_bubble : Icons.history,
+          color: Colors.white,
+          size: 18,
+        ),
+        label: Text(
+          _showHistory ? 'Chat' : _historyLabel(auth),
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      TextButton.icon(
+        onPressed: _showSuggestions,
+        icon: const Icon(
+          Icons.lightbulb_outline,
+          color: Colors.white,
+        ),
+        label: Text(
+          'Suggest',
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      TextButton.icon(
+        onPressed: () {
+          ref.read(nlpQueryChatProvider.notifier).clearChat();
+          setState(() {
+            _showHistory = false;
+            _selectedSessionId = null;
+          });
+        },
+        icon: const Icon(
+          Icons.add_comment,
+          color: Colors.white,
+        ),
+        label: Text(
+          'New Chat',
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    ];
   }
 
   String _historyLabel(UserInfo? auth) {
