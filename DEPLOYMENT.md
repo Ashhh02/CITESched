@@ -14,7 +14,8 @@ This repository is now prepared for this structure:
 
 ## Backend on Render
 
-Use the `citesched_server` folder as the Render service root.
+Use the repository root as the Render service root so the Docker build can
+see both `citesched_server` and `citesched_flutter`.
 
 - Runtime: Docker
 - Dockerfile: `citesched_server/Dockerfile`
@@ -55,7 +56,8 @@ That means:
 - local development still works against localhost
 - production builds can point at Render without editing Dart source
 
-The Render Docker image now builds the Flutter web app during deployment and serves it from the same service under:
+The Render Docker image now rebuilds the Flutter web app during deployment
+from `citesched_flutter` and serves it from the same service under:
 
 - `https://citesched-server.onrender.com/app`
 
@@ -88,5 +90,5 @@ If you use redirect URIs for web auth flows, add the matching production callbac
 1. Copy `citesched_server/config/passwords.yaml.example` to `citesched_server/config/passwords.yaml`.
 2. Fill in your real production secrets locally.
 3. Commit and push the repo to GitHub.
-4. In Render, keep the backend service pointed at `citesched_server` and add the `SERVERPOD_*` environment variables.
+4. In Render, set the service Root Directory to the repository root (`.`), keep the Dockerfile path at `citesched_server/Dockerfile`, and add the `SERVERPOD_*` environment variables.
 5. Redeploy Render and open `https://citesched-server.onrender.com/app`.

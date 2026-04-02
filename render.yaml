@@ -2,6 +2,7 @@ services:
   - type: web
     name: citesched-server
     runtime: docker
+    rootDir: .
     dockerfilePath: citesched_server/Dockerfile
     plan: free
     autoDeploy: true
