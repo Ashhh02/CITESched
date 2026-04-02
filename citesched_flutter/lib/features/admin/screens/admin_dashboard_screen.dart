@@ -70,6 +70,80 @@ class _AdminDashboardScreenState
     extends ConsumerState<AdminDashboardScreen> {
   Timer? _refreshTimer;
 
+  void _showActionSnackBar({
+    required String title,
+    required String message,
+    required Color accentColor,
+    required IconData icon,
+  }) {
+    if (!mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        content: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
+              ),
+            ],
+            border: Border.all(color: accentColor.withValues(alpha: 0.18)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: accentColor, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      message,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: const Color(0xFF475569),
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -97,9 +171,12 @@ class _AdminDashboardScreenState
 
       ref.invalidate(pendingFacultyRequestsProvider);
       ref.invalidate(dashboardStatsProvider);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Approved faculty: ${faculty.name}')),
+      _showActionSnackBar(
+        title: 'Request Approved',
+        message:
+            '${faculty.name} now has approved faculty access and can sign in to the faculty dashboard.',
+        accentColor: const Color(0xFF15803D),
+        icon: Icons.verified_rounded,
       );
     } catch (e) {
       if (!mounted) return;
@@ -120,9 +197,12 @@ class _AdminDashboardScreenState
       );
 
       ref.invalidate(pendingFacultyRequestsProvider);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Declined faculty request: ${faculty.name}')),
+      _showActionSnackBar(
+        title: 'Request Declined',
+        message:
+            '${faculty.name} has been notified to select a role again or submit a new faculty request.',
+        accentColor: const Color(0xFFB91C1C),
+        icon: Icons.cancel_outlined,
       );
     } catch (e) {
       if (!mounted) return;

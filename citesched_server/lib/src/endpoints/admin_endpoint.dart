@@ -112,9 +112,16 @@ class AdminEndpoint extends Endpoint {
     required String role,
   }) async {
     // Validate the role
-    if (!['admin', 'faculty', 'student'].contains(role)) {
+    const allowedRoles = {
+      'admin',
+      'faculty',
+      'student',
+      'faculty_pending',
+      'faculty_declined',
+    };
+    if (!allowedRoles.contains(role)) {
       throw Exception(
-        'Invalid role: $role. Must be admin, faculty, or student.',
+        'Invalid role: $role. Must be one of: ${allowedRoles.join(", ")}.',
       );
     }
 

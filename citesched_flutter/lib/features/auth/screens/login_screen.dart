@@ -3,13 +3,11 @@ import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/core/utils/session_context.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:citesched_client/citesched_client.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:serverpod_auth_client/serverpod_auth_client.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
-import 'package:serverpod_auth_idp_flutter/src/common/exceptions.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -20,6 +18,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   static const List<String> _allowedCourses = ['BSIT', 'BSEMC'];
+  static const _googleDeclinedNoticeStoragePrefix = 'google_declined_notice:';
   final _idController = TextEditingController();
   final _passwordController = TextEditingController();
   final _secureStorage = const FlutterSecureStorage();
@@ -27,8 +26,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   static const _googleRoleStoragePrefix = 'google_role:';
 
   String _describeGoogleError(Object error) {
-    if (error is UserFacingException && error.originalException != null) {
-      return '${error.message}\n${error.originalException}';
+    try {
+      final dynamic dynamicError = error;
+      final message = dynamicError.message;
+      final originalException = dynamicError.originalException;
+      if (message is String && originalException != null) {
+        return '$message\n$originalException';
+      }
+    } catch (_) {
+      // Fall through to the generic string conversion below.
     }
     return error.toString();
   }
@@ -93,8 +99,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           result.key != null) {
         // Register the session with Serverpod's SessionManager
         // This is CRITICAL for subsequent requests to be authenticated
-        print('Login Successful. KeyID: ${result.keyId}, Key: ${result.key}');
-        print('UserInfo: ${result.userInfo}');
+        debugPrint('Login successful. KeyID: ${result.keyId}');
+        debugPrint('UserInfo: ${result.userInfo}');
 
         // Create a syntactically valid RFC4122 UUID from the integer keyId so
         // the auth session can be serialized safely on web.
@@ -111,7 +117,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           scopeNames: result.userInfo!.scopeNames.toSet(),
           authStrategy: 'session',
         );
-        print('Updating signed in user with AuthSuccess: $authSuccess');
+        debugPrint('Updating signed in user with AuthSuccess: $authSuccess');
         await client.auth.updateSignedInUser(authSuccess);
 
         // Update the auth provider (though the listener might handle it now)
@@ -193,15 +199,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await authNotifier.signOut();
         return;
       }
-      if (selectedRole == 'faculty_declined') {
-        await _showAccountStatusModal(
-          title: 'Faculty Request Declined',
-          message:
-              'Your faculty request was declined by admin. Please contact admin for assistance.',
-        );
-        await authNotifier.signOut();
-        return;
-      }
 
       await authNotifier.refreshCurrentUser();
       authNotifier.setSelectedRole(selectedRole);
@@ -240,17 +237,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final employmentStatus = details['employmentStatus'];
     final shiftPreference = details['shiftPreference'];
     final program = details['program'];
+    final accountPassword = details['password'] ?? '';
+    final availabilityPayload = details['availability'];
 
-    if (name.trim().isEmpty || effectiveEmail.trim().isEmpty) {
+    if (name.trim().isEmpty ||
+        effectiveEmail.trim().isEmpty ||
+        accountPassword.trim().isEmpty) {
       return false;
     }
 
-    final tempPassword = 'Google-${DateTime.now().millisecondsSinceEpoch}';
-
-    return await client.setup.createAccount(
+    final created = await client.setup.createAccount(
       userName: name.trim(),
       email: effectiveEmail.trim(),
-      password: tempPassword,
+      password: accountPassword,
       role: role,
       studentId: studentId?.trim().isEmpty == true ? null : studentId?.trim(),
       facultyId: facultyId?.trim().isEmpty == true ? null : facultyId?.trim(),
@@ -261,6 +260,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       shiftPreference: role == 'faculty' ? shiftPreference : null,
       program: role == 'faculty' ? program : null,
     );
+
+    if (!created) return false;
+
+    if (role == 'faculty') {
+      final availabilityEntries = _deserializeAvailabilityEntries(
+        availabilityPayload,
+      );
+      if (availabilityEntries.isNotEmpty) {
+        await _saveFacultyAvailability(
+          effectiveEmail.trim(),
+          availabilityEntries,
+        );
+      }
+    }
+
+    return true;
   }
 
   Future<void> _showAccountStatusModal({
@@ -353,6 +368,157 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
+  Future<void> _showFacultyDeclinedNotice() async {
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 560),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.14),
+                blurRadius: 30,
+                offset: const Offset(0, 18),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF720045), Color(0xFFB5179E)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(
+                        Icons.info_outline_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Faculty Request Declined',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Your previous faculty request was not approved. You can choose a different role or submit a new faculty request.',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white.withValues(alpha: 0.92),
+                              fontSize: 13,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF720045).withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFF720045).withValues(alpha: 0.1),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.rule_folder_outlined,
+                            color: const Color(0xFF720045),
+                            size: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'After closing this message, you can continue as a student or submit a new faculty request.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: const Color(0xFF475569),
+                                height: 1.45,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF720045),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          'Choose Role Again',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   String _normalizeSectionCode(String input) {
     final match = RegExp(
       r'^\s*(\d+)\s*([A-Za-z][A-Za-z0-9]*)\s*$',
@@ -382,6 +548,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final idController = TextEditingController();
     final sectionController = TextEditingController();
     final maxLoadController = TextEditingController(text: '21');
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
 
     return showDialog<Map<String, String>>(
       context: context,
@@ -399,6 +567,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         FacultyShiftPreference selectedShiftPreference =
             FacultyShiftPreference.any;
         Program selectedProgram = Program.it;
+        DayOfWeek selectedDay = DayOfWeek.mon;
+        TimeOfDay startTime = const TimeOfDay(hour: 8, minute: 0);
+        TimeOfDay endTime = const TimeOfDay(hour: 12, minute: 0);
+        final availabilities = <_AvailabilityEntry>[];
+        bool obscurePassword = true;
+        bool obscureConfirmPassword = true;
 
         InputDecoration fieldDecoration(String hint) {
           return InputDecoration(
@@ -603,6 +777,102 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   }
                                   if (!value.contains('@')) {
                                     return 'Invalid email';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 20),
+                              _buildModalLabel(
+                                'CITESched Password',
+                                Icons.lock_outline_rounded,
+                              ),
+                              TextFormField(
+                                controller: passwordController,
+                                decoration:
+                                    fieldDecoration(
+                                      'Create an app password',
+                                    ).copyWith(
+                                      suffixIcon: IconButton(
+                                        onPressed: () {
+                                          setModalState(() {
+                                            obscurePassword = !obscurePassword;
+                                          });
+                                        },
+                                        icon: Icon(
+                                          obscurePassword
+                                              ? Icons.visibility_off_rounded
+                                              : Icons.visibility_rounded,
+                                          color: textMuted,
+                                        ),
+                                      ),
+                                ),
+                                obscureText: obscurePassword,
+                                obscuringCharacter: '\u2022',
+                                autocorrect: false,
+                                enableSuggestions: false,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 15,
+                                  color: textPrimary,
+                                ),
+                                validator: (value) {
+                                  final trimmed = value?.trim() ?? '';
+                                  if (trimmed.isEmpty) {
+                                    return 'Required';
+                                  }
+                                  if (trimmed.length < 8) {
+                                    return 'Use at least 8 characters';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Google does not share the user\'s Gmail password with the app, so create a separate CITESched password for Faculty/Student login.',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: textMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              _buildModalLabel(
+                                'Confirm Password',
+                                Icons.lock_reset_rounded,
+                              ),
+                              TextFormField(
+                                controller: confirmPasswordController,
+                                decoration:
+                                    fieldDecoration(
+                                      'Re-enter your app password',
+                                    ).copyWith(
+                                      suffixIcon: IconButton(
+                                        onPressed: () {
+                                          setModalState(() {
+                                            obscureConfirmPassword =
+                                                !obscureConfirmPassword;
+                                          });
+                                        },
+                                        icon: Icon(
+                                          obscureConfirmPassword
+                                              ? Icons.visibility_off_rounded
+                                              : Icons.visibility_rounded,
+                                          color: textMuted,
+                                        ),
+                                      ),
+                                ),
+                                obscureText: obscureConfirmPassword,
+                                obscuringCharacter: '\u2022',
+                                autocorrect: false,
+                                enableSuggestions: false,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 15,
+                                  color: textPrimary,
+                                ),
+                                validator: (value) {
+                                  if ((value?.trim() ?? '').isEmpty) {
+                                    return 'Required';
+                                  }
+                                  if (value != passwordController.text) {
+                                    return 'Passwords do not match';
                                   }
                                   return null;
                                 },
@@ -823,6 +1093,420 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   validator: (value) =>
                                       value == null ? 'Required' : null,
                                 ),
+                                const SizedBox(height: 24),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.calendar_month_rounded,
+                                      size: 16,
+                                      color: primaryPurple,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Preferred Teaching Days & Time',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children:
+                                      [
+                                        DayOfWeek.mon,
+                                        DayOfWeek.tue,
+                                        DayOfWeek.wed,
+                                        DayOfWeek.thu,
+                                        DayOfWeek.fri,
+                                        DayOfWeek.sat,
+                                      ].map((day) {
+                                        final isSelected = selectedDay == day;
+                                        return GestureDetector(
+                                          onTap: () {
+                                            setModalState(() {
+                                              selectedDay = day;
+                                              selectedShiftPreference =
+                                                  FacultyShiftPreference.custom;
+                                            });
+                                          },
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                              milliseconds: 180,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 8,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? primaryPurple
+                                                  : Colors.white,
+                                              border: Border.all(
+                                                color: isSelected
+                                                    ? primaryPurple
+                                                    : Colors.black,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              boxShadow: isSelected
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: primaryPurple
+                                                            .withValues(
+                                                              alpha: 0.25,
+                                                            ),
+                                                        blurRadius: 6,
+                                                        offset: const Offset(
+                                                          0,
+                                                          2,
+                                                        ),
+                                                      ),
+                                                    ]
+                                                  : null,
+                                            ),
+                                            child: Text(
+                                              _dayLabel(day),
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : Colors.black,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                ),
+                                const SizedBox(height: 14),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () async {
+                                          final picked = await showTimePicker(
+                                            context: context,
+                                            initialTime: startTime,
+                                            helpText: 'Select Start Time',
+                                          );
+                                          if (picked != null) {
+                                            setModalState(() {
+                                              startTime = picked;
+                                              selectedShiftPreference =
+                                                  FacultyShiftPreference.custom;
+                                            });
+                                          }
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: bgBody,
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.black.withValues(
+                                                alpha: 0.08,
+                                              ),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.schedule_rounded,
+                                                size: 16,
+                                                color: primaryPurple,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'Start',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 11,
+                                                      color: textMuted,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    startTime.format(context),
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: textPrimary,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                      ),
+                                      child: Text(
+                                        '->',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.black45,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () async {
+                                          final picked = await showTimePicker(
+                                            context: context,
+                                            initialTime: endTime,
+                                            helpText: 'Select End Time',
+                                          );
+                                          if (picked != null) {
+                                            setModalState(() {
+                                              endTime = picked;
+                                              selectedShiftPreference =
+                                                  FacultyShiftPreference.custom;
+                                            });
+                                          }
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: bgBody,
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.black.withValues(
+                                                alpha: 0.08,
+                                              ),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.schedule_rounded,
+                                                size: 16,
+                                                color: primaryPurple,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'End',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 11,
+                                                      color: textMuted,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    endTime.format(context),
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: textPrimary,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {
+                                      final startMinutes =
+                                          startTime.hour * 60 +
+                                          startTime.minute;
+                                      final endMinutes =
+                                          endTime.hour * 60 + endTime.minute;
+                                      if (endMinutes <= startMinutes) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'End time must be later than start time.',
+                                            ),
+                                            backgroundColor: Colors.orange,
+                                          ),
+                                        );
+                                        return;
+                                      }
+
+                                      for (final existing in availabilities) {
+                                        if (existing.day == selectedDay) {
+                                          final existingStart =
+                                              existing.start.hour * 60 +
+                                              existing.start.minute;
+                                          final existingEnd =
+                                              existing.end.hour * 60 +
+                                              existing.end.minute;
+                                          if (startMinutes < existingEnd &&
+                                              existingStart < endMinutes) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Overlapping availability for the same day.',
+                                                ),
+                                                backgroundColor: Colors.orange,
+                                              ),
+                                            );
+                                            return;
+                                          }
+                                        }
+                                      }
+
+                                      setModalState(() {
+                                        availabilities.add(
+                                          _AvailabilityEntry(
+                                            day: selectedDay,
+                                            start: startTime,
+                                            end: endTime,
+                                          ),
+                                        );
+                                        selectedShiftPreference =
+                                            FacultyShiftPreference.custom;
+                                      });
+                                    },
+                                    icon: const Icon(
+                                      Icons.add_circle_outline,
+                                      size: 18,
+                                    ),
+                                    label: Text(
+                                      'Add Availability',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      side: BorderSide(
+                                        color: primaryPurple,
+                                        width: 1.5,
+                                      ),
+                                      foregroundColor: primaryPurple,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                if (availabilities.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: primaryPurple.withValues(
+                                        alpha: 0.04,
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: primaryPurple.withValues(
+                                          alpha: 0.15,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Added Availability (${availabilities.length})',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: primaryPurple,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        ...availabilities.asMap().entries.map((
+                                          entry,
+                                        ) {
+                                          final index = entry.key;
+                                          final availability = entry.value;
+                                          return Container(
+                                            margin: const EdgeInsets.only(
+                                              top: 8,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 10,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: primaryPurple.withValues(
+                                                  alpha: 0.12,
+                                                ),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    '${_dayLabel(availability.day)} • ${availability.start.format(context)} - ${availability.end.format(context)}',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: textPrimary,
+                                                    ),
+                                                  ),
+                                                ),
+                                                IconButton(
+                                                  onPressed: () {
+                                                    setModalState(() {
+                                                      availabilities.removeAt(
+                                                        index,
+                                                      );
+                                                    });
+                                                  },
+                                                  icon: const Icon(
+                                                    Icons.close_rounded,
+                                                    size: 18,
+                                                  ),
+                                                  color: Colors.redAccent,
+                                                  tooltip: 'Remove',
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ],
                               const SizedBox(height: 32),
                               Row(
@@ -863,6 +1547,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         if (!formKey.currentState!.validate()) {
                                           return;
                                         }
+                                        if (!isStudent &&
+                                            availabilities.isEmpty) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Add at least one preferred teaching day and time.',
+                                              ),
+                                              backgroundColor: Colors.orange,
+                                            ),
+                                          );
+                                          return;
+                                        }
 
                                         final normalizedSection = isStudent
                                             ? _normalizeSectionCode(
@@ -895,6 +1593,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           'program': isStudent
                                               ? ''
                                               : selectedProgram.name,
+                                          'password': passwordController.text,
+                                          'availability': isStudent
+                                              ? ''
+                                              : _serializeAvailabilityEntries(
+                                                  availabilities,
+                                                ),
                                         });
                                       },
                                       style: ElevatedButton.styleFrom(
@@ -1116,6 +1820,83 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
+  Future<bool> _confirmFacultyApprovalRequest() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 8),
+          contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          title: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: _facultyColorLight.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.verified_user_outlined,
+                  color: _facultyColorLight,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Faculty Approval Required',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF111827),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Faculty access needs admin approval before you can use the faculty dashboard. Select Okay to continue with your request, or Cancel to choose a different role.',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              height: 1.5,
+              color: const Color(0xFF475569),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _facultyColorLight,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Okay',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result ?? false;
+  }
+
   Widget _buildRoleChoiceCard({
     required String role,
     required String title,
@@ -1278,8 +2059,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // Google Button Specifics
     final googleBtnBg = isDark ? Colors.transparent : Colors.white;
     final googleBtnBorder = isDark ? Colors.white54 : Colors.grey.shade300;
-    final googleBtnText = isDark ? Colors.white : Colors.black87;
-
     // --- 2. INPUT FIELD BUILDER (Fixed: No active green outline) ---
     Widget buildCustomField({
       required TextEditingController controller,
@@ -1299,6 +2078,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: TextField(
             controller: controller,
             obscureText: isPassword && _obscurePassword,
+            obscuringCharacter: '\u2022',
             autocorrect: false,
             enableSuggestions: false,
             textCapitalization: TextCapitalization.none,
@@ -1326,6 +2106,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               disabledBorder: InputBorder.none,
               isDense: true,
               contentPadding: EdgeInsets.zero,
+              suffixIcon: isPassword
+                  ? IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                        color: textMuted,
+                        size: 20,
+                      ),
+                    )
+                  : null,
             ),
           ),
         ),
@@ -1349,7 +2145,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     errorBuilder: (context, error, stackTrace) =>
                         Container(color: activeThemeColor),
                   ),
-                  Container(color: Colors.black.withOpacity(0.3)),
+                  Container(color: Colors.black.withValues(alpha: 0.3)),
                   Padding(
                     padding: const EdgeInsets.all(80.0),
                     child: Column(
@@ -1399,7 +2195,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             borderRadius: BorderRadius.circular(24),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha: 0.1),
                                 blurRadius: 50,
                                 offset: const Offset(0, 20),
                               ),
@@ -1426,7 +2222,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   margin: const EdgeInsets.only(bottom: 24),
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.1),
+                                    color: Colors.red.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
@@ -1512,40 +2308,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 isPassword: true,
                               ),
 
-                              const SizedBox(height: 16),
-
-                              // Checkbox Row
-                              Row(
-                                children: [
-                                  SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: Checkbox(
-                                      value: !_obscurePassword,
-                                      onChanged: (val) => setState(
-                                        () => _obscurePassword = !val!,
-                                      ),
-                                      activeColor: activeThemeColor,
-                                      checkColor: Colors.white,
-                                      // Border color matches textMuted so it's visible in both modes
-                                      side: BorderSide(
-                                        color: textMuted,
-                                        width: 1.5,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Show Password',
-                                    style: GoogleFonts.poppins(
-                                      color: textMuted,
-                                    ),
-                                  ),
-                                ],
-                              ),
                               const SizedBox(height: 24),
 
                               // Login Button
@@ -1740,6 +2502,120 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return null;
   }
 
+  String _dayLabel(DayOfWeek day) {
+    switch (day) {
+      case DayOfWeek.mon:
+        return 'Mon';
+      case DayOfWeek.tue:
+        return 'Tue';
+      case DayOfWeek.wed:
+        return 'Wed';
+      case DayOfWeek.thu:
+        return 'Thu';
+      case DayOfWeek.fri:
+        return 'Fri';
+      case DayOfWeek.sat:
+        return 'Sat';
+      case DayOfWeek.sun:
+        return 'Sun';
+    }
+  }
+
+  String _formatAvailabilityTime(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  String _serializeAvailabilityEntries(List<_AvailabilityEntry> entries) {
+    return entries
+        .map(
+          (entry) =>
+              '${entry.day.name}|${_formatAvailabilityTime(entry.start)}|${_formatAvailabilityTime(entry.end)}',
+        )
+        .join(';');
+  }
+
+  List<_AvailabilityEntry> _deserializeAvailabilityEntries(String? payload) {
+    if (payload == null || payload.trim().isEmpty) {
+      return const [];
+    }
+
+    final entries = <_AvailabilityEntry>[];
+    for (final rawEntry in payload.split(';')) {
+      final trimmed = rawEntry.trim();
+      if (trimmed.isEmpty) continue;
+      final parts = trimmed.split('|');
+      if (parts.length != 3) continue;
+      entries.add(
+        _AvailabilityEntry(
+          day: DayOfWeek.fromJson(parts[0]),
+          start: _timeOfDayFrom24Hour(parts[1]),
+          end: _timeOfDayFrom24Hour(parts[2]),
+        ),
+      );
+    }
+    return entries;
+  }
+
+  TimeOfDay _timeOfDayFrom24Hour(String value) {
+    final parts = value.split(':');
+    return TimeOfDay(
+      hour: int.parse(parts[0]),
+      minute: int.parse(parts[1]),
+    );
+  }
+
+  String _timeOfDayToServer(TimeOfDay value) {
+    final hour = value.hour.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  Future<void> _saveFacultyAvailability(
+    String email,
+    List<_AvailabilityEntry> availabilities,
+  ) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty || availabilities.isEmpty) {
+      return;
+    }
+
+    final inactiveFaculty = await client.admin.getAllFaculty(isActive: false);
+    final activeFaculty = await client.admin.getAllFaculty(isActive: true);
+    final allFaculty = [...inactiveFaculty, ...activeFaculty];
+
+    Faculty? targetFaculty;
+    for (final faculty in allFaculty) {
+      if (faculty.email.trim().toLowerCase() == normalizedEmail) {
+        targetFaculty = faculty;
+        break;
+      }
+    }
+
+    if (targetFaculty?.id == null) {
+      throw Exception('Unable to find the created faculty profile.');
+    }
+    final resolvedFaculty = targetFaculty!;
+
+    final now = DateTime.now();
+    final payload = availabilities
+        .map(
+          (entry) => FacultyAvailability(
+            facultyId: resolvedFaculty.id!,
+            dayOfWeek: entry.day,
+            startTime: _timeOfDayToServer(entry.start),
+            endTime: _timeOfDayToServer(entry.end),
+            isPreferred: true,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        )
+        .toList();
+
+    await client.admin.setFacultyAvailability(resolvedFaculty.id!, payload);
+  }
+
   Future<String?> _adoptExistingGoogleAccount(String? email) async {
     final normalizedEmail = email?.trim();
     if (normalizedEmail == null || normalizedEmail.isEmpty) {
@@ -1749,21 +2625,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       return await client.setup.adoptExistingAccountByEmail(
         email: normalizedEmail,
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<String?> _loadRememberedGoogleRole(String? email) async {
-    final normalizedEmail = email?.trim().toLowerCase();
-    if (normalizedEmail == null || normalizedEmail.isEmpty) {
-      return null;
-    }
-
-    try {
-      return await _secureStorage.read(
-        key: '$_googleRoleStoragePrefix$normalizedEmail',
       );
     } catch (_) {
       return null;
@@ -1784,6 +2645,49 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (_) {}
   }
 
+  Future<bool> _shouldShowFacultyDeclinedNotice(String? email) async {
+    final normalizedEmail = email?.trim().toLowerCase();
+    if (normalizedEmail == null || normalizedEmail.isEmpty) {
+      return true;
+    }
+
+    try {
+      final stored = await _secureStorage.read(
+        key: '$_googleDeclinedNoticeStoragePrefix$normalizedEmail',
+      );
+      return stored != 'shown';
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<void> _markFacultyDeclinedNoticeShown(String? email) async {
+    final normalizedEmail = email?.trim().toLowerCase();
+    if (normalizedEmail == null || normalizedEmail.isEmpty) {
+      return;
+    }
+
+    try {
+      await _secureStorage.write(
+        key: '$_googleDeclinedNoticeStoragePrefix$normalizedEmail',
+        value: 'shown',
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _clearFacultyDeclinedNoticeState(String? email) async {
+    final normalizedEmail = email?.trim().toLowerCase();
+    if (normalizedEmail == null || normalizedEmail.isEmpty) {
+      return;
+    }
+
+    try {
+      await _secureStorage.delete(
+        key: '$_googleDeclinedNoticeStoragePrefix$normalizedEmail',
+      );
+    } catch (_) {}
+  }
+
   Future<String> _finalizeResolvedGoogleRole(
     String resolvedRole, {
     required UserInfo? userInfo,
@@ -1795,6 +2699,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       authNotifier.updateUserInfo(resolvedUserInfo);
     }
     await _rememberGoogleRole(email, resolvedRole);
+    if (resolvedRole != 'faculty_declined') {
+      await _clearFacultyDeclinedNoticeState(email);
+    }
     return resolvedRole;
   }
 
@@ -1806,12 +2713,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }) async {
     final adoptedRole = await _adoptExistingGoogleAccount(email);
     final roleFromEmail = adoptedRole ?? await _loadExistingRoleByEmail(email);
-    if (roleFromEmail == 'faculty_pending' ||
-        roleFromEmail == 'faculty_declined') {
+    if (roleFromEmail == 'faculty_pending') {
       return roleFromEmail;
     }
-    final existingRole =
-        roleFromEmail ?? await _resolveExistingGoogleRole(userInfo);
+    if (roleFromEmail == 'faculty_declined') {
+      if (await _shouldShowFacultyDeclinedNotice(email)) {
+        await _showFacultyDeclinedNotice();
+        await _markFacultyDeclinedNoticeShown(email);
+      }
+    }
+    final existingRole = roleFromEmail == 'faculty_declined'
+        ? null
+        : roleFromEmail ?? await _resolveExistingGoogleRole(userInfo);
 
     if (existingRole == 'admin' ||
         existingRole == 'faculty' ||
@@ -1824,37 +2737,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
     }
 
-    final selectedRole = await _showRoleSelectionDialog();
-    if (selectedRole == null) {
-      return null;
-    }
+    while (true) {
+      final selectedRole = await _showRoleSelectionDialog();
+      if (selectedRole == null) {
+        return null;
+      }
 
-    final completed = await _completeGoogleProfile(
-      selectedRole,
-      email: email,
-      displayName: displayName,
-    );
-    if (!completed) {
-      throw Exception('Failed to set up account details.');
-    }
+      if (selectedRole == 'faculty') {
+        final confirmed = await _confirmFacultyApprovalRequest();
+        if (!confirmed) {
+          continue;
+        }
+        await _clearFacultyDeclinedNoticeState(email);
+      }
 
-    final resolvedEmail = email?.trim();
-    if (resolvedEmail == null || resolvedEmail.isEmpty) {
-      throw Exception('Missing email from Google profile.');
-    }
+      final completed = await _completeGoogleProfile(
+        selectedRole,
+        email: email,
+        displayName: displayName,
+      );
+      if (!completed) {
+        throw Exception('Failed to set up account details.');
+      }
 
-    if (selectedRole == 'faculty') return 'faculty_pending';
+      final resolvedEmail = email?.trim();
+      if (resolvedEmail == null || resolvedEmail.isEmpty) {
+        throw Exception('Missing email from Google profile.');
+      }
 
-    final refreshedInfo = await client.setup.getUserInfoByEmail(
-      email: resolvedEmail,
-    );
-    if (refreshedInfo == null) {
-      throw Exception('Unable to refresh user info after setup.');
+      if (selectedRole == 'faculty') return 'faculty_pending';
+
+      final refreshedInfo = await client.setup.getUserInfoByEmail(
+        email: resolvedEmail,
+      );
+      if (refreshedInfo == null) {
+        throw Exception('Unable to refresh user info after setup.');
+      }
+      await _adoptExistingGoogleAccount(resolvedEmail);
+      await _rememberGoogleRole(resolvedEmail, selectedRole);
+      authNotifier.updateUserInfo(refreshedInfo);
+      return selectedRole;
     }
-    await _adoptExistingGoogleAccount(resolvedEmail);
-    await _rememberGoogleRole(resolvedEmail, selectedRole);
-    authNotifier.updateUserInfo(refreshedInfo);
-    return selectedRole;
   }
 
   String _roleDetailsTitle(String role) {
@@ -1867,16 +2790,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return 'Administrator';
   }
 
-  String _roleLabel(String role) {
-    if (role == 'admin') {
-      return 'Administrator';
-    }
-    if (role == 'faculty') {
-      return 'Faculty';
-    }
-    return 'Student';
-  }
-
   Color _resolveActiveThemeColor({required bool isDark}) {
     if (isDark) {
       return _isFaculty ? _facultyColorDark : _studentColorDark;
@@ -1885,3 +2798,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 //testing
+
+class _AvailabilityEntry {
+  final DayOfWeek day;
+  final TimeOfDay start;
+  final TimeOfDay end;
+
+  const _AvailabilityEntry({
+    required this.day,
+    required this.start,
+    required this.end,
+  });
+}

@@ -1,0 +1,17 @@
+.git
+.github
+.npm-cache
+.sixth
+
+**/.dart_tool
+**/build
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+
+citesched-hostinger-web.zip
+sonar_errors.json
+
+citesched_server/web/app
+citesched_flutter/.dart_tool
+citesched_server/.dart_tool
