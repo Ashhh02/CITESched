@@ -2093,55 +2093,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           border: Border.all(color: inputBorderColor),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Center(
-          child: TextField(
-            controller: controller,
-            obscureText: isPassword && _obscurePassword,
-            obscuringCharacter: '\u2022',
-            autocorrect: false,
-            enableSuggestions: false,
-            textCapitalization: TextCapitalization.none,
-            smartDashesType: SmartDashesType.disabled,
-            smartQuotesType: SmartQuotesType.disabled,
-            cursorColor: textPrimary, // Cursor matches text color
-            style: GoogleFonts.poppins(
-              color: inputTextColor, // Typing text color (White/Black)
+        child: TextField(
+          controller: controller,
+          obscureText: isPassword && _obscurePassword,
+          obscuringCharacter: '\u2022',
+          autocorrect: false,
+          enableSuggestions: false,
+          textCapitalization: TextCapitalization.none,
+          smartDashesType: SmartDashesType.disabled,
+          smartQuotesType: SmartQuotesType.disabled,
+          textAlignVertical: TextAlignVertical.center,
+          cursorColor: textPrimary, // Cursor matches text color
+          style: GoogleFonts.poppins(
+            color: inputTextColor, // Typing text color (White/Black)
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+          decoration: InputDecoration(
+            filled: false,
+            fillColor: Colors.transparent,
+            hintText: hintText,
+            hintStyle: GoogleFonts.poppins(
+              color: textMuted,
               fontSize: 14,
-              fontWeight: FontWeight.w500,
             ),
-            decoration: InputDecoration(
-              filled: false,
-              fillColor: Colors.transparent,
-              hintText: hintText,
-              hintStyle: GoogleFonts.poppins(
-                color: textMuted,
-                fontSize: 14,
-              ),
-              // Disable all default borders to prevent the green line
-              border: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              errorBorder: InputBorder.none,
-              disabledBorder: InputBorder.none,
-              isDense: true,
-              contentPadding: EdgeInsets.zero,
-              suffixIcon: isPassword
-                  ? IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off_rounded
-                            : Icons.visibility_rounded,
-                        color: textMuted,
-                        size: 20,
-                      ),
-                    )
-                  : null,
+            // Disable all default borders to prevent the green line
+            border: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            errorBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            suffixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 40,
             ),
+            suffixIcon: isPassword
+                ? IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                    splashRadius: 20,
+                    padding: EdgeInsets.zero,
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                      color: textMuted,
+                      size: 20,
+                    ),
+                  )
+                : null,
           ),
         ),
       );
