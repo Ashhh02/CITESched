@@ -25,6 +25,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
   final TextEditingController _queryController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _showHistory = false;
+  bool _showSuggestionsPanel = false;
   double? _dialogWidth;
   double? _dialogHeight;
   String? _selectedSessionId;
@@ -35,6 +36,9 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
     final query = _queryController.text.trim();
     if (query.isEmpty) return;
     _queryController.clear();
+    setState(() {
+      _showSuggestionsPanel = false;
+    });
     await ref.read(nlpQueryChatProvider.notifier).sendQuery(query);
     _scrollToBottom();
   }
@@ -51,37 +55,27 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
     });
   }
 
-  void _showSuggestions() {
-    final suggestions = _roleSuggestions();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  @override
+  void dispose() {
+    _queryController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: suggestions.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final text = suggestions[index];
-          return ListTile(
-            title: Text(
-              text,
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            trailing: const Icon(Icons.send, size: 18),
-            onTap: () {
-              Navigator.of(context).pop();
-              _queryController.text = text;
-              _sendQuery();
-            },
-          );
-        },
-      ),
-    );
+  void _toggleHistory() {
+    setState(() {
+      _showHistory = !_showHistory;
+      _showSuggestionsPanel = false;
+      _selectedSessionId = null;
+    });
+  }
+
+  void _toggleSuggestions() {
+    setState(() {
+      _showSuggestionsPanel = !_showSuggestionsPanel;
+      _showHistory = false;
+      _selectedSessionId = null;
+    });
   }
 
   List<String> _roleSuggestions() {
@@ -96,14 +90,18 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
     if (scopes.contains('faculty')) {
       return [
         'Show my schedule',
+        'Show my teaching load this term',
+        'Show my timetable for this week',
+        'Do I have any schedule conflicts?',
         'What is my next class?',
-        'Am I free at 10 AM?',
       ];
     }
     return [
-      'Show my schedule',
-      'What classes do I have today?',
+      'Show our section schedule',
+      'Show our class timetable this week',
       'Where is my next class?',
+      'Do we have any schedule conflicts?',
+      'Which room is assigned for our next class?',
     ];
   }
 
@@ -168,7 +166,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final compactHeader = constraints.maxWidth < 700;
-                      final actionButtons = _buildHeaderActions(auth);
+                      final actionButtons = _buildHeaderActions();
 
                       if (compactHeader) {
                         return Column(
@@ -176,6 +174,16 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
                           children: [
                             Row(
                               children: [
+                                IconButton(
+                                  onPressed: _toggleHistory,
+                                  tooltip: _historyLabel(auth),
+                                  icon: Icon(
+                                    _showHistory
+                                        ? Icons.chat_bubble_outline
+                                        : Icons.history,
+                                    color: Colors.white,
+                                  ),
+                                ),
                                 const Icon(
                                   Icons.auto_awesome_rounded,
                                   color: Colors.white,
@@ -208,6 +216,16 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          IconButton(
+                            onPressed: _toggleHistory,
+                            tooltip: _historyLabel(auth),
+                            icon: Icon(
+                              _showHistory
+                                  ? Icons.chat_bubble_outline
+                                  : Icons.history,
+                              color: Colors.white,
+                            ),
+                          ),
                           const Icon(
                             Icons.auto_awesome_rounded,
                             color: Colors.white,
@@ -275,6 +293,11 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
                             sessionsAsync,
                             historyAsync,
                           ),
+                        ),
+                      if (_showSuggestionsPanel)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: _buildSuggestionsPanel(),
                         ),
                     ],
                   ),
@@ -477,31 +500,10 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
     );
   }
 
-  List<Widget> _buildHeaderActions(UserInfo? auth) {
+  List<Widget> _buildHeaderActions() {
     return [
       TextButton.icon(
-        onPressed: () {
-          setState(() {
-            _showHistory = !_showHistory;
-            _selectedSessionId = null;
-          });
-        },
-        icon: Icon(
-          _showHistory ? Icons.chat_bubble : Icons.history,
-          color: Colors.white,
-          size: 18,
-        ),
-        label: Text(
-          _showHistory ? 'Chat' : _historyLabel(auth),
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      TextButton.icon(
-        onPressed: _showSuggestions,
+        onPressed: _toggleSuggestions,
         icon: const Icon(
           Icons.lightbulb_outline,
           color: Colors.white,
@@ -520,6 +522,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
           ref.read(nlpQueryChatProvider.notifier).clearChat();
           setState(() {
             _showHistory = false;
+            _showSuggestionsPanel = false;
             _selectedSessionId = null;
           });
         },
@@ -545,6 +548,85 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
     if (scopes.contains('faculty')) return 'Faculty History';
     if (scopes.contains('student')) return 'Student History';
     return 'History';
+  }
+
+  Widget _buildSuggestionsPanel() {
+    final suggestions = _roleSuggestions();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: 320,
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: maroonColor.withOpacity(0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Icon(Icons.lightbulb_outline, color: maroonColor, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Suggested Queries',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _showSuggestionsPanel = false;
+                    });
+                  },
+                  icon: const Icon(Icons.close, size: 18),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.all(12),
+              itemCount: suggestions.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final text = suggestions[index];
+                return ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  tileColor: isDark
+                      ? Colors.white.withOpacity(0.04)
+                      : Colors.grey.shade50,
+                  title: Text(
+                    text,
+                    style: GoogleFonts.poppins(fontSize: 13),
+                  ),
+                  trailing: Icon(Icons.send_rounded, color: maroonColor, size: 18),
+                  onTap: () {
+                    _queryController.text = text;
+                    _sendQuery();
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildHistoryPanel(
@@ -762,14 +844,22 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
                       const Icon(Icons.chevron_right),
                     ],
                   ),
-                  onTap: () {
-                    ref
-                        .read(nlpQueryChatProvider.notifier)
-                        .setActiveSession(
-                          entry.sessionId,
-                          entry.title,
+                  onTap: () async {
+                    final historyItems = await ref.read(
+                      chatHistorySessionProvider(entry.sessionId).future,
+                    );
+                    if (!mounted) return;
+                    ref.read(nlpQueryChatProvider.notifier).loadSessionHistory(
+                          sessionId: entry.sessionId,
+                          sessionTitle: entry.title,
+                          history: historyItems,
                         );
-                    setState(() => _selectedSessionId = entry.sessionId);
+                    setState(() {
+                      _showHistory = false;
+                      _showSuggestionsPanel = false;
+                      _selectedSessionId = entry.sessionId;
+                    });
+                    _scrollToBottom();
                   },
                 ),
               );

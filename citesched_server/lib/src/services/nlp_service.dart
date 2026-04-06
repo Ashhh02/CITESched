@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:serverpod/serverpod.dart';
+import 'package:serverpod_auth_server/serverpod_auth_server.dart';
 import '../generated/protocol.dart';
 import 'conflict_service.dart';
 
@@ -18,6 +19,96 @@ class NLPService {
     'truncate',
     'alter',
   ];
+
+  Future<Student?> _findCurrentStudent(
+    Session session,
+    String userIdentifier,
+  ) async {
+    final userInfoId = int.tryParse(userIdentifier);
+
+    if (userInfoId != null) {
+      final byUserInfoId = await Student.db.findFirstRow(
+        session,
+        where: (t) => t.userInfoId.equals(userInfoId) & t.isActive.equals(true),
+      );
+      if (byUserInfoId != null) return byUserInfoId;
+    }
+
+    final linkedUserInfo = await UserInfo.db.findFirstRow(
+      session,
+      where: (t) => t.userIdentifier.equals(userIdentifier),
+    );
+    if (linkedUserInfo?.id != null) {
+      final resolvedLinkedUserInfo = linkedUserInfo!;
+      final byLinkedUserInfo = await Student.db.findFirstRow(
+        session,
+        where: (t) =>
+            t.userInfoId.equals(resolvedLinkedUserInfo.id!) &
+            t.isActive.equals(true),
+      );
+      if (byLinkedUserInfo != null) return byLinkedUserInfo;
+
+      final linkedEmail =
+          (resolvedLinkedUserInfo.email ?? '').trim().toLowerCase();
+      if (linkedEmail.isNotEmpty) {
+        final byLinkedEmail = await Student.db.findFirstRow(
+          session,
+          where: (t) => t.email.equals(linkedEmail) & t.isActive.equals(true),
+        );
+        if (byLinkedEmail != null) return byLinkedEmail;
+      }
+    }
+
+    return await Student.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(userIdentifier) & t.isActive.equals(true),
+    );
+  }
+
+  Future<Faculty?> _findCurrentFaculty(
+    Session session,
+    String userIdentifier,
+  ) async {
+    final userInfoId = int.tryParse(userIdentifier);
+
+    if (userInfoId != null) {
+      final byUserInfoId = await Faculty.db.findFirstRow(
+        session,
+        where: (t) => t.userInfoId.equals(userInfoId) & t.isActive.equals(true),
+      );
+      if (byUserInfoId != null) return byUserInfoId;
+    }
+
+    final linkedUserInfo = await UserInfo.db.findFirstRow(
+      session,
+      where: (t) => t.userIdentifier.equals(userIdentifier),
+    );
+    if (linkedUserInfo?.id != null) {
+      final resolvedLinkedUserInfo = linkedUserInfo!;
+      final byLinkedUserInfo = await Faculty.db.findFirstRow(
+        session,
+        where: (t) =>
+            t.userInfoId.equals(resolvedLinkedUserInfo.id!) &
+            t.isActive.equals(true),
+      );
+      if (byLinkedUserInfo != null) return byLinkedUserInfo;
+
+      final linkedEmail =
+          (resolvedLinkedUserInfo.email ?? '').trim().toLowerCase();
+      if (linkedEmail.isNotEmpty) {
+        final byLinkedEmail = await Faculty.db.findFirstRow(
+          session,
+          where: (t) => t.email.equals(linkedEmail) & t.isActive.equals(true),
+        );
+        if (byLinkedEmail != null) return byLinkedEmail;
+      }
+    }
+
+    return await Faculty.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(userIdentifier) & t.isActive.equals(true),
+    );
+  }
 
   Future<NLPResponse> processQuery(
     Session session,
@@ -403,10 +494,7 @@ class NLPService {
 
       if (isFaculty) {
         // Get faculty schedules
-        final faculty = await Faculty.db.findFirstRow(
-          session,
-          where: (t) => t.facultyId.equals(userId),
-        );
+        final faculty = await _findCurrentFaculty(session, userId);
 
         if (faculty == null) {
           return NLPResponse(
@@ -440,12 +528,52 @@ class NLPService {
           }),
         );
       } else if (isStudent) {
-        // Get student section schedules
-        // Note: Implement based on your student section mapping
+        final student = await _findCurrentStudent(session, userId);
+        if (student == null) {
+          return NLPResponse(
+            text: "Could not find your student profile.",
+            intent: NLPIntent.schedule,
+          );
+        }
 
+        List<Schedule> schedules;
+        if (student.sectionId != null) {
+          schedules = await Schedule.db.find(
+            session,
+            where: (t) =>
+                t.sectionId.equals(student.sectionId) & t.isActive.equals(true),
+            include: Schedule.include(
+              subject: Subject.include(),
+              faculty: Faculty.include(),
+              room: Room.include(),
+              timeslot: Timeslot.include(),
+            ),
+          );
+        } else if (student.section != null && student.section!.isNotEmpty) {
+          schedules = await Schedule.db.find(
+            session,
+            where: (t) =>
+                t.section.equals(student.section!) & t.isActive.equals(true),
+            include: Schedule.include(
+              subject: Subject.include(),
+              faculty: Faculty.include(),
+              room: Room.include(),
+              timeslot: Timeslot.include(),
+            ),
+          );
+        } else {
+          schedules = [];
+        }
+
+        final filtered = _filterSchedulesByDay(schedules, requestedDay);
         return NLPResponse(
-          text: "Retrieving your class schedule...",
+          text: _buildScheduleCountMessage(
+            filtered.length,
+            "You have",
+            requestedDay,
+          ),
           intent: NLPIntent.schedule,
+          schedules: filtered,
           dataJson: jsonEncode({
             'contextType': 'my',
             'contextValue': 'student',
@@ -528,10 +656,7 @@ class NLPService {
     Session session,
     String userId,
   ) async {
-    final faculty = await Faculty.db.findFirstRow(
-      session,
-      where: (t) => t.facultyId.equals(userId),
-    );
+    final faculty = await _findCurrentFaculty(session, userId);
 
     if (faculty == null) {
       return NLPResponse(
@@ -576,10 +701,7 @@ class NLPService {
     Session session,
     String userId,
   ) async {
-    final student = await Student.db.findFirstRow(
-      session,
-      where: (t) => t.studentNumber.equals(userId),
-    );
+    final student = await _findCurrentStudent(session, userId);
 
     if (student == null || student.section == null) {
       return NLPResponse(
@@ -644,10 +766,7 @@ class NLPService {
       if (foundFaculty != null) {
         // If a specific faculty is mentioned and user is not admin, check if it's themselves
         if (!isAdmin && isFaculty) {
-          final currentFaculty = await Faculty.db.findFirstRow(
-            session,
-            where: (t) => t.facultyId.equals(userId),
-          );
+          final currentFaculty = await _findCurrentFaculty(session, userId);
           if (currentFaculty == null || currentFaculty.id != foundFaculty.id) {
             return NLPResponse(
               text:
@@ -701,10 +820,7 @@ class NLPService {
 
       // Non-admin users can only see their own load info
       if (!isAdmin && isFaculty) {
-        final faculty = await Faculty.db.findFirstRow(
-          session,
-          where: (t) => t.facultyId.equals(userId),
-        );
+        final faculty = await _findCurrentFaculty(session, userId);
 
         if (faculty == null) {
           return NLPResponse(
@@ -903,30 +1019,40 @@ class NLPService {
           );
       if (facultySchedules != null) return facultySchedules;
 
-      // Extract section (e.g., IT 3A)
-      final sectionMatch = RegExp(
-        r'\b([a-zA-Z]{1,4})?\s?(\d[a-zA-Z])\b',
-      ).firstMatch(query.toUpperCase());
+      // Extract section (e.g., IT 3A / 3A)
+      final extractedSection = _extractSectionFromQuery(query);
+      if (extractedSection != null) {
+        final sectionCandidates = _buildSectionCandidates(extractedSection);
+        final allSchedules = <Schedule>[];
+        for (final candidate in sectionCandidates) {
+          final chunk = await Schedule.db.find(
+            session,
+            where: (t) => t.section.equals(candidate),
+            include: Schedule.include(
+              subject: Subject.include(),
+              faculty: Faculty.include(),
+              room: Room.include(),
+              timeslot: Timeslot.include(),
+            ),
+          );
+          allSchedules.addAll(chunk);
+        }
 
-      if (sectionMatch != null) {
-        final section = sectionMatch.group(0)!;
-        final schedules = await Schedule.db.find(
-          session,
-          where: (t) => t.section.equals(section),
-          include: Schedule.include(
-            subject: Subject.include(),
-            faculty: Faculty.include(),
-            room: Room.include(),
-            timeslot: Timeslot.include(),
-          ),
-        );
+        final schedulesById = <int, Schedule>{};
+        for (final sched in allSchedules) {
+          final id = sched.id;
+          if (id != null) {
+            schedulesById[id] = sched;
+          }
+        }
+        final schedules = schedulesById.values.toList();
 
         final filtered = _filterSchedulesByDay(schedules, requestedDay);
         if (filtered.isEmpty) {
           return NLPResponse(
             text: _buildScheduleCountMessage(
               0,
-              "I couldn't find any classes scheduled for section $section",
+              "I couldn't find any classes scheduled for section $extractedSection",
               requestedDay,
             ),
             intent: NLPIntent.schedule,
@@ -938,14 +1064,24 @@ class NLPService {
             filtered.length,
             "Found",
             requestedDay,
-            suffix: "for section $section",
+            suffix: "for section $extractedSection",
           ),
           intent: NLPIntent.schedule,
           schedules: filtered,
           dataJson: jsonEncode({
             'contextType': 'section',
-            'contextValue': section,
+            'contextValue': extractedSection,
           }),
+        );
+      }
+
+      final isStudent = scopes.contains('student');
+      if (isStudent && userId != null) {
+        return await _handleMyScheduleQuery(
+          session,
+          userId,
+          scopes,
+          requestedDay ?? (requestedDays.length == 1 ? requestedDays.first : null),
         );
       }
 
@@ -1101,10 +1237,7 @@ class NLPService {
         );
       }
 
-      final currentFaculty = await Faculty.db.findFirstRow(
-        session,
-        where: (t) => t.facultyId.equals(userId),
-      );
+      final currentFaculty = await _findCurrentFaculty(session, userId);
       if (currentFaculty == null || currentFaculty.id != matchedFaculty.id) {
         return NLPResponse(
           text:
@@ -1209,6 +1342,20 @@ class NLPService {
     final match = RegExp(r'\b([a-zA-Z]{1,4})?\s?\d[a-zA-Z]\b')
         .firstMatch(query.toUpperCase());
     return match?.group(0);
+  }
+
+  List<String> _buildSectionCandidates(String sectionInput) {
+    final original = sectionInput.trim().toUpperCase();
+    final compact = original.replaceAll(RegExp(r'[\s-]+'), '');
+    final suffixMatch = RegExp(r'(\d[A-Z])$').firstMatch(compact);
+    final suffix = suffixMatch?.group(1);
+
+    final candidates = <String>{};
+    if (original.isNotEmpty) candidates.add(original);
+    if (compact.isNotEmpty) candidates.add(compact);
+    if (suffix != null && suffix.isNotEmpty) candidates.add(suffix);
+
+    return candidates.toList();
   }
 
   List<DayOfWeek> _extractRelativeDays(String query) {
@@ -1383,10 +1530,7 @@ class NLPService {
       );
     } else if (isFaculty) {
       if (userId == null) return null;
-      final faculty = await Faculty.db.findFirstRow(
-        session,
-        where: (t) => t.facultyId.equals(userId),
-      );
+      final faculty = await _findCurrentFaculty(session, userId);
       if (faculty == null) return null;
       schedules = await Schedule.db.find(
         session,
@@ -1400,10 +1544,7 @@ class NLPService {
       );
     } else if (isStudent) {
       if (userId == null) return null;
-      final student = await Student.db.findFirstRow(
-        session,
-        where: (t) => t.studentNumber.equals(userId),
-      );
+      final student = await _findCurrentStudent(session, userId);
       if (student?.section == null) return null;
       schedules = await Schedule.db.find(
         session,
@@ -1574,10 +1715,7 @@ class NLPService {
       );
     } else if (isFaculty) {
       if (userId == null) return null;
-      final faculty = await Faculty.db.findFirstRow(
-        session,
-        where: (t) => t.facultyId.equals(userId),
-      );
+      final faculty = await _findCurrentFaculty(session, userId);
       if (faculty == null) return null;
       if (matchedFaculty != null && matchedFaculty.id != faculty.id) {
         return NLPResponse(
@@ -1598,16 +1736,21 @@ class NLPService {
       );
     } else if (isStudent) {
       if (userId == null) return null;
-      final student = await Student.db.findFirstRow(
-        session,
-        where: (t) => t.studentNumber.equals(userId),
-      );
+      final student = await _findCurrentStudent(session, userId);
       if (student?.section == null) return null;
-      if (section != null && section != student!.section) {
-        return NLPResponse(
-          text: "You can only view your own section schedule.",
-          intent: NLPIntent.schedule,
-        );
+      if (section != null) {
+        final requestedCandidates = _buildSectionCandidates(section);
+        final currentCandidates = _buildSectionCandidates(student!.section!);
+        final intersects = requestedCandidates
+            .toSet()
+            .intersection(currentCandidates.toSet())
+            .isNotEmpty;
+        if (!intersects) {
+          return NLPResponse(
+            text: "You can only view your own section schedule.",
+            intent: NLPIntent.schedule,
+          );
+        }
       }
       schedules = await Schedule.db.find(
         session,
@@ -1628,7 +1771,10 @@ class NLPService {
           schedules.where((s) => s.facultyId == matchedFaculty.id).toList();
     }
     if (section != null) {
-      schedules = schedules.where((s) => s.section == section).toList();
+      final requestedCandidates = _buildSectionCandidates(section);
+      schedules = schedules
+          .where((s) => requestedCandidates.contains(s.section.toUpperCase()))
+          .toList();
     }
     if (room != null) {
       schedules = schedules.where((s) => s.roomId == room.id).toList();

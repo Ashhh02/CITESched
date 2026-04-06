@@ -7,6 +7,21 @@ import '../auth/scopes.dart';
 class TimetableEndpoint extends Endpoint {
   final TimetableService _timetableService = TimetableService();
 
+  Program? _programFromCourse(String? course) {
+    final normalized = (course ?? '').trim().toUpperCase();
+    if (normalized.contains('BSIT') || normalized == 'IT') return Program.it;
+    if (normalized.contains('EMC')) return Program.emc;
+    return null;
+  }
+
+  List<ScheduleInfo> _filterByProgram(
+    List<ScheduleInfo> schedules,
+    Program? program,
+  ) {
+    if (program == null) return schedules;
+    return schedules.where((s) => s.schedule.subject?.program == program).toList();
+  }
+
   Future<Student?> _findCurrentStudent(
     Session session,
     dynamic authInfo,
@@ -122,13 +137,15 @@ class TimetableEndpoint extends Endpoint {
   ) async {
     final student = await _findCurrentStudent(session, authInfo);
     if (student == null) return [];
+    final studentProgram = _programFromCourse(student.course);
 
     if (student.sectionId != null) {
-      return await _timetableService.fetchSchedulesBySectionId(
+      final schedules = await _timetableService.fetchSchedulesBySectionId(
         session,
         student.sectionId!,
         fallbackSectionCode: student.section,
       );
+      return _filterByProgram(schedules, studentProgram);
     }
 
     if (student.section != null && student.section!.isNotEmpty) {
@@ -141,11 +158,12 @@ class TimetableEndpoint extends Endpoint {
         try {
           await Student.db.updateRow(session, student);
         } catch (_) {}
-        return await _timetableService.fetchSchedulesBySectionId(
+        final schedules = await _timetableService.fetchSchedulesBySectionId(
           session,
           resolvedSectionId,
           fallbackSectionCode: student.section,
         );
+        return _filterByProgram(schedules, studentProgram);
       }
     }
 
@@ -153,10 +171,14 @@ class TimetableEndpoint extends Endpoint {
       return [];
     }
 
-    return await _timetableService.fetchSchedulesWithFilters(
+    final schedules = await _timetableService.fetchSchedulesWithFilters(
       session,
-      TimetableFilterRequest(section: student.section),
+      TimetableFilterRequest(
+        section: student.section,
+        program: studentProgram,
+      ),
     );
+    return _filterByProgram(schedules, studentProgram);
   }
 
   Future<List<ScheduleInfo>> _getFacultyPersonalSchedule(

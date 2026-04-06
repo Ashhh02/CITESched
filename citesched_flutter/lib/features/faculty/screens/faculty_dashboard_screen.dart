@@ -6,6 +6,8 @@ import 'package:citesched_flutter/core/utils/schedule_export_service.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/features/auth/widgets/logout_confirmation_dialog.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
+import 'package:citesched_flutter/core/widgets/draggable_fab.dart';
+import 'package:citesched_flutter/core/widgets/nlp_query_dialog.dart';
 import 'package:citesched_flutter/features/nlp/providers/chat_history_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -387,7 +389,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
       );
     }
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: bgColor,
       body: Center(
         child: ConstrainedBox(
@@ -980,6 +982,27 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
           ),
         ),
       ),
+    );
+
+    return Stack(
+      children: [
+        scaffold,
+        DraggableFab(
+          child: FloatingActionButton.extended(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => const NLPQueryDialog(),
+              );
+            },
+            backgroundColor: const Color(0xFF4f003b),
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Ask Me!'),
+            tooltip: 'Hey ask me some questions!',
+          ),
+        ),
+      ],
     );
   }
 

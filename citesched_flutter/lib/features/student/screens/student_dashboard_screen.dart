@@ -6,6 +6,8 @@ import 'package:citesched_flutter/core/utils/schedule_export_service.dart';
 import 'package:citesched_flutter/core/utils/session_context.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/features/auth/widgets/logout_confirmation_dialog.dart';
+import 'package:citesched_flutter/core/widgets/draggable_fab.dart';
+import 'package:citesched_flutter/core/widgets/nlp_query_dialog.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:citesched_flutter/features/nlp/providers/chat_history_provider.dart';
 import 'package:flutter/material.dart';
@@ -80,7 +82,7 @@ class StudentDashboardScreen extends ConsumerWidget {
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         title: Text(
@@ -146,14 +148,16 @@ class StudentDashboardScreen extends ConsumerWidget {
                                       ),
                                       child: CircleAvatar(
                                         radius: 30,
-                                        backgroundColor:
-                                            Colors.white.withOpacity(0.15),
+                                        backgroundColor: Colors.white
+                                            .withOpacity(0.15),
                                         child: Text(
-                                          (profileAsync.value?.name
-                                                      .isNotEmpty ==
-                                                  true
-                                              ? profileAsync.value!.name[0]
-                                              : user?.userName?[0] ?? 'S')
+                                          (profileAsync
+                                                          .value
+                                                          ?.name
+                                                          .isNotEmpty ==
+                                                      true
+                                                  ? profileAsync.value!.name[0]
+                                                  : user?.userName?[0] ?? 'S')
                                               .toUpperCase(),
                                           style: GoogleFonts.poppins(
                                             fontSize: 26,
@@ -172,15 +176,16 @@ class StudentDashboardScreen extends ConsumerWidget {
                                           Text(
                                             'Welcome back, Student!',
                                             style: GoogleFonts.poppins(
-                                              color: Colors.white
-                                                  .withOpacity(0.9),
+                                              color: Colors.white.withOpacity(
+                                                0.9,
+                                              ),
                                               fontSize: 13,
                                               fontWeight: FontWeight.w500,
                                               letterSpacing: 0.4,
                                             ),
                                           ),
                                           const SizedBox(height: 4),
-                                        Text(
+                                          Text(
                                             profileAsync.value?.name ??
                                                 signedInNameAsync.value ??
                                                 user?.userName ??
@@ -204,8 +209,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                                   width: double.infinity,
                                   child: ElevatedButton.icon(
                                     onPressed: () async {
-                                      final confirm =
-                                          await showDialog<bool>(
+                                      final confirm = await showDialog<bool>(
                                         context: context,
                                         builder: (context) =>
                                             const LogoutConfirmationDialog(),
@@ -228,8 +232,9 @@ class StudentDashboardScreen extends ConsumerWidget {
                                       ),
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          Colors.white.withOpacity(0.2),
+                                      backgroundColor: Colors.white.withOpacity(
+                                        0.2,
+                                      ),
                                       foregroundColor: Colors.white,
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 18,
@@ -237,8 +242,9 @@ class StudentDashboardScreen extends ConsumerWidget {
                                       ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(14),
-                                        side:
-                                            const BorderSide(color: Colors.white30),
+                                        side: const BorderSide(
+                                          color: Colors.white30,
+                                        ),
                                       ),
                                       elevation: 0,
                                     ),
@@ -259,13 +265,14 @@ class StudentDashboardScreen extends ConsumerWidget {
                                   ),
                                   child: CircleAvatar(
                                     radius: 35,
-                                    backgroundColor:
-                                        Colors.white.withOpacity(0.15),
+                                    backgroundColor: Colors.white.withOpacity(
+                                      0.15,
+                                    ),
                                     child: Text(
                                       (profileAsync.value?.name.isNotEmpty ==
-                                              true
-                                          ? profileAsync.value!.name[0]
-                                          : user?.userName?[0] ?? 'S')
+                                                  true
+                                              ? profileAsync.value!.name[0]
+                                              : user?.userName?[0] ?? 'S')
                                           .toUpperCase(),
                                       style: GoogleFonts.poppins(
                                         fontSize: 32,
@@ -314,12 +321,13 @@ class StudentDashboardScreen extends ConsumerWidget {
                                           const LogoutConfirmationDialog(),
                                     );
                                     if (confirm == true) {
-                                      ref
-                                          .read(authProvider.notifier)
-                                          .signOut();
+                                      ref.read(authProvider.notifier).signOut();
                                     }
                                   },
-                                  icon: const Icon(Icons.logout_rounded, size: 18),
+                                  icon: const Icon(
+                                    Icons.logout_rounded,
+                                    size: 18,
+                                  ),
                                   label: Text(
                                     'Sign Out',
                                     style: GoogleFonts.poppins(
@@ -328,7 +336,9 @@ class StudentDashboardScreen extends ConsumerWidget {
                                     ),
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white.withOpacity(0.2),
+                                    backgroundColor: Colors.white.withOpacity(
+                                      0.2,
+                                    ),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 18,
@@ -336,7 +346,9 @@ class StudentDashboardScreen extends ConsumerWidget {
                                     ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14),
-                                      side: const BorderSide(color: Colors.white30),
+                                      side: const BorderSide(
+                                        color: Colors.white30,
+                                      ),
                                     ),
                                     elevation: 0,
                                   ),
@@ -457,9 +469,13 @@ class StudentDashboardScreen extends ConsumerWidget {
                                           DataCell(Text(profile.name)),
                                           DataCell(Text(profile.course)),
                                           DataCell(
-                                            Text(profile.section ?? 'Unassigned'),
+                                            Text(
+                                              profile.section ?? 'Unassigned',
+                                            ),
                                           ),
-                                          DataCell(Text('${profile.yearLevel}')),
+                                          DataCell(
+                                            Text('${profile.yearLevel}'),
+                                          ),
                                         ],
                                       ),
                                     ],
@@ -551,13 +567,16 @@ class StudentDashboardScreen extends ConsumerWidget {
                                     child: Icon(
                                       isUser ? Icons.person : Icons.smart_toy,
                                       size: 14,
-                                      color: isUser ? maroonColor : Colors.green,
+                                      color: isUser
+                                          ? maroonColor
+                                          : Colors.green,
                                     ),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           isUser ? 'You' : 'CITESched AI',
@@ -569,7 +588,9 @@ class StudentDashboardScreen extends ConsumerWidget {
                                         const SizedBox(height: 4),
                                         Text(
                                           entry.text,
-                                          style: GoogleFonts.poppins(fontSize: 12),
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -583,7 +604,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                     ),
 
                     Text(
-                      'My Class Schedule',
+                      'My Classes Schedule',
                       style: GoogleFonts.poppins(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -832,6 +853,27 @@ class StudentDashboardScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+
+    return Stack(
+      children: [
+        scaffold,
+        DraggableFab(
+          child: FloatingActionButton.extended(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => const NLPQueryDialog(),
+              );
+            },
+            backgroundColor: const Color(0xFF4f003b),
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Ask Me!'),
+            tooltip: 'Hey ask me some questions!',
+          ),
+        ),
+      ],
     );
   }
 }

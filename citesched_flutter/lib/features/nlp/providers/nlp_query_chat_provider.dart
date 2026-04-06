@@ -50,7 +50,7 @@ class NLPQueryChatNotifier extends Notifier<NLPQueryChatState> {
           {
             'isUser': false,
             'text':
-                "Hello! I'm your CITESched Assistant. I can help you find schedules, check room availability, or (for admins) analyze conflicts and faculty load.",
+                "Hello! I'm your CITESched Assistant. I can help with schedules, teaching loads, timetables, room assignments, and conflict checks.",
           },
         ],
         sessionId: _generateSessionId(),
@@ -67,7 +67,7 @@ class NLPQueryChatNotifier extends Notifier<NLPQueryChatState> {
         {
           'isUser': false,
           'text':
-              "Hello! I'm your CITESched Assistant. I can help you find schedules, check room availability, or (for admins) analyze conflicts and faculty load.",
+              "Hello! I'm your CITESched Assistant. I can help with schedules, teaching loads, timetables, room assignments, and conflict checks.",
         },
       ],
       isLoading: false,
@@ -84,22 +84,48 @@ class NLPQueryChatNotifier extends Notifier<NLPQueryChatState> {
     );
   }
 
+  void loadSessionHistory({
+    required String sessionId,
+    String? sessionTitle,
+    required List<ChatHistory> history,
+  }) {
+    _pendingTimetable = false;
+    final restoredMessages = history
+        .map(
+          (entry) => <String, dynamic>{
+            'isUser': entry.sender == 'user',
+            'text': entry.text,
+          },
+        )
+        .toList();
+
+    state = NLPQueryChatState(
+      messages: restoredMessages,
+      isLoading: false,
+      sessionId: sessionId,
+      sessionTitle: sessionTitle ?? state.sessionTitle,
+    );
+  }
+
   Future<void> sendQuery(String query) async {
     if (query.trim().isEmpty) return;
 
-    final normalized = _normalizeQuery(query);
-    var outbound = query.trim();
+    final userQuery = query.trim();
+    var outbound = _rewriteSimpleQuery(userQuery);
+    final normalized = _normalizeQuery(outbound);
     if (_isTimetableQuery(normalized)) {
       _pendingTimetable = true;
       if (!_hasExplicitScheduleTarget(normalized) && !_isAdmin()) {
-        outbound = 'my schedule $outbound';
+        outbound = _isStudent()
+            ? 'section schedule $outbound'
+            : 'my schedule $outbound';
       }
     }
 
     state = state.copyWith(
       messages: [
         ...state.messages,
-        {'isUser': true, 'text': outbound},
+        {'isUser': true, 'text': userQuery},
       ],
       isLoading: true,
     );
@@ -154,11 +180,15 @@ class NLPQueryChatNotifier extends Notifier<NLPQueryChatState> {
   }
 
   bool _isTimetableQuery(String query) {
-    return query.contains('timetable') || query.contains('calendar');
+    return query.contains('timetable') ||
+        query.contains('calendar') ||
+        query.contains('weekly schedule');
   }
 
   bool _hasExplicitScheduleTarget(String query) {
     if (query.contains('my ')) return true;
+    if (query.contains('our ')) return true;
+    if (query.contains('section')) return true;
     if (query.contains('prof') ||
         query.contains('sir') ||
         query.contains('maam')) {
@@ -172,10 +202,83 @@ class NLPQueryChatNotifier extends Notifier<NLPQueryChatState> {
     return query.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
+  String _rewriteSimpleQuery(String query) {
+    var normalized = _normalizeQuery(query);
+    final auth = ref.read(authProvider);
+    final scopes = auth?.scopeNames ?? const [];
+    final isStudent = scopes.contains('student');
+    final isFaculty = scopes.contains('faculty');
+
+    final asksSchedule = RegExp(
+      r'\b(schedule|schedules|class schedule|classes|timetable|calendar|routine)\b',
+    ).hasMatch(normalized);
+    final asksConflict = RegExp(r'\b(conflict|conflicts|overlap|clash)\b')
+        .hasMatch(normalized);
+    final asksLoad = RegExp(r'\b(load|units|teaching load)\b')
+        .hasMatch(normalized);
+    final asksRoom = RegExp(r'\b(room|classroom|venue)\b').hasMatch(normalized);
+    final asksSection = RegExp(r'\b(section)\b').hasMatch(normalized);
+    final hasDayContext = RegExp(
+      r'\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b',
+    ).hasMatch(normalized);
+
+    if (asksSchedule) {
+      normalized = normalized
+          .replaceAll('schedules', 'schedule')
+          .replaceAll('timetable', 'weekly schedule')
+          .replaceAll('calendar', 'weekly schedule')
+          .replaceAll('routine', 'schedule');
+
+      if (isStudent) {
+        normalized = normalized
+            .replaceAll('my schedule', 'section schedule')
+            .replaceAll('my class schedule', 'section schedule')
+            .replaceAll('my weekly schedule', 'section weekly schedule');
+        if (!normalized.contains('section') && !asksSection) {
+          normalized = 'section $normalized';
+        }
+      } else if (isFaculty && !normalized.contains('my')) {
+        normalized = 'my $normalized';
+      }
+
+      if (hasDayContext && !normalized.contains('on ')) {
+        normalized = normalized.replaceFirst(' schedule ', ' schedule on ');
+      }
+    }
+
+    if (asksConflict) {
+      normalized = isStudent
+          ? 'check conflicts for section'
+          : isFaculty
+              ? 'check my teaching conflicts'
+              : 'check conflicts';
+    }
+
+    if (isFaculty && asksLoad && !normalized.contains('teaching load')) {
+      normalized = 'my teaching load';
+    }
+
+    if (isStudent && asksRoom) {
+      final asksNextClass =
+          normalized.contains('next') && normalized.contains('class');
+      normalized = asksNextClass
+          ? 'what is the next class for section'
+          : 'show section schedule';
+    }
+
+    return normalized;
+  }
+
   bool _isAdmin() {
     final auth = ref.read(authProvider);
     final scopes = auth?.scopeNames ?? const [];
     return scopes.contains('admin');
+  }
+
+  bool _isStudent() {
+    final auth = ref.read(authProvider);
+    final scopes = auth?.scopeNames ?? const [];
+    return scopes.contains('student');
   }
 
   String _generateSessionId() {
