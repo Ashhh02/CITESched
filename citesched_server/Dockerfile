@@ -46,4 +46,6 @@ COPY --from=build /src/citesched_server/lib/src/generated/protocol.yaml /app/lib
 EXPOSE 8080
 
 RUN chmod +x /app/start.sh
+RUN useradd -U -u 1000 appuser && chown -R 1000:1000 /app
+USER 1000
 CMD ["/app/start.sh"]
