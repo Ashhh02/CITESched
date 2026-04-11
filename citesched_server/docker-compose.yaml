@@ -1,4 +1,30 @@
 services:
+  app:
+    build:
+      context: ..
+      dockerfile: citesched_server/Dockerfile
+    ports:
+      - "10000:10000"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      PORT: "10000"
+      SERVERPOD_PUBLIC_HOST: localhost
+      SERVERPOD_PUBLIC_PORT: "10000"
+      SERVERPOD_PUBLIC_SCHEME: http
+      SERVERPOD_DATABASE_HOST: postgres
+      SERVERPOD_DATABASE_PORT: "5432"
+      SERVERPOD_DATABASE_NAME: citesched
+      SERVERPOD_DATABASE_USER: postgres
+      SERVERPOD_DATABASE_PASSWORD: "2_HmLlxC1SzrZSUxd4La6iNo01pj_9ce"
+      SERVERPOD_DATABASE_REQUIRE_SSL: "false"
+      SERVERPOD_SHARED_PASSWORD: "change-me"
+      SERVERPOD_SERVICE_SECRET: "local-dev-service-secret-change-me"
+      SERVERPOD_EMAIL_SECRET_HASH_PEPPER: "local-dev-email-pepper-change-me"
+      SERVERPOD_JWT_HMAC_SHA512_PRIVATE_KEY: "local-dev-jwt-private-key-change-me"
+      SERVERPOD_JWT_REFRESH_TOKEN_HASH_PEPPER: "local-dev-refresh-pepper-change-me"
+      SERVERPOD_SERVER_SIDE_SESSION_KEY_HASH_PEPPER: "local-dev-session-pepper-change-me"
   # Development services
   postgres:
     image: pgvector/pgvector:pg16
