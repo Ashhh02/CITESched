@@ -31,7 +31,7 @@ webServer:
 database:
   host: localhost
   port: 8090
-  name: temp
+  name: citesched
   user: postgres
   #requireSsl: true # defaults to false
   #isUnixSocket: true # defaults to false

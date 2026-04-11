@@ -22,6 +22,7 @@ environment:
   flutter: "^3.32.0"
 
 dependencies:
+  serverpod: 3.4.5
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.5
@@ -29,13 +30,13 @@ dependencies:
     sdk: flutter
   citesched_client:
     path: ../citesched_client
-  serverpod_flutter: 3.2.3
-  serverpod_auth_idp_flutter: 3.2.3
+  serverpod_flutter: 3.4.5
+  serverpod_auth_idp_flutter: 3.4.5
   flutter_riverpod: ^3.2.1
   google_fonts: ^7.1.0
   email_validator: ^3.0.0
-  serverpod_auth_email_flutter: ^3.2.3
-  serverpod_auth_shared_flutter: ^3.2.3
+  serverpod_auth_email_flutter: ^3.4.5
+  serverpod_auth_shared_flutter: ^3.4.5
   fl_chart: ^0.68.0
   pdf: ^3.11.3
   printing: ^5.14.2

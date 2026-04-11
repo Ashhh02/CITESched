@@ -4,7 +4,7 @@ set -eu
 
 CONFIG_FILE="/app/config/passwords.yaml"
 PRODUCTION_CONFIG_FILE="/app/config/production.yaml"
-NGINX_TEMPLATE="/app/nginx.conf.template"
+NGINX_SOURCE="/app/nginx.conf"
 NGINX_CONFIG="/etc/nginx/nginx.conf"
 
 first_non_empty() {
@@ -149,7 +149,7 @@ write_production_config
 write_password_config
 
 export PORT="${PORT:-10000}"
-envsubst '${PORT}' < "$NGINX_TEMPLATE" > "$NGINX_CONFIG"
+envsubst '${PORT}' < "$NGINX_SOURCE" > "$NGINX_CONFIG"
 
 /app/server \
   --mode production \

@@ -37,13 +37,13 @@ WORKDIR /app
 COPY --from=build /src/citesched_server/bin/server /app/server
 COPY --from=build /src/citesched_server/config/ /app/config/
 COPY --from=build /src/citesched_server/deploy/render/start.sh /app/start.sh
-COPY --from=build /src/citesched_server/deploy/render/nginx.conf.template /app/nginx.conf.template
+COPY --from=build /src/citesched_server/deploy/render/nginx.conf /app/nginx.conf
 COPY --from=build /src/citesched_server/web/ /app/web/
 COPY --from=build /tmp/citesched-web/ /app/web/app/
 COPY --from=build /src/citesched_server/migrations/ /app/migrations/
 COPY --from=build /src/citesched_server/lib/src/generated/protocol.yaml /app/lib/src/generated/protocol.yaml
 
-EXPOSE 8080
+EXPOSE 10000
 
 RUN chmod +x /app/start.sh
 CMD ["/app/start.sh"]

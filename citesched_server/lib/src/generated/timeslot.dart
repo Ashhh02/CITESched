@@ -338,7 +338,7 @@ class TimeslotRepository {
   /// );
   /// ```
   Future<List<Timeslot>> find(
-    _i1.Session session, {
+    _i1.DatabaseSession session, {
     _i1.WhereExpressionBuilder<TimeslotTable>? where,
     int? limit,
     int? offset,
@@ -346,6 +346,8 @@ class TimeslotRepository {
     bool orderDescending = false,
     _i1.OrderByListBuilder<TimeslotTable>? orderByList,
     _i1.Transaction? transaction,
+    _i1.LockMode? lockMode,
+    _i1.LockBehavior? lockBehavior,
   }) async {
     return session.db.find<Timeslot>(
       where: where?.call(Timeslot.t),
@@ -355,6 +357,8 @@ class TimeslotRepository {
       limit: limit,
       offset: offset,
       transaction: transaction,
+      lockMode: lockMode,
+      lockBehavior: lockBehavior,
     );
   }
 
@@ -376,13 +380,15 @@ class TimeslotRepository {
   /// );
   /// ```
   Future<Timeslot?> findFirstRow(
-    _i1.Session session, {
+    _i1.DatabaseSession session, {
     _i1.WhereExpressionBuilder<TimeslotTable>? where,
     int? offset,
     _i1.OrderByBuilder<TimeslotTable>? orderBy,
     bool orderDescending = false,
     _i1.OrderByListBuilder<TimeslotTable>? orderByList,
     _i1.Transaction? transaction,
+    _i1.LockMode? lockMode,
+    _i1.LockBehavior? lockBehavior,
   }) async {
     return session.db.findFirstRow<Timeslot>(
       where: where?.call(Timeslot.t),
@@ -391,18 +397,24 @@ class TimeslotRepository {
       orderDescending: orderDescending,
       offset: offset,
       transaction: transaction,
+      lockMode: lockMode,
+      lockBehavior: lockBehavior,
     );
   }
 
   /// Finds a single [Timeslot] by its [id] or null if no such row exists.
   Future<Timeslot?> findById(
-    _i1.Session session,
+    _i1.DatabaseSession session,
     int id, {
     _i1.Transaction? transaction,
+    _i1.LockMode? lockMode,
+    _i1.LockBehavior? lockBehavior,
   }) async {
     return session.db.findById<Timeslot>(
       id,
       transaction: transaction,
+      lockMode: lockMode,
+      lockBehavior: lockBehavior,
     );
   }
 
@@ -412,14 +424,20 @@ class TimeslotRepository {
   ///
   /// This is an atomic operation, meaning that if one of the rows fails to
   /// insert, none of the rows will be inserted.
+  ///
+  /// If [ignoreConflicts] is set to `true`, rows that conflict with existing
+  /// rows are silently skipped, and only the successfully inserted rows are
+  /// returned.
   Future<List<Timeslot>> insert(
-    _i1.Session session,
+    _i1.DatabaseSession session,
     List<Timeslot> rows, {
     _i1.Transaction? transaction,
+    bool ignoreConflicts = false,
   }) async {
     return session.db.insert<Timeslot>(
       rows,
       transaction: transaction,
+      ignoreConflicts: ignoreConflicts,
     );
   }
 
@@ -427,7 +445,7 @@ class TimeslotRepository {
   ///
   /// The returned [Timeslot] will have its `id` field set.
   Future<Timeslot> insertRow(
-    _i1.Session session,
+    _i1.DatabaseSession session,
     Timeslot row, {
     _i1.Transaction? transaction,
   }) async {
@@ -443,7 +461,7 @@ class TimeslotRepository {
   /// This is an atomic operation, meaning that if one of the rows fails to
   /// update, none of the rows will be updated.
   Future<List<Timeslot>> update(
-    _i1.Session session,
+    _i1.DatabaseSession session,
     List<Timeslot> rows, {
     _i1.ColumnSelections<TimeslotTable>? columns,
     _i1.Transaction? transaction,
@@ -459,7 +477,7 @@ class TimeslotRepository {
   /// Optionally, a list of [columns] can be provided to only update those
   /// columns. Defaults to all columns.
   Future<Timeslot> updateRow(
-    _i1.Session session,
+    _i1.DatabaseSession session,
     Timeslot row, {
     _i1.ColumnSelections<TimeslotTable>? columns,
     _i1.Transaction? transaction,
@@ -474,7 +492,7 @@ class TimeslotRepository {
   /// Updates a single [Timeslot] by its [id] with the specified [columnValues].
   /// Returns the updated row or null if no row with the given id exists.
   Future<Timeslot?> updateById(
-    _i1.Session session,
+    _i1.DatabaseSession session,
     int id, {
     required _i1.ColumnValueListBuilder<TimeslotUpdateTable> columnValues,
     _i1.Transaction? transaction,
@@ -489,7 +507,7 @@ class TimeslotRepository {
   /// Updates all [Timeslot]s matching the [where] expression with the specified [columnValues].
   /// Returns the list of updated rows.
   Future<List<Timeslot>> updateWhere(
-    _i1.Session session, {
+    _i1.DatabaseSession session, {
     required _i1.ColumnValueListBuilder<TimeslotUpdateTable> columnValues,
     required _i1.WhereExpressionBuilder<TimeslotTable> where,
     int? limit,
@@ -515,7 +533,7 @@ class TimeslotRepository {
   /// This is an atomic operation, meaning that if one of the rows fail to
   /// be deleted, none of the rows will be deleted.
   Future<List<Timeslot>> delete(
-    _i1.Session session,
+    _i1.DatabaseSession session,
     List<Timeslot> rows, {
     _i1.Transaction? transaction,
   }) async {
@@ -527,7 +545,7 @@ class TimeslotRepository {
 
   /// Deletes a single [Timeslot].
   Future<Timeslot> deleteRow(
-    _i1.Session session,
+    _i1.DatabaseSession session,
     Timeslot row, {
     _i1.Transaction? transaction,
   }) async {
@@ -539,7 +557,7 @@ class TimeslotRepository {
 
   /// Deletes all rows matching the [where] expression.
   Future<List<Timeslot>> deleteWhere(
-    _i1.Session session, {
+    _i1.DatabaseSession session, {
     required _i1.WhereExpressionBuilder<TimeslotTable> where,
     _i1.Transaction? transaction,
   }) async {
@@ -552,7 +570,7 @@ class TimeslotRepository {
   /// Counts the number of rows matching the [where] expression. If omitted,
   /// will return the count of all rows in the table.
   Future<int> count(
-    _i1.Session session, {
+    _i1.DatabaseSession session, {
     _i1.WhereExpressionBuilder<TimeslotTable>? where,
     int? limit,
     _i1.Transaction? transaction,
@@ -560,6 +578,22 @@ class TimeslotRepository {
     return session.db.count<Timeslot>(
       where: where?.call(Timeslot.t),
       limit: limit,
+      transaction: transaction,
+    );
+  }
+
+  /// Acquires row-level locks on [Timeslot] rows matching the [where] expression.
+  Future<void> lockRows(
+    _i1.DatabaseSession session, {
+    required _i1.WhereExpressionBuilder<TimeslotTable> where,
+    required _i1.LockMode lockMode,
+    required _i1.Transaction transaction,
+    _i1.LockBehavior lockBehavior = _i1.LockBehavior.wait,
+  }) async {
+    return session.db.lockRows<Timeslot>(
+      where: where(Timeslot.t),
+      lockMode: lockMode,
+      lockBehavior: lockBehavior,
       transaction: transaction,
     );
   }

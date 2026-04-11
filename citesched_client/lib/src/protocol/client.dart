@@ -226,6 +226,13 @@ class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
       'newPassword': newPassword,
     },
   );
+
+  @override
+  _i3.Future<bool> hasAccount() => caller.callServerEndpoint<bool>(
+    'emailIdp',
+    'hasAccount',
+    {},
+  );
 }
 
 /// By extending [GoogleIdpBaseEndpoint], the Google identity provider endpoints
@@ -238,10 +245,6 @@ class EndpointGoogleIdp extends _i1.EndpointGoogleIdpBase {
   @override
   String get name => 'googleIdp';
 
-  /// Validates a Google ID token and either logs in the associated user or
-  /// creates a new user account if the Google account ID is not yet known.
-  ///
-  /// If a new user is created an associated [UserProfile] is also created.
   @override
   _i3.Future<_i4.AuthSuccess> login({
     required String idToken,
@@ -253,6 +256,13 @@ class EndpointGoogleIdp extends _i1.EndpointGoogleIdpBase {
       'idToken': idToken,
       'accessToken': accessToken,
     },
+  );
+
+  @override
+  _i3.Future<bool> hasAccount() => caller.callServerEndpoint<bool>(
+    'googleIdp',
+    'hasAccount',
+    {},
   );
 }
 
@@ -932,8 +942,8 @@ class EndpointSetup extends _i2.EndpointRef {
       );
 }
 
-/// Student-only endpoint for viewing schedules and managing own profile.
-/// Only users with the 'student' scope can access these methods.
+/// Student endpoint for viewing schedules and managing the logged-in user's
+/// linked student profile.
 /// {@category Endpoint}
 class EndpointStudent extends _i2.EndpointRef {
   EndpointStudent(_i2.EndpointCaller caller) : super(caller);
