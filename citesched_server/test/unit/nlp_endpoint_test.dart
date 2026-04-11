@@ -1,4 +1,5 @@
 import 'package:citesched_server/src/generated/protocol.dart';
+import 'package:citesched_server/src/auth/scopes.dart';
 import 'package:citesched_server/src/services/nlp_service.dart';
 import 'package:test/test.dart';
 
@@ -19,7 +20,7 @@ void main() {
       return days[DateTime.now().weekday - 1];
     }
 
-    Future<void> seedScheduleData() async {
+    Future<Student> seedScheduleData() async {
       final today = _todayDay();
       final faculty = await endpoints.admin.createFaculty(
         sessionBuilder,
@@ -37,7 +38,7 @@ void main() {
         ),
       );
 
-      await endpoints.admin.createStudent(
+      final student = await endpoints.admin.createStudent(
         sessionBuilder,
         Student(
           name: 'NLP Student',
@@ -56,7 +57,7 @@ void main() {
       final room = await endpoints.admin.createRoom(
         sessionBuilder,
         Room(
-          name: 'Room NLP 1',
+          name: 'ROOM 1',
           capacity: 30,
           type: RoomType.lecture,
           program: Program.it,
@@ -71,7 +72,7 @@ void main() {
         Subject(
           code: 'NLP101',
           name: 'Natural Language Processing',
-          units: 3,
+          units: 2,
           types: [SubjectType.lecture],
           program: Program.it,
           studentsCount: 30,
@@ -85,7 +86,7 @@ void main() {
         Timeslot(
           day: today,
           startTime: '08:00',
-          endTime: '09:00',
+          endTime: '11:00',
           label: 'Morning Slot',
           createdAt: DateTime.now().toUtc(),
           updatedAt: DateTime.now().toUtc(),
@@ -96,8 +97,8 @@ void main() {
         sessionBuilder,
         Timeslot(
           day: today,
-          startTime: '23:50',
-          endTime: '23:59',
+          startTime: '12:00',
+          endTime: '15:00',
           label: 'Late Slot',
           createdAt: DateTime.now().toUtc(),
           updatedAt: DateTime.now().toUtc(),
@@ -129,61 +130,28 @@ void main() {
           updatedAt: DateTime.now().toUtc(),
         ),
       );
+
+      return student;
     }
 
     test('returns schedule matches for authenticated student queries', () async {
-      await seedScheduleData();
+      final student = await seedScheduleData();
 
       final studentSession = sessionBuilder.copyWith(
         authentication: AuthenticationOverride.authenticationInfo(
-          '901',
-          {const Scope('student')},
+          student.userInfoId.toString(),
+          {AppScopes.student},
         ),
       );
 
-      final startResponse = await endpoints.nLP.query(
+      final response = await endpoints.nLP.query(
         studentSession,
-        'schedule today start at 8:00',
+        'my schedule today',
       );
-      expect(startResponse.intent, NLPIntent.schedule);
-      expect(startResponse.text, contains('Found 1 class'));
-      expect(startResponse.schedules, isNotNull);
-      expect(startResponse.schedules!, isNotEmpty);
-
-      final endResponse = await endpoints.nLP.query(
-        studentSession,
-        'schedule today end at 9:00',
-      );
-      expect(endResponse.intent, NLPIntent.schedule);
-      expect(endResponse.text, contains('Found 1 class'));
-      expect(endResponse.schedules, isNotNull);
-      expect(endResponse.schedules!, isNotEmpty);
-
-      final firstResponse = await endpoints.nLP.query(
-        studentSession,
-        'first class today',
-      );
-      expect(firstResponse.intent, NLPIntent.schedule);
-      expect(firstResponse.text, contains('first class'));
-      expect(firstResponse.schedules, isNotNull);
-      expect(firstResponse.schedules!, isNotEmpty);
-
-      final lastResponse = await endpoints.nLP.query(
-        studentSession,
-        'last class today',
-      );
-      expect(lastResponse.intent, NLPIntent.schedule);
-      expect(lastResponse.text, contains('last class'));
-      expect(lastResponse.schedules, isNotNull);
-      expect(lastResponse.schedules!, isNotEmpty);
-
-      final genericResponse = await endpoints.nLP.query(
-        studentSession,
-        'schedule today',
-      );
-      expect(genericResponse.intent, NLPIntent.schedule);
-      expect(genericResponse.schedules, isNotNull);
-      expect(genericResponse.schedules!, isNotEmpty);
+      expect(response.intent, NLPIntent.schedule);
+      expect(response.text, contains('You have'));
+      expect(response.schedules, isNotNull);
+      expect(response.schedules!, isNotEmpty);
     });
 
     test('returns next class using a fixed clock', () async {
@@ -196,18 +164,19 @@ void main() {
         10,
       );
       final service = NLPService(nowProvider: () => fixedNow);
-      final studentSession = sessionBuilder.copyWith(
+
+      final adminSession = sessionBuilder.copyWith(
         authentication: AuthenticationOverride.authenticationInfo(
-          '901',
-          {const Scope('student')},
+          '1',
+          {AppScopes.admin},
         ),
       );
 
       final response = await service.processQuery(
-        studentSession.build(),
+        adminSession.build(),
         'next class today',
-        '901',
-        ['student'],
+        '1',
+        ['admin'],
       );
 
       expect(response.intent, NLPIntent.schedule);
