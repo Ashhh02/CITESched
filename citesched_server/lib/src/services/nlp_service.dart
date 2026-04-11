@@ -7,6 +7,9 @@ import 'conflict_service.dart';
 
 class NLPService {
   final ConflictService _conflictService = ConflictService();
+  final DateTime Function() _now;
+
+  NLPService({DateTime Function()? nowProvider}) : _now = nowProvider ?? DateTime.now;
 
   // Restricted keywords that should always be rejected
   static const List<String> forbiddenKeywords = [
@@ -1374,7 +1377,7 @@ class NLPService {
 
   List<DayOfWeek> _extractRelativeDays(String query) {
     final days = <DayOfWeek>[];
-    final now = DateTime.now();
+    final now = _now();
     if (_containsKeywordFuzzy(query, ['today', 'tonight', 'now'])) {
       days.add(_dayFromDate(now));
     }
@@ -1734,7 +1737,7 @@ class NLPService {
     final schedules = await _resolveSchedulesByScope(session, userId, scopes);
     if (schedules == null) return null;
 
-    final now = DateTime.now();
+    final now = _now();
     final nowDay = _dayFromDate(now);
     final nowMinutes = now.hour * 60 + now.minute;
 
@@ -1952,7 +1955,7 @@ class NLPService {
     );
     var day = relativeDays.length == 1 ? relativeDays.first : null;
     if (hasNow) {
-      final now = DateTime.now();
+      final now = _now();
       day ??= _dayFromDate(now);
       final nowMinutes = now.hour * 60 + now.minute;
       timeRange ??= _TimeRange(nowMinutes, nowMinutes + 1);

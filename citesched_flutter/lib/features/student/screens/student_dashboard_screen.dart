@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
 import 'package:citesched_flutter/core/widgets/full_screen_calendar_scaffold.dart';
+import 'package:serverpod_auth_client/serverpod_auth_client.dart';
 
 final currentSignedInEmailProvider = FutureProvider<String?>((ref) async {
   final sessionContext = await fetchSessionContext();
@@ -725,13 +726,14 @@ class StudentDashboardScreen extends ConsumerWidget {
                                 const SizedBox(width: 10),
                                 ElevatedButton.icon(
                                   onPressed: () async {
+                                    final messenger = ScaffoldMessenger.of(context);
                                     final result =
                                         await ScheduleExportService.exportStudentScheduleDocx(
                                           student: profileAsync.value,
                                           schedules: schedules,
                                         );
-                                    if (!context.mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    if (!mounted) return;
+                                    messenger.showSnackBar(
                                       SnackBar(
                                         content: Text(
                                           result != null
