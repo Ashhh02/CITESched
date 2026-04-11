@@ -105,7 +105,7 @@ class StandardPageLayout extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Divider(
+                    const Divider(
                       color: DesignSystem.borderColor,
                       thickness: 1,
                       height: DesignSystem.spacing16,

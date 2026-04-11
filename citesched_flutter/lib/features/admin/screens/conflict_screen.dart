@@ -31,17 +31,15 @@ class _ConflictScreenState extends State<ConflictScreen> {
     setState(() => _isLoading = true);
     try {
       final conflicts = await client.admin.getAllConflicts();
-      if (mounted) {
-        setState(() {
-          _conflicts = conflicts;
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _conflicts = conflicts;
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        AppErrorDialog.show(context, e);
-      }
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      AppErrorDialog.show(context, e);
     }
   }
 
@@ -690,7 +688,6 @@ class _ConflictScreenState extends State<ConflictScreen> {
                                 onPressed: isResolving
                                     ? null
                                     : () => _resolveConflict(
-                                          context,
                                           conflict,
                                           conflictKey: conflictKey,
                                         ),
@@ -745,13 +742,12 @@ class _ConflictScreenState extends State<ConflictScreen> {
   }
 
   Future<void> _resolveConflict(
-    BuildContext context,
     ScheduleConflict conflict, {
     required String conflictKey,
   }) async {
     if (conflict.type == 'max_load_exceeded' && conflict.facultyId != null) {
-      final shouldContinue = await _showMaxLoadConfirmationDialog(context);
-      if (shouldContinue != true || !mounted) return;
+      final shouldContinue = await _showMaxLoadConfirmationDialog();
+      if (!mounted || shouldContinue != true) return;
 
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -770,12 +766,12 @@ class _ConflictScreenState extends State<ConflictScreen> {
       if (!mounted) return;
 
       if (suggestion == null) {
-        await _showManualResolutionDialog(context, conflict);
+        await _showManualResolutionDialog(conflict);
         return;
       }
 
-      final shouldApply = await _showSuggestionDialog(context, suggestion);
-      if (shouldApply != true || !mounted) return;
+      final shouldApply = await _showSuggestionDialog(suggestion);
+      if (!mounted || shouldApply != true) return;
 
       await client.admin.updateSchedule(suggestion.updatedSchedule);
       await _fetchConflicts();
@@ -1009,7 +1005,6 @@ class _ConflictScreenState extends State<ConflictScreen> {
   }
 
   Future<bool?> _showSuggestionDialog(
-    BuildContext context,
     _ResolutionSuggestion suggestion,
   ) {
     return showDialog<bool>(
@@ -1071,7 +1066,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
     );
   }
 
-  Future<bool?> _showMaxLoadConfirmationDialog(BuildContext context) {
+  Future<bool?> _showMaxLoadConfirmationDialog() {
     return showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -1097,10 +1092,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
     );
   }
 
-  Future<void> _showManualResolutionDialog(
-    BuildContext context,
-    ScheduleConflict conflict,
-  ) async {
+  Future<void> _showManualResolutionDialog(ScheduleConflict conflict) async {
     final index = _manualResolutionIndex(conflict.type);
     await showDialog<void>(
       context: context,

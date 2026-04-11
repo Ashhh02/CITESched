@@ -350,9 +350,11 @@ class _AdminDashboardScreenState
                                         height: 40,
                                         child: ElevatedButton.icon(
                                           onPressed: () async {
+                                            final navigator =
+                                                Navigator.of(dialogContext);
                                             await _approvePendingFaculty(item);
                                             if (dialogContext.mounted) {
-                                              Navigator.of(dialogContext).pop();
+                                              navigator.pop();
                                             }
                                           },
                                           icon: const Icon(Icons.check_rounded),
@@ -372,9 +374,11 @@ class _AdminDashboardScreenState
                                         height: 40,
                                         child: ElevatedButton.icon(
                                           onPressed: () async {
+                                            final navigator =
+                                                Navigator.of(dialogContext);
                                             await _declinePendingFaculty(item);
                                             if (dialogContext.mounted) {
-                                              Navigator.of(dialogContext).pop();
+                                              navigator.pop();
                                             }
                                           },
                                           icon: const Icon(Icons.close_rounded),

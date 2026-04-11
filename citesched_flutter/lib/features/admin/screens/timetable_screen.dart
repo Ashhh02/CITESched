@@ -130,56 +130,54 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     try {
       precheck = await client.admin.precheckSchedule();
     } catch (e) {
+      if (!mounted) return;
       _closeDialogIfMounted();
-      if (mounted) {
-        AppErrorDialog.show(context, e);
-      }
+      AppErrorDialog.show(context, e);
       return;
     }
+    if (!mounted) return;
     _closeDialogIfMounted();
 
     final precheckResult = precheck;
     if (!precheckResult.success) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Row(
-              children: [
-                const Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.orange,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Not Ready',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            content: Text(
-              precheckResult.message ?? 'Missing required data.',
-              style: GoogleFonts.poppins(fontSize: 14),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  'OK',
-                  style: GoogleFonts.poppins(
-                    color: maroonColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Not Ready',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
               ),
             ],
           ),
-        );
-      }
+          content: Text(
+            precheckResult.message ?? 'Missing required data.',
+            style: GoogleFonts.poppins(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'OK',
+                style: GoogleFonts.poppins(
+                  color: maroonColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
       return;
     }
 
@@ -297,19 +295,16 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
 
     try {
       final response = await client.admin.regenerateSchedule();
+      if (!mounted) return;
       _closeDialogIfMounted();
-
-      if (mounted) {
-        notifyScheduleDataChanged(ref);
-        ref.invalidate(filteredSchedulesProvider);
-        ref.invalidate(timetableSummaryProvider);
-        _showSummaryDialog(response);
-      }
+      notifyScheduleDataChanged(ref);
+      ref.invalidate(filteredSchedulesProvider);
+      ref.invalidate(timetableSummaryProvider);
+      _showSummaryDialog(response);
     } catch (e) {
+      if (!mounted) return;
       _closeDialogIfMounted();
-      if (mounted) {
-        AppErrorDialog.show(context, e);
-      }
+      AppErrorDialog.show(context, e);
     }
   }
 
@@ -420,13 +415,12 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                 )
                 .toList();
       if (scopedSubjects.isEmpty || scopedSections.isEmpty) {
+        if (!mounted) return;
         _closeDialogIfMounted();
-        if (mounted) {
-          AppErrorDialog.show(
-            context,
-            'No available subjects or sections found for this program to generate a schedule.',
-          );
-        }
+        AppErrorDialog.show(
+          context,
+          'No available subjects or sections found for this program to generate a schedule.',
+        );
         return;
       }
 
@@ -440,18 +434,16 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
 
       final response = await client.admin.generateSchedule(request);
 
+      if (!mounted) return;
       _closeDialogIfMounted();
-      if (mounted) {
-        notifyScheduleDataChanged(ref);
-        ref.invalidate(filteredSchedulesProvider);
-        ref.invalidate(timetableSummaryProvider);
-        _showSummaryDialog(response);
-      }
+      notifyScheduleDataChanged(ref);
+      ref.invalidate(filteredSchedulesProvider);
+      ref.invalidate(timetableSummaryProvider);
+      _showSummaryDialog(response);
     } catch (e) {
+      if (!mounted) return;
       _closeDialogIfMounted();
-      if (mounted) {
-        AppErrorDialog.show(context, e);
-      }
+      AppErrorDialog.show(context, e);
     }
   }
 

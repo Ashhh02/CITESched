@@ -119,7 +119,7 @@ class FormDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: padding,
-      child: Divider(
+      child: const Divider(
         color: DesignSystem.borderColor,
         thickness: 1,
         height: 1,
