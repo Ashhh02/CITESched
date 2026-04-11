@@ -134,25 +134,28 @@ void main() {
       return student;
     }
 
-    test('returns schedule matches for authenticated student queries', () async {
-      final student = await seedScheduleData();
+    test(
+      'returns schedule matches for authenticated student queries',
+      () async {
+        final student = await seedScheduleData();
 
-      final studentSession = sessionBuilder.copyWith(
-        authentication: AuthenticationOverride.authenticationInfo(
-          student.userInfoId.toString(),
-          {AppScopes.student},
-        ),
-      );
+        final studentSession = sessionBuilder.copyWith(
+          authentication: AuthenticationOverride.authenticationInfo(
+            student.userInfoId.toString(),
+            {AppScopes.student},
+          ),
+        );
 
-      final response = await endpoints.nLP.query(
-        studentSession,
-        'my schedule today',
-      );
-      expect(response.intent, NLPIntent.schedule);
-      expect(response.text, contains('You have'));
-      expect(response.schedules, isNotNull);
-      expect(response.schedules!, isNotEmpty);
-    });
+        final response = await endpoints.nLP.query(
+          studentSession,
+          'my schedule today',
+        );
+        expect(response.intent, NLPIntent.schedule);
+        expect(response.text, contains('You have'));
+        expect(response.schedules, isNotNull);
+        expect(response.schedules!, isNotEmpty);
+      },
+    );
 
     test('returns next class using a fixed clock', () async {
       await seedScheduleData();
@@ -186,3 +189,4 @@ void main() {
     });
   });
 }
+//testing 
