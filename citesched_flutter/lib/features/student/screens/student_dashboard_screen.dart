@@ -732,7 +732,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                                           student: profileAsync.value,
                                           schedules: schedules,
                                         );
-                                    if (!mounted) return;
+                                    if (!context.mounted) return;
                                     messenger.showSnackBar(
                                       SnackBar(
                                         content: Text(
