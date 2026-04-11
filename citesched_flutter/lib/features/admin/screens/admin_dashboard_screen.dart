@@ -144,6 +144,38 @@ class _AdminDashboardScreenState
     );
   }
 
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _showDebugSessionInfo() async {
+    try {
+      final debugInfo = await client.debug.getSessionInfo();
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Debug Session Info'),
+          content: SingleChildScrollView(
+            child: Text(debugInfo.toString()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      _showErrorSnackBar('Debug failed: $e');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -179,10 +211,7 @@ class _AdminDashboardScreenState
         icon: Icons.verified_rounded,
       );
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Approval failed: $e')),
-      );
+      _showErrorSnackBar('Approval failed: $e');
     }
   }
 
@@ -205,10 +234,7 @@ class _AdminDashboardScreenState
         icon: Icons.cancel_outlined,
       );
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Decline failed: $e')),
-      );
+      _showErrorSnackBar('Decline failed: $e');
     }
   }
 
@@ -411,32 +437,7 @@ class _AdminDashboardScreenState
               Text('Error: $err'),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () async {
-                  try {
-                    final debugInfo = await client.debug.getSessionInfo();
-                    if (!context.mounted) return;
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Debug Session Info'),
-                        content: SingleChildScrollView(
-                          child: Text(debugInfo.toString()),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Close'),
-                          ),
-                        ],
-                      ),
-                    );
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Debug failed: $e')),
-                    );
-                  }
-                },
+                onPressed: _showDebugSessionInfo,
                 child: const Text('Debug Session'),
               ),
               const SizedBox(height: 8),

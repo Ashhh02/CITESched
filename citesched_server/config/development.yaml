@@ -29,8 +29,8 @@ webServer:
 
 # This is the database setup for your server.
 database:
-  host: localhost
-  port: 8090
+  host: 127.0.0.1
+  port: 15432
   name: citesched
   user: postgres
   #requireSsl: true # defaults to false
@@ -40,7 +40,7 @@ database:
 # This is the setup for Redis.
 redis:
   enabled: false
-  host: localhost
+  host: 127.0.0.1
   port: 8091
   #user: # defaults to empty
   #requireSsl: true # defaults to false

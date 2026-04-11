@@ -68,6 +68,7 @@ class TimetableScreen extends ConsumerStatefulWidget {
 }
 
 class _TimetableScreenState extends ConsumerState<TimetableScreen> {
+  static const String _weeklyTimetableTitle = 'Weekly Timetable';
   final Color maroonColor = const Color(0xFF720045);
   List<Faculty> _facultyList = [];
   List<Room> _roomList = [];
@@ -105,6 +106,12 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     }
   }
 
+  void _closeDialogIfMounted() {
+    if (mounted) {
+      Navigator.pop(context);
+    }
+  }
+
   Future<void> _generateSchedule() async {
     final activeFilter = ref.read(timetableFilterProvider);
     if (activeFilter.facultyId != null) {
@@ -123,13 +130,13 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     try {
       precheck = await client.admin.precheckSchedule();
     } catch (e) {
-      if (mounted) Navigator.pop(context);
+      _closeDialogIfMounted();
       if (mounted) {
         AppErrorDialog.show(context, e);
       }
       return;
     }
-    if (mounted) Navigator.pop(context);
+    _closeDialogIfMounted();
 
     final precheckResult = precheck;
     if (!precheckResult.success) {
@@ -290,7 +297,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
 
     try {
       final response = await client.admin.regenerateSchedule();
-      if (mounted) Navigator.pop(context);
+      _closeDialogIfMounted();
 
       if (mounted) {
         notifyScheduleDataChanged(ref);
@@ -299,7 +306,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
         _showSummaryDialog(response);
       }
     } catch (e) {
-      if (mounted) Navigator.pop(context);
+      _closeDialogIfMounted();
       if (mounted) {
         AppErrorDialog.show(context, e);
       }
@@ -413,7 +420,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                 )
                 .toList();
       if (scopedSubjects.isEmpty || scopedSections.isEmpty) {
-        if (mounted) Navigator.pop(context);
+        _closeDialogIfMounted();
         if (mounted) {
           AppErrorDialog.show(
             context,
@@ -433,7 +440,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
 
       final response = await client.admin.generateSchedule(request);
 
-      if (mounted) Navigator.pop(context);
+      _closeDialogIfMounted();
       if (mounted) {
         notifyScheduleDataChanged(ref);
         ref.invalidate(filteredSchedulesProvider);
@@ -441,7 +448,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
         _showSummaryDialog(response);
       }
     } catch (e) {
-      if (mounted) Navigator.pop(context);
+      _closeDialogIfMounted();
       if (mounted) {
         AppErrorDialog.show(context, e);
       }
@@ -616,7 +623,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Weekly Timetable',
+                      _weeklyTimetableTitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
@@ -722,7 +729,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
       onPressed: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => FullScreenCalendarScaffold(
-            title: 'Weekly Timetable',
+            title: _weeklyTimetableTitle,
             backgroundColor: bgColor,
             child: WeeklyCalendarView(
               schedules: schedules,

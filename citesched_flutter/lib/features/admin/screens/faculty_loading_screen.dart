@@ -50,6 +50,8 @@ String _getDayAbbr(DayOfWeek day) {
 
 const Set<String> _labRoomNames = {'IT LAB', 'EMC LAB'};
 const String _lectureRoomName = 'ROOM 1';
+const String _noPreferredTimeslotsMessage =
+    'No preferred timeslots for this faculty';
 
 String _normalizedRoomName(String value) => value.trim().toUpperCase();
 
@@ -4598,7 +4600,7 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
                               data: (availabilityList) {
                                 if (availabilityList.isEmpty) {
                                   return Text(
-                                    'No preferred timeslots for this faculty',
+                                    _noPreferredTimeslotsMessage,
                                     style: GoogleFonts.poppins(fontSize: 12),
                                   );
                                 }
@@ -5732,7 +5734,7 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
                               data: (availabilityList) {
                                 if (availabilityList.isEmpty) {
                                   return Text(
-                                    'No preferred timeslots for this faculty',
+                                    _noPreferredTimeslotsMessage,
                                     style: GoogleFonts.poppins(fontSize: 12),
                                   );
                                 }

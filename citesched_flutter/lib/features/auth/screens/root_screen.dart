@@ -13,26 +13,14 @@ class RootScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final authNotifier = ref.read(authProvider.notifier);
-    final selectedRole = authNotifier.selectedRole;
 
     if (authState == null) {
       return const LoginScreen();
     }
 
-    if (selectedRole != null) {
-      if (selectedRole == 'admin' && authNotifier.isAdmin) {
-        return const AdminLayout();
-      }
-      if (selectedRole == 'student' && authNotifier.isStudent) {
-        return const StudentDashboardScreen();
-      }
-      if (selectedRole == 'faculty' && authNotifier.isFaculty) {
-        return const FacultyDashboardScreen();
-      }
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        authNotifier.setSelectedRole(null);
-      });
+    final selectedRoleScreen = _buildSelectedRoleScreen(authNotifier);
+    if (selectedRoleScreen != null) {
+      return selectedRoleScreen;
     }
 
     if (authNotifier.isAdmin) {
@@ -52,5 +40,27 @@ class RootScreen extends ConsumerWidget {
     }
 
     return const LoginScreen();
+  }
+
+  Widget? _buildSelectedRoleScreen(AuthNotifier authNotifier) {
+    final selectedRole = authNotifier.selectedRole;
+    if (selectedRole == null) {
+      return null;
+    }
+
+    if (selectedRole == 'admin' && authNotifier.isAdmin) {
+      return const AdminLayout();
+    }
+    if (selectedRole == 'student' && authNotifier.isStudent) {
+      return const StudentDashboardScreen();
+    }
+    if (selectedRole == 'faculty' && authNotifier.isFaculty) {
+      return const FacultyDashboardScreen();
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      authNotifier.setSelectedRole(null);
+    });
+    return null;
   }
 }

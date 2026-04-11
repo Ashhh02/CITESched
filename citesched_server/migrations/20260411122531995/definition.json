@@ -4972,7 +4972,7 @@
     {
       "__className__": "serverpod.DatabaseMigrationVersion",
       "module": "citesched",
-      "version": "20260411023700267"
+      "version": "20260411122531995"
     },
     {
       "__className__": "serverpod.DatabaseMigrationVersion",
