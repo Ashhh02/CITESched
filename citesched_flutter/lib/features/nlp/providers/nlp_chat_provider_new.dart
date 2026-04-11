@@ -143,9 +143,8 @@ class NLPChatNotifier extends Notifier<NLPChatState> {
           );
 
       // Add assistant response
-      final metadata = response.dataJson != null
-          ? _parseMetadata(response.dataJson!)
-          : <String, dynamic>{};
+      final metadata =
+          _parseMetadata(response.dataJson) ?? <String, dynamic>{};
       if (_pendingTimetable) {
         metadata['showTimetable'] = true;
         _pendingTimetable = false;
@@ -211,8 +210,8 @@ class NLPChatNotifier extends Notifier<NLPChatState> {
   }
 
   /// Parses metadata from JSON string if available
-  Map<String, dynamic>? _parseMetadata(String jsonStr) {
-    if (jsonStr.isEmpty) return null;
+  Map<String, dynamic>? _parseMetadata(String? jsonStr) {
+    if (jsonStr == null || jsonStr.isEmpty) return null;
     try {
       return jsonDecode(jsonStr) as Map<String, dynamic>;
     } catch (e) {
