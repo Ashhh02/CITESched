@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final nlpQueryChatProvider =
     NotifierProvider<NLPQueryChatNotifier, NLPQueryChatState>(
-  NLPQueryChatNotifier.new,
-);
+      NLPQueryChatNotifier.new,
+    );
 
 class NLPQueryChatState {
   final List<Map<String, dynamic>> messages;
@@ -38,6 +38,7 @@ class NLPQueryChatState {
 }
 
 class NLPQueryChatNotifier extends Notifier<NLPQueryChatState> {
+  static const _weeklySchedule = 'weekly schedule';
   bool _initialized = false;
   bool _pendingTimetable = false;
 
@@ -182,7 +183,7 @@ class NLPQueryChatNotifier extends Notifier<NLPQueryChatState> {
   bool _isTimetableQuery(String query) {
     return query.contains('timetable') ||
         query.contains('calendar') ||
-        query.contains('weekly schedule');
+        query.contains(_weeklySchedule);
   }
 
   bool _hasExplicitScheduleTarget(String query) {
@@ -212,10 +213,12 @@ class NLPQueryChatNotifier extends Notifier<NLPQueryChatState> {
     final asksSchedule = RegExp(
       r'\b(schedule|schedules|class schedule|classes|timetable|calendar|routine)\b',
     ).hasMatch(normalized);
-    final asksConflict = RegExp(r'\b(conflict|conflicts|overlap|clash)\b')
-        .hasMatch(normalized);
-    final asksLoad = RegExp(r'\b(load|units|teaching load)\b')
-        .hasMatch(normalized);
+    final asksConflict = RegExp(
+      r'\b(conflict|conflicts|overlap|clash)\b',
+    ).hasMatch(normalized);
+    final asksLoad = RegExp(
+      r'\b(load|units|teaching load)\b',
+    ).hasMatch(normalized);
     final asksRoom = RegExp(r'\b(room|classroom|venue)\b').hasMatch(normalized);
     final asksSection = RegExp(r'\b(section)\b').hasMatch(normalized);
     final hasDayContext = RegExp(
@@ -223,35 +226,20 @@ class NLPQueryChatNotifier extends Notifier<NLPQueryChatState> {
     ).hasMatch(normalized);
 
     if (asksSchedule) {
-      normalized = normalized
-          .replaceAll('schedules', 'schedule')
-          .replaceAll('timetable', 'weekly schedule')
-          .replaceAll('calendar', 'weekly schedule')
-          .replaceAll('routine', 'schedule');
-
-      if (isStudent) {
-        normalized = normalized
-            .replaceAll('my schedule', 'section schedule')
-            .replaceAll('my class schedule', 'section schedule')
-            .replaceAll('my weekly schedule', 'section weekly schedule');
-        if (!normalized.contains('section') && !asksSection) {
-          normalized = 'section $normalized';
-        }
-      } else if (isFaculty && !normalized.contains('my')) {
-        normalized = 'my $normalized';
-      }
-
-      if (hasDayContext && !normalized.contains('on ')) {
-        normalized = normalized.replaceFirst(' schedule ', ' schedule on ');
-      }
+      normalized = _rewriteScheduleIntent(
+        normalized: normalized,
+        isStudent: isStudent,
+        isFaculty: isFaculty,
+        asksSection: asksSection,
+        hasDayContext: hasDayContext,
+      );
     }
 
     if (asksConflict) {
-      normalized = isStudent
-          ? 'check conflicts for section'
-          : isFaculty
-              ? 'check my teaching conflicts'
-              : 'check conflicts';
+      normalized = _rewriteConflictIntent(
+        isStudent: isStudent,
+        isFaculty: isFaculty,
+      );
     }
 
     if (isFaculty && asksLoad && !normalized.contains('teaching load')) {
@@ -259,14 +247,59 @@ class NLPQueryChatNotifier extends Notifier<NLPQueryChatState> {
     }
 
     if (isStudent && asksRoom) {
-      final asksNextClass =
-          normalized.contains('next') && normalized.contains('class');
-      normalized = asksNextClass
-          ? 'what is the next class for section'
-          : 'show section schedule';
+      normalized = _rewriteStudentRoomIntent(normalized);
     }
 
     return normalized;
+  }
+
+  String _rewriteScheduleIntent({
+    required String normalized,
+    required bool isStudent,
+    required bool isFaculty,
+    required bool asksSection,
+    required bool hasDayContext,
+  }) {
+    var rewritten = normalized
+        .replaceAll('schedules', 'schedule')
+        .replaceAll('timetable', _weeklySchedule)
+        .replaceAll('calendar', _weeklySchedule)
+        .replaceAll('routine', 'schedule');
+
+    if (isStudent) {
+      rewritten = rewritten
+          .replaceAll('my schedule', 'section schedule')
+          .replaceAll('my class schedule', 'section schedule')
+          .replaceAll('my $_weeklySchedule', 'section $_weeklySchedule');
+      if (!rewritten.contains('section') && !asksSection) {
+        rewritten = 'section $rewritten';
+      }
+    } else if (isFaculty && !rewritten.contains('my')) {
+      rewritten = 'my $rewritten';
+    }
+
+    if (hasDayContext && !rewritten.contains('on ')) {
+      rewritten = rewritten.replaceFirst(' schedule ', ' schedule on ');
+    }
+    return rewritten;
+  }
+
+  String _rewriteConflictIntent({
+    required bool isStudent,
+    required bool isFaculty,
+  }) {
+    if (isStudent) return 'check conflicts for section';
+    if (isFaculty) return 'check my teaching conflicts';
+    return 'check conflicts';
+  }
+
+  String _rewriteStudentRoomIntent(String normalized) {
+    final asksNextClass =
+        normalized.contains('next') && normalized.contains('class');
+    if (asksNextClass) {
+      return 'what is the next class for section';
+    }
+    return 'show section schedule';
   }
 
   bool _isAdmin() {

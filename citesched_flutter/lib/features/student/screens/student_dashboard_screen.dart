@@ -142,7 +142,9 @@ class StudentDashboardScreen extends ConsumerWidget {
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         border: Border.all(
-                                          color: Colors.white.withValues(alpha: 0.2),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.2,
+                                          ),
                                           width: 2,
                                         ),
                                       ),
@@ -151,14 +153,10 @@ class StudentDashboardScreen extends ConsumerWidget {
                                         backgroundColor: Colors.white
                                             .withValues(alpha: 0.15),
                                         child: Text(
-                                          (profileAsync
-                                                          .value
-                                                          ?.name
-                                                          .isNotEmpty ==
-                                                      true
-                                                  ? profileAsync.value!.name[0]
-                                                  : user?.userName?[0] ?? 'S')
-                                              .toUpperCase(),
+                                          _studentAvatarInitial(
+                                            profileAsync,
+                                            user,
+                                          ).toUpperCase(),
                                           style: GoogleFonts.poppins(
                                             fontSize: 26,
                                             fontWeight: FontWeight.bold,
@@ -176,8 +174,8 @@ class StudentDashboardScreen extends ConsumerWidget {
                                           Text(
                                             'Welcome back, Student!',
                                             style: GoogleFonts.poppins(
-                                              color: Colors.white.withValues(alpha: 
-                                                0.9,
+                                              color: Colors.white.withValues(
+                                                alpha: 0.9,
                                               ),
                                               fontSize: 13,
                                               fontWeight: FontWeight.w500,
@@ -232,8 +230,8 @@ class StudentDashboardScreen extends ConsumerWidget {
                                       ),
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white.withValues(alpha: 
-                                        0.2,
+                                      backgroundColor: Colors.white.withValues(
+                                        alpha: 0.2,
                                       ),
                                       foregroundColor: Colors.white,
                                       padding: const EdgeInsets.symmetric(
@@ -259,14 +257,16 @@ class StudentDashboardScreen extends ConsumerWidget {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.2),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.2,
+                                      ),
                                       width: 2,
                                     ),
                                   ),
                                   child: CircleAvatar(
                                     radius: 35,
-                                    backgroundColor: Colors.white.withValues(alpha: 
-                                      0.15,
+                                    backgroundColor: Colors.white.withValues(
+                                      alpha: 0.15,
                                     ),
                                     child: Text(
                                       (profileAsync.value?.name.isNotEmpty ==
@@ -291,7 +291,9 @@ class StudentDashboardScreen extends ConsumerWidget {
                                       Text(
                                         'Welcome back, Student!',
                                         style: GoogleFonts.poppins(
-                                          color: Colors.white.withValues(alpha: 0.9),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.9,
+                                          ),
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500,
                                           letterSpacing: 0.5,
@@ -336,8 +338,8 @@ class StudentDashboardScreen extends ConsumerWidget {
                                     ),
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white.withValues(alpha: 
-                                      0.2,
+                                    backgroundColor: Colors.white.withValues(
+                                      alpha: 0.2,
                                     ),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
@@ -875,6 +877,17 @@ class StudentDashboardScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  String _studentAvatarInitial(
+    AsyncValue<Student?> profileAsync,
+    UserInfo? user,
+  ) {
+    final profileName = profileAsync.value?.name;
+    if (profileName != null && profileName.isNotEmpty) {
+      return profileName[0];
+    }
+    return user?.userName?[0] ?? 'S';
   }
 }
 

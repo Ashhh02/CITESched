@@ -33,13 +33,13 @@ class _ConflictScreenState extends State<ConflictScreen> {
     setState(() => _isLoading = true);
     try {
       final conflicts = await client.admin.getAllConflicts();
-      if (!context.mounted) return;
+      if (!mounted) return;
       setState(() {
         _conflicts = conflicts;
         _isLoading = false;
       });
     } catch (e) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       setState(() => _isLoading = false);
       AppErrorDialog.show(context, e);
     }
@@ -136,9 +136,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
 
   List<ScheduleConflict> _filteredConflicts() {
     if (widget.filterType == null) return _conflicts;
-    return _conflicts
-        .where((c) => c.type == widget.filterType)
-        .toList();
+    return _conflicts.where((c) => c.type == widget.filterType).toList();
   }
 
   @override
@@ -172,39 +170,135 @@ class _ConflictScreenState extends State<ConflictScreen> {
               ],
               child: isMobile
                   ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.white,
+                                size: 28,
                               ),
                             ),
-                            child: const Icon(
-                              Icons.warning_amber_rounded,
-                              color: Colors.white,
-                              size: 28,
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'System Conflicts',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _isLoading
+                                        ? 'Scanning all modules for conflicts...'
+                                        : _conflicts.isEmpty
+                                        ? 'No scheduling conflicts detected'
+                                        : '${_conflicts.length} conflict${_conflicts.length == 1 ? '' : 's'} detected across modules',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _isLoading ? null : _fetchConflicts,
+                            icon: _isLoading
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Color(0xFF720045),
+                                      ),
+                                    ),
+                                  )
+                                : const Icon(Icons.refresh_rounded, size: 20),
+                            label: Text(
+                              _isLoading ? 'Scanning...' : 'Refresh',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: maroonColor,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.white,
+                                size: 32,
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   'System Conflicts',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.poppins(
-                                    fontSize: 20,
+                                    fontSize: 32,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
-                                    letterSpacing: -0.5,
+                                    letterSpacing: -1,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -214,23 +308,18 @@ class _ConflictScreenState extends State<ConflictScreen> {
                                       : _conflicts.isEmpty
                                       ? 'No scheduling conflicts detected'
                                       : '${_conflicts.length} conflict${_conflicts.length == 1 ? '' : 's'} detected across modules',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.poppins(
-                                    fontSize: 12,
+                                    fontSize: 16,
                                     color: Colors.white.withValues(alpha: 0.8),
                                     letterSpacing: 0.2,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
+                          ],
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton.icon(
                           onPressed: _isLoading ? null : _fetchConflicts,
                           icon: _isLoading
                               ? const SizedBox(
@@ -243,21 +332,21 @@ class _ConflictScreenState extends State<ConflictScreen> {
                                     ),
                                   ),
                                 )
-                              : const Icon(Icons.refresh_rounded, size: 20),
+                              : const Icon(Icons.refresh_rounded, size: 22),
                           label: Text(
                             _isLoading ? 'Scanning...' : 'Refresh',
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              letterSpacing: 0.4,
+                              fontSize: 15,
+                              letterSpacing: 0.5,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: maroonColor,
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
+                              horizontal: 28,
+                              vertical: 18,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -265,98 +354,9 @@ class _ConflictScreenState extends State<ConflictScreen> {
                             elevation: 0,
                           ),
                         ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2),
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.warning_amber_rounded,
-                              color: Colors.white,
-                              size: 32,
-                            ),
-                          ),
-                          const SizedBox(width: 24),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'System Conflicts',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: -1,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _isLoading
-                                    ? 'Scanning all modules for conflicts...'
-                                    : _conflicts.isEmpty
-                                    ? 'No scheduling conflicts detected'
-                                    : '${_conflicts.length} conflict${_conflicts.length == 1 ? '' : 's'} detected across modules',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 16),
-                      ElevatedButton.icon(
-                        onPressed: _isLoading ? null : _fetchConflicts,
-                        icon: _isLoading
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Color(0xFF720045),
-                                  ),
-                                ),
-                              )
-                            : const Icon(Icons.refresh_rounded, size: 22),
-                        label: Text(
-                          _isLoading ? 'Scanning...' : 'Refresh',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: maroonColor,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 28,
-                            vertical: 18,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                        ),
-                      ),
-                    ],
-                  ),
-              ),
+                      ],
+                    ),
+            ),
 
             const SizedBox(height: 32),
 
@@ -544,16 +544,21 @@ class _ConflictScreenState extends State<ConflictScreen> {
                 final conflict = _filteredConflicts()[index];
                 final config = _getConfig(conflict.type);
                 final conflictKey = _conflictKey(conflict, index);
-                final isResolving = _resolvingConflictKeys.contains(conflictKey);
-                final severityColor =
-                    config.severity == 'CRITICAL' ? Colors.red : Colors.orange;
+                final isResolving = _resolvingConflictKeys.contains(
+                  conflictKey,
+                );
+                final severityColor = config.severity == 'CRITICAL'
+                    ? Colors.red
+                    : Colors.orange;
 
                 return Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: cardBg,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: config.color.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: config.color.withValues(alpha: 0.2),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: config.color.withValues(alpha: 0.05),
@@ -684,9 +689,9 @@ class _ConflictScreenState extends State<ConflictScreen> {
                                 onPressed: isResolving
                                     ? null
                                     : () => _resolveConflict(
-                                          conflict,
-                                          conflictKey: conflictKey,
-                                        ),
+                                        conflict,
+                                        conflictKey: conflictKey,
+                                      ),
                                 icon: isResolving
                                     ? const SizedBox(
                                         width: 16,
@@ -746,7 +751,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
 
     if (conflict.type == 'max_load_exceeded' && conflict.facultyId != null) {
       final shouldContinue = await _showMaxLoadConfirmationDialog();
-      if (!context.mounted || shouldContinue != true) return;
+      if (!mounted || shouldContinue != true) return;
 
       navigator.push(
         MaterialPageRoute(
@@ -762,7 +767,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
     setState(() => _resolvingConflictKeys.add(conflictKey));
     try {
       final suggestion = await _buildResolutionSuggestion(conflict);
-      if (!context.mounted) return;
+      if (!mounted) return;
 
       if (suggestion == null) {
         await _showManualResolutionDialog(conflict);
@@ -770,19 +775,17 @@ class _ConflictScreenState extends State<ConflictScreen> {
       }
 
       final shouldApply = await _showSuggestionDialog(suggestion);
-      if (!context.mounted || shouldApply != true) return;
+      if (!mounted || shouldApply != true) return;
 
       await client.admin.updateSchedule(suggestion.updatedSchedule);
       await _fetchConflicts();
-      if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(suggestion.successMessage)),
-      );
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(suggestion.successMessage)));
     } catch (e) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       AppErrorDialog.show(context, e);
     } finally {
-      if (context.mounted) {
+      if (mounted) {
         setState(() => _resolvingConflictKeys.remove(conflictKey));
       }
     }
@@ -843,9 +846,13 @@ class _ConflictScreenState extends State<ConflictScreen> {
             timeslot: currentTimeslot,
             room: currentRoom,
           ),
-          proposedSlotLabel: _buildSlotLabel(timeslot: currentTimeslot, room: room),
+          proposedSlotLabel: _buildSlotLabel(
+            timeslot: currentTimeslot,
+            room: room,
+          ),
           updatedSchedule: candidate,
-          successMessage: 'Conflict resolved by moving the class to ${room.name}.',
+          successMessage:
+              'Conflict resolved by moving the class to ${room.name}.',
         );
       }
     }
@@ -888,12 +895,13 @@ class _ConflictScreenState extends State<ConflictScreen> {
     if (currentTimeslot == null) return null;
 
     final durationMinutes = _timeslotDurationMinutes(currentTimeslot);
-    final candidateTimeslots = timeslots
-        .where((t) => t.id != currentTimeslot.id)
-        .where((t) => _timeslotDurationMinutes(t) == durationMinutes)
-        .where((t) => !_overlapsLunch(t))
-        .toList()
-      ..sort((a, b) => _compareTimeslotCloseness(currentTimeslot, a, b));
+    final candidateTimeslots =
+        timeslots
+            .where((t) => t.id != currentTimeslot.id)
+            .where((t) => _timeslotDurationMinutes(t) == durationMinutes)
+            .where((t) => !_overlapsLunch(t))
+            .toList()
+          ..sort((a, b) => _compareTimeslotCloseness(currentTimeslot, a, b));
 
     final roomOptions = <Room?>[
       rooms.where((r) => r.id == schedule.roomId).firstOrNull,
@@ -984,10 +992,10 @@ class _ConflictScreenState extends State<ConflictScreen> {
     final bDay = (b.day.index - current.day.index).abs();
     if (aDay != bDay) return aDay.compareTo(bDay);
 
-    final aStart = (_parseMinutes(a.startTime) - _parseMinutes(current.startTime))
-        .abs();
-    final bStart = (_parseMinutes(b.startTime) - _parseMinutes(current.startTime))
-        .abs();
+    final aStart =
+        (_parseMinutes(a.startTime) - _parseMinutes(current.startTime)).abs();
+    final bStart =
+        (_parseMinutes(b.startTime) - _parseMinutes(current.startTime)).abs();
     return aStart.compareTo(bStart);
   }
 

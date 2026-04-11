@@ -48,8 +48,9 @@ class NLPService {
       );
       if (byLinkedUserInfo != null) return byLinkedUserInfo;
 
-      final linkedEmail =
-          (resolvedLinkedUserInfo.email ?? '').trim().toLowerCase();
+      final linkedEmail = (resolvedLinkedUserInfo.email ?? '')
+          .trim()
+          .toLowerCase();
       if (linkedEmail.isNotEmpty) {
         final byLinkedEmail = await Student.db.findFirstRow(
           session,
@@ -93,8 +94,9 @@ class NLPService {
       );
       if (byLinkedUserInfo != null) return byLinkedUserInfo;
 
-      final linkedEmail =
-          (resolvedLinkedUserInfo.email ?? '').trim().toLowerCase();
+      final linkedEmail = (resolvedLinkedUserInfo.email ?? '')
+          .trim()
+          .toLowerCase();
       if (linkedEmail.isNotEmpty) {
         final byLinkedEmail = await Faculty.db.findFirstRow(
           session,
@@ -171,7 +173,10 @@ class NLPService {
     }
 
     // 3.5 Room type questions (lab vs lecture)
-    final roomTypeResponse = await _tryRoomTypeQuestion(session, normalizedQuery);
+    final roomTypeResponse = await _tryRoomTypeQuestion(
+      session,
+      normalizedQuery,
+    );
     if (roomTypeResponse != null) {
       return roomTypeResponse;
     }
@@ -204,7 +209,12 @@ class NLPService {
     final timeRange = _extractTimeRange(normalizedQuery);
     if (_hasScheduleIntent(normalizedQuery) ||
         _containsSectionPattern(normalizedQuery) ||
-        _hasScheduleQuestion(normalizedQuery, requestedDay, relativeDays, timeRange)) {
+        _hasScheduleQuestion(
+          normalizedQuery,
+          requestedDay,
+          relativeDays,
+          timeRange,
+        )) {
       final timeQueryResponse = await _tryTimeBasedScheduleQuery(
         session,
         normalizedQuery,
@@ -285,8 +295,9 @@ class NLPService {
       );
     }
 
-    final typeLabel =
-        matchedRoom.type == RoomType.laboratory ? 'laboratory' : 'lecture';
+    final typeLabel = matchedRoom.type == RoomType.laboratory
+        ? 'laboratory'
+        : 'lecture';
     return NLPResponse(
       text: "Room ${matchedRoom.name} is a $typeLabel room.",
       intent: NLPIntent.roomStatus,
@@ -632,10 +643,12 @@ class NLPService {
         intent: NLPIntent.conflict,
       );
     }
-    final roomConflicts =
-        conflicts.where((c) => c.type.toLowerCase().contains('room')).length;
-    final facultyConflicts =
-        conflicts.where((c) => c.type.toLowerCase().contains('faculty')).length;
+    final roomConflicts = conflicts
+        .where((c) => c.type.toLowerCase().contains('room'))
+        .length;
+    final facultyConflicts = conflicts
+        .where((c) => c.type.toLowerCase().contains('faculty'))
+        .length;
 
     var summary = "I found ${conflicts.length} conflict(s): ";
     if (roomConflicts > 0) summary += "$roomConflicts room conflict(s). ";
@@ -1009,14 +1022,13 @@ class NLPService {
       if (multiDayResponse != null) return multiDayResponse;
 
       // First: check if the query references a faculty name
-      final facultySchedules =
-          await _tryFacultyScheduleQuery(
-            session,
-            query,
-            userId,
-            scopes,
-            requestedDay,
-          );
+      final facultySchedules = await _tryFacultyScheduleQuery(
+        session,
+        query,
+        userId,
+        scopes,
+        requestedDay,
+      );
       if (facultySchedules != null) return facultySchedules;
 
       // Extract section (e.g., IT 3A / 3A)
@@ -1081,7 +1093,8 @@ class NLPService {
           session,
           userId,
           scopes,
-          requestedDay ?? (requestedDays.length == 1 ? requestedDays.first : null),
+          requestedDay ??
+              (requestedDays.length == 1 ? requestedDays.first : null),
         );
       }
 
@@ -1339,8 +1352,9 @@ class NLPService {
   }
 
   String? _extractSectionFromQuery(String query) {
-    final match = RegExp(r'\b([a-zA-Z]{1,4})?\s?\d[a-zA-Z]\b')
-        .firstMatch(query.toUpperCase());
+    final match = RegExp(
+      r'\b([a-zA-Z]{1,4})?\s?\d[a-zA-Z]\b',
+    ).firstMatch(query.toUpperCase());
     return match?.group(0);
   }
 
@@ -1496,30 +1510,26 @@ class NLPService {
     return dp[a.length][b.length];
   }
 
-  Future<NLPResponse?> _tryTimeBasedScheduleQuery(
-    Session session,
-    String query,
-    String? userId,
-    List<String> scopes,
+  DayOfWeek? _singleDayOrNull(
     DayOfWeek? requestedDay,
     List<DayOfWeek> relativeDays,
+  ) {
+    if (requestedDay != null) return requestedDay;
+    if (relativeDays.length == 1) return relativeDays.first;
+    return null;
+  }
+
+  Future<List<Schedule>?> _resolveSchedulesByScope(
+    Session session,
+    String? userId,
+    List<String> scopes,
   ) async {
-    var timeRange = _extractTimeRange(query);
-    final hasNow = _containsKeywordFuzzy(query, ['now', 'ongoing', 'happening']);
-    final hasTime = timeRange != null || hasNow;
-    var day =
-        requestedDay ?? (relativeDays.length == 1 ? relativeDays.first : null);
-
-    if (!hasTime && day == null) return null;
-
-    // Determine schedule scope (admin: all, faculty/student: own)
     final isAdmin = scopes.contains('admin');
     final isFaculty = scopes.contains('faculty');
     final isStudent = scopes.contains('student');
 
-    List<Schedule> schedules;
     if (isAdmin) {
-      schedules = await Schedule.db.find(
+      return Schedule.db.find(
         session,
         include: Schedule.include(
           subject: Subject.include(),
@@ -1528,11 +1538,13 @@ class NLPService {
           timeslot: Timeslot.include(),
         ),
       );
-    } else if (isFaculty) {
+    }
+
+    if (isFaculty) {
       if (userId == null) return null;
       final faculty = await _findCurrentFaculty(session, userId);
       if (faculty == null) return null;
-      schedules = await Schedule.db.find(
+      return Schedule.db.find(
         session,
         where: (t) => t.facultyId.equals(faculty.id!),
         include: Schedule.include(
@@ -1542,11 +1554,13 @@ class NLPService {
           timeslot: Timeslot.include(),
         ),
       );
-    } else if (isStudent) {
+    }
+
+    if (isStudent) {
       if (userId == null) return null;
       final student = await _findCurrentStudent(session, userId);
       if (student?.section == null) return null;
-      schedules = await Schedule.db.find(
+      return Schedule.db.find(
         session,
         where: (t) => t.section.equals(student!.section!),
         include: Schedule.include(
@@ -1556,9 +1570,169 @@ class NLPService {
           timeslot: Timeslot.include(),
         ),
       );
-    } else {
-      return null;
     }
+
+    return null;
+  }
+
+  List<Schedule> _sortSchedulesByStart(List<Schedule> schedules) {
+    final sorted = List<Schedule>.from(schedules);
+    sorted.sort((a, b) {
+      final sa = _parseTimeToMinutes(a.timeslot?.startTime ?? '00:00');
+      final sb = _parseTimeToMinutes(b.timeslot?.startTime ?? '00:00');
+      return sa.compareTo(sb);
+    });
+    return sorted;
+  }
+
+  bool _isNextClassQuery(String query) {
+    return _containsKeywordFuzzy(query, ['next']) &&
+        _containsKeywordFuzzy(query, ['class']);
+  }
+
+  bool _isFirstOrLastClassQuery(String query) {
+    return _containsKeywordFuzzy(query, ['first', 'last']) &&
+        _containsKeywordFuzzy(query, ['class']);
+  }
+
+  NLPResponse? _buildNextClassResponse(
+    List<Schedule> schedules,
+    DayOfWeek? day,
+    DayOfWeek nowDay,
+    int nowMinutes,
+  ) {
+    final effectiveDay = day ?? nowDay;
+    final daySchedules = _filterSchedulesByDay(schedules, effectiveDay);
+    final upcoming = daySchedules.where((s) {
+      final ts = s.timeslot;
+      if (ts == null) return false;
+      final start = _parseTimeToMinutes(ts.startTime);
+      return start > nowMinutes;
+    }).toList();
+    final sortedUpcoming = _sortSchedulesByStart(upcoming);
+
+    if (sortedUpcoming.isEmpty) {
+      return NLPResponse(
+        text: "No upcoming classes found.",
+        intent: NLPIntent.schedule,
+      );
+    }
+
+    final next = sortedUpcoming.first;
+    return NLPResponse(
+      text: "Your next class is ${next.subject?.name ?? 'a class'}.",
+      intent: NLPIntent.schedule,
+      schedules: [next],
+    );
+  }
+
+  NLPResponse? _buildFirstOrLastClassResponse(
+    String query,
+    List<Schedule> schedules,
+  ) {
+    final sorted = _sortSchedulesByStart(schedules);
+    if (sorted.isEmpty) {
+      return NLPResponse(
+        text: "No classes found for that day.",
+        intent: NLPIntent.schedule,
+      );
+    }
+
+    final wantsLast = _containsKeywordFuzzy(query, ['last']);
+    final picked = wantsLast ? sorted.last : sorted.first;
+    return NLPResponse(
+      text:
+          "Your ${wantsLast ? 'last' : 'first'} class is ${picked.subject?.name ?? 'a class'}.",
+      intent: NLPIntent.schedule,
+      schedules: [picked],
+    );
+  }
+
+  List<Schedule> _applyExactStartOrEndFilter(
+    String query,
+    List<Schedule> schedules,
+  ) {
+    var filtered = schedules;
+    final asksStartAt =
+        _containsKeywordFuzzy(query, ['start', 'starts']) &&
+        _containsKeywordFuzzy(query, ['at']);
+    final asksEndAt =
+        _containsKeywordFuzzy(query, ['end', 'ends']) &&
+        _containsKeywordFuzzy(query, ['at']);
+
+    if (asksStartAt) {
+      final startAt = _parseTimeToken(query);
+      if (startAt != null) {
+        filtered = filtered.where((s) {
+          final ts = s.timeslot;
+          if (ts == null) return false;
+          return _parseTimeToMinutes(ts.startTime) == startAt;
+        }).toList();
+      }
+      return filtered;
+    }
+
+    if (asksEndAt) {
+      final endAt = _parseTimeToken(query);
+      if (endAt != null) {
+        filtered = filtered.where((s) {
+          final ts = s.timeslot;
+          if (ts == null) return false;
+          return _parseTimeToMinutes(ts.endTime) == endAt;
+        }).toList();
+      }
+    }
+    return filtered;
+  }
+
+  NLPResponse _buildTimeFilteredResponse(
+    List<Schedule> filtered,
+    DayOfWeek? day,
+    _TimeRange? timeRange,
+  ) {
+    if (filtered.isEmpty) {
+      if (day != null) {
+        final atThatTime = timeRange != null ? ' at that time' : '';
+        return NLPResponse(
+          text: "I couldn't find any classes$atThatTime on ${_dayLabel(day)}.",
+          intent: NLPIntent.schedule,
+        );
+      }
+      return NLPResponse(
+        text: "I couldn't find any classes for that time range.",
+        intent: NLPIntent.schedule,
+      );
+    }
+
+    final daySuffix = day != null ? ' on ${_dayLabel(day)}' : '';
+    return NLPResponse(
+      text: 'Found ${filtered.length} class(es)$daySuffix.',
+      intent: NLPIntent.schedule,
+      schedules: filtered,
+    );
+  }
+
+  Future<NLPResponse?> _tryTimeBasedScheduleQuery(
+    Session session,
+    String query,
+    String? userId,
+    List<String> scopes,
+    DayOfWeek? requestedDay,
+    List<DayOfWeek> relativeDays,
+  ) async {
+    var timeRange = _extractTimeRange(query);
+    final hasNow = _containsKeywordFuzzy(query, [
+      'now',
+      'ongoing',
+      'happening',
+    ]);
+    final hasTime = timeRange != null || hasNow;
+    var day = _singleDayOrNull(requestedDay, relativeDays);
+
+    if (!hasTime && day == null) return null;
+
+    final schedules = await _resolveSchedulesByScope(session, userId, scopes);
+    if (schedules == null) return null;
 
     final now = DateTime.now();
     final nowDay = _dayFromDate(now);
@@ -1569,105 +1743,27 @@ class NLPService {
       timeRange = _TimeRange(nowMinutes, nowMinutes + 1);
     }
 
-    schedules = _filterSchedulesByDay(schedules, day);
+    var dayScopedSchedules = _filterSchedulesByDay(schedules, day);
 
     // Next class
-    if (_containsKeywordFuzzy(query, ['next']) &&
-        _containsKeywordFuzzy(query, ['class'])) {
-      if (day == null) day = nowDay;
-      final upcoming = schedules
-          .where((s) {
-            final ts = s.timeslot;
-            if (ts == null) return false;
-            final start = _parseTimeToMinutes(ts.startTime);
-            return start > nowMinutes;
-          })
-          .toList()
-        ..sort((a, b) {
-          final sa = _parseTimeToMinutes(a.timeslot?.startTime ?? '00:00');
-          final sb = _parseTimeToMinutes(b.timeslot?.startTime ?? '00:00');
-          return sa.compareTo(sb);
-        });
-
-      if (upcoming.isEmpty) {
-        return NLPResponse(
-          text: "No upcoming classes found.",
-          intent: NLPIntent.schedule,
-        );
-      }
-      final next = upcoming.first;
-      return NLPResponse(
-        text: "Your next class is ${next.subject?.name ?? 'a class'}.",
-        intent: NLPIntent.schedule,
-        schedules: [next],
+    if (_isNextClassQuery(query)) {
+      return _buildNextClassResponse(
+        dayScopedSchedules,
+        day,
+        nowDay,
+        nowMinutes,
       );
     }
 
     // First/last class (for day)
-    if (_containsKeywordFuzzy(query, ['first', 'last']) &&
-        _containsKeywordFuzzy(query, ['class'])) {
-      final sorted = List<Schedule>.from(schedules)
-        ..sort((a, b) {
-          final sa = _parseTimeToMinutes(a.timeslot?.startTime ?? '00:00');
-          final sb = _parseTimeToMinutes(b.timeslot?.startTime ?? '00:00');
-          return sa.compareTo(sb);
-        });
-      if (sorted.isEmpty) {
-        return NLPResponse(
-          text: "No classes found for that day.",
-          intent: NLPIntent.schedule,
-        );
-      }
-      final picked = _containsKeywordFuzzy(query, ['last'])
-          ? sorted.last
-          : sorted.first;
-      return NLPResponse(
-        text:
-            "Your ${_containsKeywordFuzzy(query, ['last']) ? 'last' : 'first'} class is ${picked.subject?.name ?? 'a class'}.",
-        intent: NLPIntent.schedule,
-        schedules: [picked],
-      );
+    if (_isFirstOrLastClassQuery(query)) {
+      return _buildFirstOrLastClassResponse(query, dayScopedSchedules);
     }
 
-    // Start at / End at exact time
-    if (_containsKeywordFuzzy(query, ['start', 'starts']) &&
-        _containsKeywordFuzzy(query, ['at'])) {
-      final startAt = _parseTimeToken(query);
-      if (startAt != null) {
-        schedules = schedules.where((s) {
-          final ts = s.timeslot;
-          if (ts == null) return false;
-          return _parseTimeToMinutes(ts.startTime) == startAt;
-        }).toList();
-      }
-    } else if (_containsKeywordFuzzy(query, ['end', 'ends']) &&
-        _containsKeywordFuzzy(query, ['at'])) {
-      final endAt = _parseTimeToken(query);
-      if (endAt != null) {
-        schedules = schedules.where((s) {
-          final ts = s.timeslot;
-          if (ts == null) return false;
-          return _parseTimeToMinutes(ts.endTime) == endAt;
-        }).toList();
-      }
-    }
+    dayScopedSchedules = _applyExactStartOrEndFilter(query, dayScopedSchedules);
 
-    final filtered = _filterSchedulesByTimeRange(schedules, timeRange);
-
-    if (filtered.isEmpty) {
-      return NLPResponse(
-        text: day != null
-            ? "I couldn't find any classes${timeRange != null ? ' at that time' : ''} on ${_dayLabel(day)}."
-            : "I couldn't find any classes for that time range.",
-        intent: NLPIntent.schedule,
-      );
-    }
-
-    return NLPResponse(
-      text: "Found ${filtered.length} class(es)${day != null ? ' on ${_dayLabel(day)}' : ''}.",
-      intent: NLPIntent.schedule,
-      schedules: filtered,
-    );
+    final filtered = _filterSchedulesByTimeRange(dayScopedSchedules, timeRange);
+    return _buildTimeFilteredResponse(filtered, day, timeRange);
   }
 
   Future<NLPResponse?> _tryFilteredScheduleQuery(
@@ -1694,7 +1790,8 @@ class NLPService {
 
     final section = _extractSectionFromQuery(query);
 
-    final hasAnyFilter = day != null ||
+    final hasAnyFilter =
+        day != null ||
         timeRange != null ||
         roomType != null ||
         room != null ||
@@ -1767,8 +1864,9 @@ class NLPService {
     }
 
     if (matchedFaculty != null) {
-      schedules =
-          schedules.where((s) => s.facultyId == matchedFaculty.id).toList();
+      schedules = schedules
+          .where((s) => s.facultyId == matchedFaculty.id)
+          .toList();
     }
     if (section != null) {
       final requestedCandidates = _buildSectionCandidates(section);
@@ -1840,8 +1938,7 @@ class NLPService {
 
     if (!scopes.contains('admin')) {
       return NLPResponse(
-        text:
-            "Please specify a room name to check availability.",
+        text: "Please specify a room name to check availability.",
         intent: NLPIntent.roomStatus,
       );
     }
@@ -1873,8 +1970,9 @@ class NLPService {
 
     final rooms = await Room.db.find(session);
     final occupiedRoomIds = filtered.map((s) => s.roomId).toSet();
-    final availableRooms =
-        rooms.where((r) => !occupiedRoomIds.contains(r.id)).toList();
+    final availableRooms = rooms
+        .where((r) => !occupiedRoomIds.contains(r.id))
+        .toList();
 
     return NLPResponse(
       text:
@@ -1944,9 +2042,9 @@ class NLPService {
       return _TimeRange(17 * 60, 21 * 60);
     }
 
-    final match = RegExp(r'(\d{1,2})(?::(\d{2}))?\s?(am|pm)?')
-        .allMatches(query)
-        .toList();
+    final match = RegExp(
+      r'(\d{1,2})(?::(\d{2}))?\s?(am|pm)?',
+    ).allMatches(query).toList();
     if (match.isEmpty) return null;
     final first = match.first;
     final token = first.group(0);
@@ -1957,8 +2055,9 @@ class NLPService {
 
   int? _parseTimeToken(String? token) {
     if (token == null) return null;
-    final match = RegExp(r'(\d{1,2})(?::(\d{2}))?\s?(am|pm)?')
-        .firstMatch(token.trim());
+    final match = RegExp(
+      r'(\d{1,2})(?::(\d{2}))?\s?(am|pm)?',
+    ).firstMatch(token.trim());
     if (match == null) return null;
     final hour = int.tryParse(match.group(1) ?? '') ?? 0;
     final minute = int.tryParse(match.group(2) ?? '0') ?? 0;

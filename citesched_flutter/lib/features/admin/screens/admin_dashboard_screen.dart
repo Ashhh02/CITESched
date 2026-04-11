@@ -19,7 +19,9 @@ final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
   return await client.admin.getDashboardStats();
 });
 
-final pendingFacultyRequestsProvider = FutureProvider<List<Faculty>>((ref) async {
+final pendingFacultyRequestsProvider = FutureProvider<List<Faculty>>((
+  ref,
+) async {
   final inactiveFaculty = await client.admin.getAllFaculty(isActive: false);
   if (inactiveFaculty.isEmpty) return const <Faculty>[];
 
@@ -66,8 +68,7 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
       _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState
-    extends ConsumerState<AdminDashboardScreen> {
+class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Timer? _refreshTimer;
 
   void _showActionSnackBar({
@@ -288,7 +289,10 @@ class _AdminDashboardScreenState
                     ),
                     IconButton(
                       onPressed: () => Navigator.of(dialogContext).pop(),
-                      icon: const Icon(Icons.close_rounded, color: Colors.white),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -350,8 +354,9 @@ class _AdminDashboardScreenState
                                         height: 40,
                                         child: ElevatedButton.icon(
                                           onPressed: () async {
-                                            final navigator =
-                                                Navigator.of(dialogContext);
+                                            final navigator = Navigator.of(
+                                              dialogContext,
+                                            );
                                             await _approvePendingFaculty(item);
                                             if (dialogContext.mounted) {
                                               navigator.pop();
@@ -374,8 +379,9 @@ class _AdminDashboardScreenState
                                         height: 40,
                                         child: ElevatedButton.icon(
                                           onPressed: () async {
-                                            final navigator =
-                                                Navigator.of(dialogContext);
+                                            final navigator = Navigator.of(
+                                              dialogContext,
+                                            );
                                             await _declinePendingFaculty(item);
                                             if (dialogContext.mounted) {
                                               navigator.pop();
@@ -418,7 +424,6 @@ class _AdminDashboardScreenState
 
     // Colors — adapt to theme
     const primaryPurple = Color(0xFF720045);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final pageBg = Theme.of(context).scaffoldBackgroundColor;
     final cardBg = Theme.of(context).cardColor;
 
@@ -493,8 +498,9 @@ class _AdminDashboardScreenState
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.red,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
                                         ),
                                         child: Text(
                                           '$count',
@@ -585,32 +591,34 @@ class _AdminDashboardScreenState
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'CITESched • Admin Dashboard',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 30,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -1,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'CITESched • Admin Dashboard',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 30,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: -1,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Welcome back, ${userInfo?.userName ?? "Administrator"}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 18,
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                    letterSpacing: 0.5,
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Welcome back, ${userInfo?.userName ?? "Administrator"}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 18,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -689,8 +697,9 @@ class _AdminDashboardScreenState
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final isWide = isDesktop;
-                    final conflictsLabel =
-                        isWide ? 'Conflicts' : 'Unresolved Conflicts';
+                    final conflictsLabel = isWide
+                        ? 'Conflicts'
+                        : 'Unresolved Conflicts';
                     final cards = [
                       _StatCardConfig(
                         label: 'Scheduled Classes',
@@ -932,12 +941,15 @@ class _AdminDashboardScreenState
     // If user layout uses Maroon for sidebar, likely inner-menu-bg is also maroon or slightly different.
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = Theme.of(context).textTheme.bodyLarge?.color ??
+    final textPrimary =
+        Theme.of(context).textTheme.bodyLarge?.color ??
         (isDark ? const Color(0xFFE2E8F0) : Colors.black);
-    final borderColor =
-        isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.1);
-    final headerBorder =
-        isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.5);
+    final borderColor = isDark
+        ? Colors.white12
+        : Colors.black.withValues(alpha: 0.1);
+    final headerBorder = isDark
+        ? Colors.white12
+        : Colors.black.withValues(alpha: 0.5);
     final iconColor = isDark ? Colors.white70 : Colors.black;
     final iconMuted = isDark ? Colors.white54 : Colors.black54;
 
@@ -995,12 +1007,16 @@ class _AdminDashboardScreenState
           ),
           // Chart
           Padding(
-            padding: EdgeInsets.all(ResponsiveHelper.isMobile(context) ? 16 : 24),
+            padding: EdgeInsets.all(
+              ResponsiveHelper.isMobile(context) ? 16 : 24,
+            ),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isMobile = ResponsiveHelper.isMobile(context);
-                final minWidth =
-                    (data.length * (isMobile ? 60.0 : 80.0)).clamp(320.0, 1200.0);
+                final minWidth = (data.length * (isMobile ? 60.0 : 80.0)).clamp(
+                  320.0,
+                  1200.0,
+                );
                 if (!isMobile) {
                   return SizedBox(
                     height: 350,
@@ -1009,8 +1025,9 @@ class _AdminDashboardScreenState
                   );
                 }
 
-                final chartWidth =
-                    minWidth > constraints.maxWidth ? minWidth : constraints.maxWidth;
+                final chartWidth = minWidth > constraints.maxWidth
+                    ? minWidth
+                    : constraints.maxWidth;
                 return SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: SizedBox(
@@ -1036,15 +1053,18 @@ class _AdminDashboardScreenState
   ) {
     final conflictCount = conflicts.length;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = Theme.of(context).textTheme.bodyLarge?.color ??
+    final textPrimary =
+        Theme.of(context).textTheme.bodyLarge?.color ??
         (isDark ? const Color(0xFFE2E8F0) : Colors.black);
     final textMuted = isDark
         ? const Color(0xFF94A3B8)
         : const Color(0xFF666666);
-    final borderColor =
-        isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.15);
-    final headerBorder =
-        isDark ? Colors.white12 : Colors.black.withValues(alpha: 1.0);
+    final borderColor = isDark
+        ? Colors.white12
+        : Colors.black.withValues(alpha: 0.15);
+    final headerBorder = isDark
+        ? Colors.white12
+        : Colors.black.withValues(alpha: 1.0);
 
     return Container(
       decoration: BoxDecoration(
@@ -1229,15 +1249,18 @@ class _AdminDashboardScreenState
     IconData icon,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = Theme.of(context).textTheme.bodyLarge?.color ??
+    final textPrimary =
+        Theme.of(context).textTheme.bodyLarge?.color ??
         (isDark ? const Color(0xFFE2E8F0) : Colors.black);
     final textMuted = isDark
         ? const Color(0xFF94A3B8)
         : const Color(0xFF666666);
-    final borderColor =
-        isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.15);
-    final headerBorder =
-        isDark ? Colors.white12 : Colors.black.withValues(alpha: 1.0);
+    final borderColor = isDark
+        ? Colors.white12
+        : Colors.black.withValues(alpha: 0.15);
+    final headerBorder = isDark
+        ? Colors.white12
+        : Colors.black.withValues(alpha: 1.0);
 
     return Container(
       decoration: BoxDecoration(
@@ -1360,4 +1383,5 @@ class _AdminDashboardScreenState
     );
   }
 }
+
 // Triggering green status with new code period

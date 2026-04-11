@@ -193,7 +193,12 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
     return Column(
       children: [
         _buildDialogHeader(auth),
-        _buildChatMessagesArea(messages, isLoading, sessionsAsync, historyAsync),
+        _buildChatMessagesArea(
+          messages,
+          isLoading,
+          sessionsAsync,
+          historyAsync,
+        ),
         _buildInputArea(isDark, isLoading),
       ],
     );
@@ -347,7 +352,9 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
-            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200]!,
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : Colors.grey[200]!,
           ),
         ),
       ),
@@ -401,8 +408,10 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
         cursor: SystemMouseCursors.resizeLeftRight,
         onDrag: (delta) {
           setState(() {
-            _dialogWidth =
-                (bounds.width - delta.dx).clamp(bounds.minWidth, bounds.maxWidth);
+            _dialogWidth = (bounds.width - delta.dx).clamp(
+              bounds.minWidth,
+              bounds.maxWidth,
+            );
           });
         },
         vertical: true,
@@ -413,8 +422,10 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
         cursor: SystemMouseCursors.resizeLeftRight,
         onDrag: (delta) {
           setState(() {
-            _dialogWidth =
-                (bounds.width + delta.dx).clamp(bounds.minWidth, bounds.maxWidth);
+            _dialogWidth = (bounds.width + delta.dx).clamp(
+              bounds.minWidth,
+              bounds.maxWidth,
+            );
           });
         },
         vertical: true,
@@ -425,8 +436,10 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
         cursor: SystemMouseCursors.resizeUpDown,
         onDrag: (delta) {
           setState(() {
-            _dialogHeight =
-                (bounds.height - delta.dy).clamp(bounds.minHeight, bounds.maxHeight);
+            _dialogHeight = (bounds.height - delta.dy).clamp(
+              bounds.minHeight,
+              bounds.maxHeight,
+            );
           });
         },
         vertical: false,
@@ -437,8 +450,10 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
         cursor: SystemMouseCursors.resizeUpDown,
         onDrag: (delta) {
           setState(() {
-            _dialogHeight =
-                (bounds.height + delta.dy).clamp(bounds.minHeight, bounds.maxHeight);
+            _dialogHeight = (bounds.height + delta.dy).clamp(
+              bounds.minHeight,
+              bounds.maxHeight,
+            );
           });
         },
         vertical: false,
@@ -449,10 +464,14 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
         cursor: SystemMouseCursors.resizeUpLeftDownRight,
         onDrag: (delta) {
           setState(() {
-            _dialogWidth =
-                (bounds.width - delta.dx).clamp(bounds.minWidth, bounds.maxWidth);
-            _dialogHeight =
-                (bounds.height - delta.dy).clamp(bounds.minHeight, bounds.maxHeight);
+            _dialogWidth = (bounds.width - delta.dx).clamp(
+              bounds.minWidth,
+              bounds.maxWidth,
+            );
+            _dialogHeight = (bounds.height - delta.dy).clamp(
+              bounds.minHeight,
+              bounds.maxHeight,
+            );
           });
         },
         color: maroonColor,
@@ -462,10 +481,14 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
         cursor: SystemMouseCursors.resizeUpRightDownLeft,
         onDrag: (delta) {
           setState(() {
-            _dialogWidth =
-                (bounds.width + delta.dx).clamp(bounds.minWidth, bounds.maxWidth);
-            _dialogHeight =
-                (bounds.height - delta.dy).clamp(bounds.minHeight, bounds.maxHeight);
+            _dialogWidth = (bounds.width + delta.dx).clamp(
+              bounds.minWidth,
+              bounds.maxWidth,
+            );
+            _dialogHeight = (bounds.height - delta.dy).clamp(
+              bounds.minHeight,
+              bounds.maxHeight,
+            );
           });
         },
         color: maroonColor,
@@ -475,10 +498,14 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
         cursor: SystemMouseCursors.resizeUpRightDownLeft,
         onDrag: (delta) {
           setState(() {
-            _dialogWidth =
-                (bounds.width - delta.dx).clamp(bounds.minWidth, bounds.maxWidth);
-            _dialogHeight =
-                (bounds.height + delta.dy).clamp(bounds.minHeight, bounds.maxHeight);
+            _dialogWidth = (bounds.width - delta.dx).clamp(
+              bounds.minWidth,
+              bounds.maxWidth,
+            );
+            _dialogHeight = (bounds.height + delta.dy).clamp(
+              bounds.minHeight,
+              bounds.maxHeight,
+            );
           });
         },
         color: maroonColor,
@@ -488,10 +515,14 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
         cursor: SystemMouseCursors.resizeUpLeftDownRight,
         onDrag: (delta) {
           setState(() {
-            _dialogWidth =
-                (bounds.width + delta.dx).clamp(bounds.minWidth, bounds.maxWidth);
-            _dialogHeight =
-                (bounds.height + delta.dy).clamp(bounds.minHeight, bounds.maxHeight);
+            _dialogWidth = (bounds.width + delta.dx).clamp(
+              bounds.minWidth,
+              bounds.maxWidth,
+            );
+            _dialogHeight = (bounds.height + delta.dy).clamp(
+              bounds.minHeight,
+              bounds.maxHeight,
+            );
           });
         },
         color: maroonColor,
@@ -641,7 +672,11 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
                     text,
                     style: GoogleFonts.poppins(fontSize: 13),
                   ),
-                  trailing: Icon(Icons.send_rounded, color: maroonColor, size: 18),
+                  trailing: Icon(
+                    Icons.send_rounded,
+                    color: maroonColor,
+                    size: 18,
+                  ),
                   onTap: () {
                     _queryController.text = text;
                     _sendQuery();
@@ -663,7 +698,8 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
       return _buildPanelContainer(
         historyAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => _buildHistoryStatusText('Could not load history: $err'),
+          error: (err, _) =>
+              _buildHistoryStatusText('Could not load history: $err'),
           data: _buildHistoryDetailsBody,
         ),
       );
@@ -672,7 +708,8 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
     return _buildPanelContainer(
       sessionsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => _buildHistoryStatusText('Could not load history: $err'),
+        error: (err, _) =>
+            _buildHistoryStatusText('Could not load history: $err'),
         data: _buildSessionsBody,
       ),
     );
@@ -754,9 +791,22 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
   Widget _buildHistoryMessageBubble(ChatHistory entry) {
     final isUser = entry.sender == 'user';
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final messageColor = isUser
-        ? Colors.white
-        : (isDark ? Colors.white70 : Colors.black87);
+    Color messageColor;
+    if (isUser) {
+      messageColor = Colors.white;
+    } else if (isDark) {
+      messageColor = Colors.white70;
+    } else {
+      messageColor = Colors.black87;
+    }
+    Color? bubbleColor;
+    if (isUser) {
+      bubbleColor = maroonColor;
+    } else if (isDark) {
+      bubbleColor = Colors.white.withValues(alpha: 0.08);
+    } else {
+      bubbleColor = Colors.grey[200];
+    }
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -764,9 +814,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
         padding: const EdgeInsets.all(12),
         constraints: const BoxConstraints(maxWidth: 240),
         decoration: BoxDecoration(
-          color: isUser
-              ? maroonColor
-              : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey[200]),
+          color: bubbleColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
@@ -853,7 +901,9 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
       chatHistorySessionProvider(entry.sessionId).future,
     );
     if (!mounted) return;
-    ref.read(nlpQueryChatProvider.notifier).loadSessionHistory(
+    ref
+        .read(nlpQueryChatProvider.notifier)
+        .loadSessionHistory(
           sessionId: entry.sessionId,
           sessionTitle: entry.title,
           history: historyItems,
@@ -1071,7 +1121,9 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
           width: 6,
           height: 6,
           decoration: BoxDecoration(
-            color: widget.color.withValues(alpha: 0.3 + (0.7 * _animation.value)),
+            color: widget.color.withValues(
+              alpha: 0.3 + (0.7 * _animation.value),
+            ),
             shape: BoxShape.circle,
           ),
         );
@@ -1119,7 +1171,9 @@ class _MessageBubble extends StatelessWidget {
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
-      mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment: isUser
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!isUser) _buildBotAvatar(),
@@ -1135,7 +1189,9 @@ class _MessageBubble extends StatelessWidget {
                 bottomLeft: Radius.circular(isUser ? 20 : 4),
                 bottomRight: Radius.circular(isUser ? 4 : 20),
               ),
-              border: isError ? Border.all(color: Colors.red.withValues(alpha: 0.3)) : null,
+              border: isError
+                  ? Border.all(color: Colors.red.withValues(alpha: 0.3))
+                  : null,
             ),
             child: Text(
               text,
