@@ -33,10 +33,10 @@ class ConflictListModal extends StatelessWidget {
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(19),
-          border: Border.all(color: Colors.black.withOpacity(0.05)),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
           boxShadow: [
             BoxShadow(
-              color: primaryPurple.withOpacity(0.15),
+              color: primaryPurple.withValues(alpha: 0.15),
               blurRadius: 30,
               offset: const Offset(0, 15),
             ),
@@ -70,7 +70,7 @@ class ConflictListModal extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Icon(
@@ -100,7 +100,7 @@ class ConflictListModal extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.poppins(
                                       fontSize: 12,
-                                      color: Colors.white.withOpacity(0.85),
+                                      color: Colors.white.withValues(alpha: 0.85),
                                     ),
                                   ),
                                 ],
@@ -110,7 +110,7 @@ class ConflictListModal extends StatelessWidget {
                               icon: const Icon(Icons.close, color: Colors.white),
                               onPressed: () => Navigator.of(context).pop(),
                               style: IconButton.styleFrom(
-                                backgroundColor: Colors.white.withOpacity(0.2),
+                                backgroundColor: Colors.white.withValues(alpha: 0.2),
                               ),
                             ),
                           ],
@@ -125,7 +125,7 @@ class ConflictListModal extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Icon(
@@ -150,7 +150,7 @@ class ConflictListModal extends StatelessWidget {
                                   '${conflicts.length} issues require attention',
                                   style: GoogleFonts.poppins(
                                     fontSize: 12,
-                                    color: Colors.white.withOpacity(0.85),
+                                    color: Colors.white.withValues(alpha: 0.85),
                                   ),
                                 ),
                               ],
@@ -161,7 +161,7 @@ class ConflictListModal extends StatelessWidget {
                           icon: const Icon(Icons.close, color: Colors.white),
                           onPressed: () => Navigator.of(context).pop(),
                           style: IconButton.styleFrom(
-                            backgroundColor: Colors.white.withOpacity(0.2),
+                            backgroundColor: Colors.white.withValues(alpha: 0.2),
                           ),
                         ),
                       ],
@@ -180,7 +180,7 @@ class ConflictListModal extends StatelessWidget {
                             Icon(
                               Icons.check_circle_outline,
                               size: 64,
-                              color: Colors.green.withOpacity(0.5),
+                              color: Colors.green.withValues(alpha: 0.5),
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -202,14 +202,14 @@ class ConflictListModal extends StatelessWidget {
                           return Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.05),
+                              color: Colors.red.withValues(alpha: 0.05),
                               border: Border.all(
-                                color: Colors.red.withOpacity(0.2),
+                                color: Colors.red.withValues(alpha: 0.2),
                               ),
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.02),
+                                  color: Colors.black.withValues(alpha: 0.02),
                                   blurRadius: 5,
                                 ),
                               ],
@@ -276,7 +276,7 @@ class ConflictListModal extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: cardBg,
                   border: Border(
-                    top: BorderSide(color: Colors.black.withOpacity(0.05)),
+                    top: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
                   ),
                 ),
                 child: Row(

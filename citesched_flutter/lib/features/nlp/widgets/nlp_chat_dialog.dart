@@ -66,7 +66,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
         decoration: BoxDecoration(
           color: const Color(0xFF1e1e2e),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: maroonColor.withOpacity(0.3)),
+          border: Border.all(color: maroonColor.withValues(alpha: 0.3)),
         ),
         child: Stack(
           children: [
@@ -233,7 +233,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          maroonColor.withOpacity(0.7),
+                          maroonColor.withValues(alpha: 0.7),
                         ),
                       ),
                     ),
@@ -255,8 +255,8 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  color: Colors.red.withValues(alpha: 0.1),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -274,7 +274,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
               decoration: BoxDecoration(
                 border: Border(
                   top: BorderSide(
-                    color: maroonColor.withOpacity(0.2),
+                    color: maroonColor.withValues(alpha: 0.2),
                   ),
                 ),
               ),
@@ -295,7 +295,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
-                            color: maroonColor.withOpacity(0.3),
+                            color: maroonColor.withValues(alpha: 0.3),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -605,7 +605,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
                                 decoration: BoxDecoration(
                                   color: isUser
                                       ? const Color(0xFF720045)
-                                      : Colors.white.withOpacity(0.08),
+                                      : Colors.white.withValues(alpha: 0.08),
                                   borderRadius: BorderRadius.circular(12),
                                   border: isUser
                                       ? null
@@ -667,7 +667,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
               return Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.white12),
                 ),
@@ -732,7 +732,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
 
 class _ResizeEdge extends StatelessWidget {
   final Alignment alignment;
-  final SystemMouseCursor cursor;
+  final MouseCursor cursor;
   final void Function(Offset delta) onDrag;
   final bool vertical;
   final Color color;
@@ -762,7 +762,7 @@ class _ResizeEdge extends StatelessWidget {
               width: vertical ? 12 : 80,
               height: vertical ? 80 : 12,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.08),
+                color: color.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Center(
@@ -770,7 +770,7 @@ class _ResizeEdge extends StatelessWidget {
                   width: vertical ? 2 : 36,
                   height: vertical ? 36 : 2,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.6),
+                    color: color.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -785,7 +785,7 @@ class _ResizeEdge extends StatelessWidget {
 
 class _ResizeCorner extends StatelessWidget {
   final Alignment alignment;
-  final SystemMouseCursor cursor;
+  final MouseCursor cursor;
   final void Function(Offset delta) onDrag;
   final Color color;
   final double sensitivity;
@@ -813,13 +813,13 @@ class _ResizeCorner extends StatelessWidget {
               width: 18,
               height: 18,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Icon(
                 Icons.drag_handle,
                 size: 12,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
           ),

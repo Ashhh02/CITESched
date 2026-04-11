@@ -263,7 +263,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
                           border: Border.all(
                             color: isDark
                                 ? Colors.white10
-                                : Colors.black.withOpacity(0.05),
+                                : Colors.black.withValues(alpha: 0.05),
                           ),
                         ),
                         child: ListView.separated(
@@ -280,7 +280,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
                               leading: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: maroonColor.withOpacity(0.1),
+                                  color: maroonColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
@@ -367,7 +367,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
                           border: Border.all(
                             color: isDark
                                 ? Colors.white10
-                                : Colors.black.withOpacity(0.05),
+                                : Colors.black.withValues(alpha: 0.05),
                           ),
                         ),
                         child: ListView.separated(
@@ -382,7 +382,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
                               leading: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: maroonColor.withOpacity(0.1),
+                                  color: maroonColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
@@ -407,7 +407,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.grey.withOpacity(0.1),
+                                  color: Colors.grey.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(

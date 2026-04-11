@@ -415,10 +415,10 @@ class _UserListModalState extends ConsumerState<UserListModal>
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(19),
-          border: Border.all(color: Colors.black.withOpacity(0.05)),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
           boxShadow: [
             BoxShadow(
-              color: primaryPurple.withOpacity(0.15),
+              color: primaryPurple.withValues(alpha: 0.15),
               blurRadius: 30,
               offset: const Offset(0, 15),
             ),
@@ -435,7 +435,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: primaryPurple.withOpacity(0.3),
+                  color: primaryPurple.withValues(alpha: 0.3),
                   blurRadius: 25,
                   offset: const Offset(0, 12),
                 ),
@@ -449,10 +449,10 @@ class _UserListModalState extends ConsumerState<UserListModal>
                             Container(
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.15),
+                                color: Colors.white.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.2),
                                 ),
                               ),
                               child: const Icon(
@@ -484,7 +484,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.poppins(
                                       fontSize: 12,
-                                      color: Colors.white.withOpacity(0.8),
+                                      color: Colors.white.withValues(alpha: 0.8),
                                       letterSpacing: 0.2,
                                     ),
                                   ),
@@ -539,7 +539,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                               ),
                               style: IconButton.styleFrom(
                                 backgroundColor:
-                                    Colors.white.withOpacity(0.15),
+                                    Colors.white.withValues(alpha: 0.15),
                                 padding: const EdgeInsets.all(10),
                               ),
                             ),
@@ -555,10 +555,10 @@ class _UserListModalState extends ConsumerState<UserListModal>
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.15),
+                                color: Colors.white.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.2),
                                 ),
                               ),
                               child: const Icon(
@@ -585,7 +585,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                                   'Manage system users and permissions',
                                   style: GoogleFonts.poppins(
                                     fontSize: 16,
-                                    color: Colors.white.withOpacity(0.8),
+                                    color: Colors.white.withValues(alpha: 0.8),
                                     letterSpacing: 0.2,
                                   ),
                                 ),
@@ -635,7 +635,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                               ),
                               style: IconButton.styleFrom(
                                 backgroundColor:
-                                    Colors.white.withOpacity(0.15),
+                                    Colors.white.withValues(alpha: 0.15),
                                 padding: const EdgeInsets.all(12),
                               ),
                             ),
@@ -653,7 +653,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                 decoration: BoxDecoration(
                   color: bgBody,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.black.withOpacity(0.05)),
+                  border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
                 ),
                 child: TabBar(
                   controller: _tabController,
@@ -881,9 +881,9 @@ class _UserListModalState extends ConsumerState<UserListModal>
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.08),
+                  color: primaryColor.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: primaryColor.withOpacity(0.2)),
+                  border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
                 ),
                 child: Text(
                   '${_sortedStudents.length} students',
@@ -944,7 +944,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
       decoration: BoxDecoration(
         color: bgBody,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
       ),
       child: isMobile
           ? Column(
@@ -1020,9 +1020,9 @@ class _UserListModalState extends ConsumerState<UserListModal>
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.1),
+                        color: primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: primaryColor.withOpacity(0.3)),
+                        border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
                       ),
                       child: Text(
                         (f.program?.name ?? '?').toUpperCase(),
@@ -1110,9 +1110,9 @@ class _UserListModalState extends ConsumerState<UserListModal>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
+                    color: primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: primaryColor.withOpacity(0.3)),
+                    border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     (f.program?.name ?? '?').toUpperCase(),
@@ -1161,7 +1161,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.08),
+            color: color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 18, color: color),
@@ -1181,13 +1181,13 @@ class _UserListModalState extends ConsumerState<UserListModal>
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: isAdmin
-            ? Colors.red.withOpacity(0.1)
-            : Colors.blue.withOpacity(0.1),
+            ? Colors.red.withValues(alpha: 0.1)
+            : Colors.blue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: isAdmin
-              ? Colors.red.withOpacity(0.3)
-              : Colors.blue.withOpacity(0.3),
+              ? Colors.red.withValues(alpha: 0.3)
+              : Colors.blue.withValues(alpha: 0.3),
         ),
       ),
       child: Text(
@@ -1215,7 +1215,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
       decoration: BoxDecoration(
         color: bgBody,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
       ),
       child: isMobile
           ? Column(
@@ -1277,10 +1277,10 @@ class _UserListModalState extends ConsumerState<UserListModal>
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
+                                  color: Colors.green.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: Colors.green.withOpacity(0.3),
+                                    color: Colors.green.withValues(alpha: 0.3),
                                   ),
                                 ),
                                 child: Text(
@@ -1302,7 +1302,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: primaryColor.withOpacity(0.1),
+                                color: primaryColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -1331,9 +1331,9 @@ class _UserListModalState extends ConsumerState<UserListModal>
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: green.withOpacity(0.1),
+                        color: green.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: green.withOpacity(0.3)),
+                        border: Border.all(color: green.withValues(alpha: 0.3)),
                       ),
                       child: Text(
                         s.course,
@@ -1423,10 +1423,10 @@ class _UserListModalState extends ConsumerState<UserListModal>
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
+                              color: Colors.green.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: Colors.green.withOpacity(0.3),
+                                color: Colors.green.withValues(alpha: 0.3),
                               ),
                             ),
                             child: Text(
@@ -1448,7 +1448,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.1),
+                            color: primaryColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -1466,9 +1466,9 @@ class _UserListModalState extends ConsumerState<UserListModal>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: green.withOpacity(0.1),
+                    color: green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: green.withOpacity(0.3)),
+                    border: Border.all(color: green.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     s.course,
@@ -1534,7 +1534,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
           value: value,
           onChanged: onChanged,
           activeThumbColor: Colors.orange,
-          activeTrackColor: Colors.orange.withOpacity(0.2),
+          activeTrackColor: Colors.orange.withValues(alpha: 0.2),
           inactiveThumbColor: Colors.grey.shade400,
           inactiveTrackColor: Colors.grey.shade200,
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1559,7 +1559,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
           color: isSelected ? primaryColor : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? primaryColor : textPrimary.withOpacity(0.2),
+            color: isSelected ? primaryColor : textPrimary.withValues(alpha: 0.2),
             width: 1.5,
           ),
         ),
@@ -1591,7 +1591,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
           color: isSelected ? primaryColor : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? primaryColor : textPrimary.withOpacity(0.2),
+            color: isSelected ? primaryColor : textPrimary.withValues(alpha: 0.2),
             width: 1.5,
           ),
         ),
@@ -1612,7 +1612,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 64, color: textMuted.withOpacity(0.5)),
+          Icon(icon, size: 64, color: textMuted.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           Text(
             message,
@@ -1747,7 +1747,7 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
     InputDecoration field(String hint, IconData icon) => InputDecoration(
       hintText: hint,
       hintStyle: GoogleFonts.poppins(
-        color: textMuted.withOpacity(0.6),
+        color: textMuted.withValues(alpha: 0.6),
         fontSize: 14,
       ),
       prefixIcon: Icon(icon, color: maroon, size: 20),
@@ -1778,7 +1778,7 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
           borderRadius: BorderRadius.circular(19),
           boxShadow: [
             BoxShadow(
-              color: maroon.withOpacity(0.15),
+              color: maroon.withValues(alpha: 0.15),
               blurRadius: 30,
               offset: const Offset(0, 15),
             ),
@@ -1803,7 +1803,7 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -1827,7 +1827,7 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close_rounded, color: Colors.white),
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.15),
+                      backgroundColor: Colors.white.withValues(alpha: 0.15),
                     ),
                   ),
                 ],
@@ -1932,7 +1932,7 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   side: BorderSide(
-                                    color: Colors.black.withOpacity(0.1),
+                                    color: Colors.black.withValues(alpha: 0.1),
                                   ),
                                 ),
                               ),

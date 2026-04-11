@@ -125,7 +125,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(28),
                         boxShadow: [
                           BoxShadow(
-                            color: maroonColor.withOpacity(0.3),
+                            color: maroonColor.withValues(alpha: 0.3),
                             blurRadius: 25,
                             offset: const Offset(0, 12),
                           ),
@@ -142,14 +142,14 @@ class StudentDashboardScreen extends ConsumerWidget {
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         border: Border.all(
-                                          color: Colors.white.withOpacity(0.2),
+                                          color: Colors.white.withValues(alpha: 0.2),
                                           width: 2,
                                         ),
                                       ),
                                       child: CircleAvatar(
                                         radius: 30,
                                         backgroundColor: Colors.white
-                                            .withOpacity(0.15),
+                                            .withValues(alpha: 0.15),
                                         child: Text(
                                           (profileAsync
                                                           .value
@@ -176,7 +176,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                                           Text(
                                             'Welcome back, Student!',
                                             style: GoogleFonts.poppins(
-                                              color: Colors.white.withOpacity(
+                                              color: Colors.white.withValues(alpha: 
                                                 0.9,
                                               ),
                                               fontSize: 13,
@@ -232,7 +232,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                                       ),
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white.withOpacity(
+                                      backgroundColor: Colors.white.withValues(alpha: 
                                         0.2,
                                       ),
                                       foregroundColor: Colors.white,
@@ -259,13 +259,13 @@ class StudentDashboardScreen extends ConsumerWidget {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: Colors.white.withOpacity(0.2),
+                                      color: Colors.white.withValues(alpha: 0.2),
                                       width: 2,
                                     ),
                                   ),
                                   child: CircleAvatar(
                                     radius: 35,
-                                    backgroundColor: Colors.white.withOpacity(
+                                    backgroundColor: Colors.white.withValues(alpha: 
                                       0.15,
                                     ),
                                     child: Text(
@@ -291,7 +291,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                                       Text(
                                         'Welcome back, Student!',
                                         style: GoogleFonts.poppins(
-                                          color: Colors.white.withOpacity(0.9),
+                                          color: Colors.white.withValues(alpha: 0.9),
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500,
                                           letterSpacing: 0.5,
@@ -336,7 +336,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                                     ),
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white.withOpacity(
+                                    backgroundColor: Colors.white.withValues(alpha: 
                                       0.2,
                                     ),
                                     foregroundColor: Colors.white,
@@ -451,7 +451,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                                   ),
                                   child: DataTable(
                                     headingRowColor: WidgetStateProperty.all(
-                                      maroonColor.withOpacity(0.08),
+                                      maroonColor.withValues(alpha: 0.08),
                                     ),
                                     horizontalMargin: 12,
                                     columnSpacing: 24,
@@ -544,7 +544,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                             color: cardBg,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: maroonColor.withOpacity(0.1),
+                              color: maroonColor.withValues(alpha: 0.1),
                             ),
                           ),
                           child: ListView.separated(
@@ -562,8 +562,8 @@ class StudentDashboardScreen extends ConsumerWidget {
                                   CircleAvatar(
                                     radius: 14,
                                     backgroundColor: isUser
-                                        ? maroonColor.withOpacity(0.15)
-                                        : Colors.green.withOpacity(0.15),
+                                        ? maroonColor.withValues(alpha: 0.15)
+                                        : Colors.green.withValues(alpha: 0.15),
                                     child: Icon(
                                       isUser ? Icons.person : Icons.smart_toy,
                                       size: 14,

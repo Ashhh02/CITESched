@@ -116,7 +116,7 @@ class AdminSidebar extends ConsumerWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Divider(color: Colors.white.withOpacity(0.2)),
+                    Divider(color: Colors.white.withValues(alpha: 0.2)),
                     const SizedBox(height: 16),
                     Text(
                       name, // {{ user.full_name|default:"Admin User" }}
@@ -130,7 +130,7 @@ class AdminSidebar extends ConsumerWidget {
                     Text(
                       'System Administrator',
                       style: GoogleFonts.openSans(
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         fontSize: 12,
                       ),
                     ),
@@ -152,7 +152,7 @@ class AdminSidebar extends ConsumerWidget {
         style: GoogleFonts.openSans(
           fontSize: 11, // 0.7rem approx
           fontWeight: FontWeight.w600,
-          color: Colors.white.withOpacity(0.5),
+          color: Colors.white.withValues(alpha: 0.5),
           letterSpacing: 0.5,
         ),
       ),

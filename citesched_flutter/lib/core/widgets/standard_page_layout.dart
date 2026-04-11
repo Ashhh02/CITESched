@@ -49,7 +49,7 @@ class StandardPageLayout extends StatelessWidget {
             Container(
               color: DesignSystem.backgroundColor,
               padding: const EdgeInsets.all(DesignSystem.spacing24),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: DesignSystem.backgroundColor,
                 border: Border(
                   bottom: BorderSide(
@@ -86,10 +86,8 @@ class StandardPageLayout extends StatelessWidget {
                     .entries
                     .map(
                       (entry) => Padding(
-                        padding: EdgeInsets.only(
-                          bottom: entry.key < contentSections.length - 1
-                              ? DesignSystem.spacing24
-                              : DesignSystem.spacing24,
+                        padding: const EdgeInsets.only(
+                          bottom: DesignSystem.spacing24,
                         ),
                         child: entry.value,
                       ),

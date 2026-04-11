@@ -21,10 +21,10 @@ class FacultyLoadChart extends StatelessWidget {
         (isDark ? const Color(0xFFE2E8F0) : Colors.black);
     final axisColor = isDark ? Colors.white70 : Colors.black;
     final gridColor =
-        isDark ? Colors.white12 : Colors.black.withOpacity(0.05);
+        isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05);
     final barColor = isDark ? const Color(0xFFE2E8F0) : Colors.black;
     final barBgColor =
-        isDark ? Colors.white10 : Colors.black.withOpacity(0.03);
+        isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.03);
 
     return BarChart(
       BarChartData(
@@ -83,7 +83,7 @@ class FacultyLoadChart extends StatelessWidget {
                 return Text(
                   value.toInt().toString(),
                   style: GoogleFonts.poppins(
-                    color: textColor.withOpacity(0.6),
+                    color: textColor.withValues(alpha: 0.6),
                     fontSize: isMobile ? 9 : 11,
                   ),
                 );
@@ -111,8 +111,8 @@ class FacultyLoadChart extends StatelessWidget {
         borderData: FlBorderData(
           show: true,
           border: Border(
-            bottom: BorderSide(color: axisColor.withOpacity(0.1), width: 1),
-            left: BorderSide(color: axisColor.withOpacity(0.1), width: 1),
+            bottom: BorderSide(color: axisColor.withValues(alpha: 0.1), width: 1),
+            left: BorderSide(color: axisColor.withValues(alpha: 0.1), width: 1),
           ),
         ),
         barGroups: data.asMap().entries.map((entry) {

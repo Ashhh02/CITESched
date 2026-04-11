@@ -54,10 +54,10 @@ class _ReportModalState extends State<ReportModal>
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(19),
-          border: Border.all(color: Colors.black.withOpacity(0.05)),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
           boxShadow: [
             BoxShadow(
-              color: primaryPurple.withOpacity(0.15),
+              color: primaryPurple.withValues(alpha: 0.15),
               blurRadius: 30,
               offset: const Offset(0, 15),
             ),
@@ -102,7 +102,7 @@ class _ReportModalState extends State<ReportModal>
                               : 'System-wide analysis and statistics',
                           style: GoogleFonts.poppins(
                             fontSize: isMobile ? 11 : 14,
-                            color: Colors.white.withOpacity(0.85),
+                            color: Colors.white.withValues(alpha: 0.85),
                           ),
                         ),
                       ],
@@ -128,7 +128,7 @@ class _ReportModalState extends State<ReportModal>
                 decoration: BoxDecoration(
                   color: bgBody,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.black.withOpacity(0.05)),
+                  border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
                 ),
                 child: TabBar(
                   controller: _tabController,
@@ -211,7 +211,7 @@ class _FacultyLoadTab extends StatelessWidget {
                     constraints: BoxConstraints(minWidth: constraints.maxWidth),
                     child: DataTable(
                       headingRowColor: WidgetStateProperty.all(
-                        Theme.of(context).primaryColor.withOpacity(0.05),
+                        Theme.of(context).primaryColor.withValues(alpha: 0.05),
                       ),
                       columns: const [
                         DataColumn(
@@ -288,7 +288,7 @@ class _FacultyLoadTab extends StatelessWidget {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.1),
+                                  color: statusColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
@@ -345,7 +345,7 @@ class _RoomUtilizationTab extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: Colors.black.withValues(alpha: 0.02),
                     blurRadius: 10,
                   ),
                 ],
@@ -356,7 +356,7 @@ class _RoomUtilizationTab extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -398,8 +398,8 @@ class _RoomUtilizationTab extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: item.isActive
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.red.withOpacity(0.1),
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -543,7 +543,7 @@ class _ScheduleOverviewTab extends StatelessWidget {
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10),
         ],
       ),
       child: Column(

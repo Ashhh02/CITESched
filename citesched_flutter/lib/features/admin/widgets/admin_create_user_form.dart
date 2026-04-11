@@ -228,10 +228,10 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(19),
-          border: Border.all(color: Colors.black.withOpacity(0.05)),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
           boxShadow: [
             BoxShadow(
-              color: primaryPurple.withOpacity(0.15),
+              color: primaryPurple.withValues(alpha: 0.15),
               blurRadius: 30,
               offset: const Offset(0, 15),
             ),
@@ -256,7 +256,7 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(19),
                 ),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,7 +266,7 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
@@ -294,7 +294,7 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                               'Create a new account for the CITESched system',
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
-                                color: Colors.white.withOpacity(0.85),
+                                color: Colors.white.withValues(alpha: 0.85),
                               ),
                             ),
                           ],
@@ -320,10 +320,10 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                           margin: const EdgeInsets.only(bottom: 24),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
+                            color: Colors.red.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Colors.red.withOpacity(0.3),
+                              color: Colors.red.withValues(alpha: 0.3),
                             ),
                           ),
                           child: Row(
@@ -603,7 +603,7 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   side: BorderSide(
-                                    color: Colors.black.withOpacity(0.1),
+                                    color: Colors.black.withValues(alpha: 0.1),
                                   ),
                                 ),
                               ),
@@ -632,7 +632,7 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
                                 ),
                                 elevation: 0,
                                 disabledBackgroundColor: primaryPurple
-                                    .withOpacity(0.5),
+                                    .withValues(alpha: 0.5),
                               ),
                               child: _isLoading
                                   ? const SizedBox(
@@ -681,7 +681,7 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: textPrimary.withOpacity(0.7)),
+          Icon(icon, size: 16, color: textPrimary.withValues(alpha: 0.7)),
           const SizedBox(width: 8),
           Text(
             text,
@@ -705,7 +705,7 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
     return InputDecoration(
       hintText: hint,
       hintStyle: GoogleFonts.poppins(
-        color: textMuted.withOpacity(0.6),
+        color: textMuted.withValues(alpha: 0.6),
         fontSize: 14,
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -713,11 +713,11 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
       fillColor: bgBody,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black.withOpacity(0.05)),
+        borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black.withOpacity(0.05)),
+        borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),

@@ -37,7 +37,7 @@ class ScheduleDisplayWidget extends StatelessWidget {
           // Header row
           TableRow(
             decoration: BoxDecoration(
-              color: const Color(0xFF720045).withOpacity(0.3),
+              color: const Color(0xFF720045).withValues(alpha: 0.3),
             ),
             children: [
               _buildHeaderCell('Subject'),

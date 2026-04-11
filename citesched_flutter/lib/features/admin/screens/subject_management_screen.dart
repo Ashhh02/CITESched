@@ -425,7 +425,7 @@ class _SubjectManagementScreenState
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: maroonColor.withOpacity(0.3),
+                    color: maroonColor.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -716,7 +716,7 @@ class _SubjectManagementScreenState
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withValues(alpha: 0.08),
                           blurRadius: 16,
                           offset: const Offset(0, 4),
                         ),
@@ -731,7 +731,7 @@ class _SubjectManagementScreenState
                             vertical: 16,
                           ),
                           decoration: BoxDecoration(
-                            color: maroonColor.withOpacity(0.05),
+                            color: maroonColor.withValues(alpha: 0.05),
                             borderRadius: const BorderRadius.only(
                               topLeft: Radius.circular(16),
                               topRight: Radius.circular(16),
@@ -761,7 +761,7 @@ class _SubjectManagementScreenState
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: maroonColor.withOpacity(0.1),
+                                    color: maroonColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
@@ -1052,7 +1052,7 @@ class _SubjectManagementScreenState
                                                                 ),
                                                             decoration: BoxDecoration(
                                                               color: maroonColor
-                                                                  .withOpacity(
+                                                                  .withValues(alpha: 
                                                                     0.1,
                                                                   ),
                                                               borderRadius:
@@ -1095,7 +1095,7 @@ class _SubjectManagementScreenState
                                                                 ),
                                                             decoration: BoxDecoration(
                                                               color: Colors.red
-                                                                  .withOpacity(
+                                                                  .withValues(alpha: 
                                                                     0.1,
                                                                   ),
                                                               borderRadius:
@@ -1150,7 +1150,7 @@ class _SubjectManagementScreenState
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1223,7 +1223,7 @@ class _SubjectManagementScreenState
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -1352,9 +1352,9 @@ class _SubjectManagementScreenState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1385,7 +1385,7 @@ class _SubjectManagementScreenState
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1448,7 +1448,7 @@ class _SubjectManagementScreenState
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1504,14 +1504,14 @@ class _SubjectManagementScreenState
     bool isDark,
   ) {
     if (states.contains(WidgetState.hovered)) {
-      return maroonColor.withOpacity(0.05);
+      return maroonColor.withValues(alpha: 0.05);
     }
     if (!index.isEven) {
       return null;
     }
     return isDark
-        ? Colors.white.withOpacity(0.02)
-        : Colors.grey.withOpacity(0.02);
+        ? Colors.white.withValues(alpha: 0.02)
+        : Colors.grey.withValues(alpha: 0.02);
   }
 }
 
@@ -1614,8 +1614,8 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
     final textPrimary = isDark ? Colors.white : const Color(0xFF333333);
     final textMuted = isDark ? Colors.grey[400]! : Colors.grey[600]!;
     final borderColor = isDark
-        ? Colors.white.withOpacity(0.1)
-        : Colors.black.withOpacity(0.1);
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.1);
 
     final isMobile = ResponsiveHelper.isMobile(context);
 
@@ -1631,7 +1631,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: widget.maroonColor.withOpacity(0.2),
+              color: widget.maroonColor.withValues(alpha: 0.2),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -1662,10 +1662,10 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.18),
+                          color: Colors.white.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(12),
                           border:
-                              Border.all(color: Colors.white.withOpacity(0.25)),
+                              Border.all(color: Colors.white.withValues(alpha: 0.25)),
                         ),
                         child: const Icon(
                           Icons.library_add_rounded,
@@ -1694,7 +1694,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.poppins(
                                 fontSize: isCompact ? 11 : 12,
-                                color: Colors.white.withOpacity(0.85),
+                                color: Colors.white.withValues(alpha: 0.85),
                               ),
                             ),
                           ],
@@ -1705,7 +1705,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                         onPressed: () => Navigator.pop(context),
                         icon: const Icon(Icons.close, color: Colors.white),
                         style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.18),
+                          backgroundColor: Colors.white.withValues(alpha: 0.18),
                         ),
                       ),
                     ],
@@ -1957,7 +1957,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                                         });
                                       },
                                       selectedColor: widget.maroonColor
-                                          .withOpacity(0.2),
+                                          .withValues(alpha: 0.2),
                                       checkmarkColor: widget.maroonColor,
                                       labelStyle: GoogleFonts.poppins(
                                         color: isSelected
@@ -2083,7 +2083,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                                               });
                                             },
                                             selectedColor: widget.maroonColor
-                                                .withOpacity(0.2),
+                                                .withValues(alpha: 0.2),
                                             checkmarkColor: widget.maroonColor,
                                             labelStyle: GoogleFonts.poppins(
                                               color: isSelected
@@ -2439,8 +2439,8 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
   InputDecoration _inputDecoration(String? label, bool isDark, {String? hint}) {
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9);
     final borderColor = isDark
-        ? Colors.white.withOpacity(0.1)
-        : Colors.black.withOpacity(0.05);
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.05);
 
     return InputDecoration(
       labelText: label,
@@ -2641,8 +2641,8 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
     final textMuted = isDark ? Colors.grey[400]! : Colors.grey[600]!;
     final isMobile = ResponsiveHelper.isMobile(context);
     final borderColor = isDark
-        ? Colors.white.withOpacity(0.1)
-        : Colors.black.withOpacity(0.1);
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.1);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -2656,7 +2656,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: widget.maroonColor.withOpacity(0.2),
+              color: widget.maroonColor.withValues(alpha: 0.2),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -2685,10 +2685,10 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.18),
+                            color: Colors.white.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.25),
+                              color: Colors.white.withValues(alpha: 0.25),
                             ),
                           ),
                           child: const Icon(
@@ -2718,7 +2718,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.poppins(
                                   fontSize: 12,
-                                  color: Colors.white.withOpacity(0.85),
+                                  color: Colors.white.withValues(alpha: 0.85),
                                 ),
                               ),
                             ],
@@ -2729,7 +2729,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                           onPressed: () => Navigator.pop(context),
                           icon: const Icon(Icons.close, color: Colors.white),
                           style: IconButton.styleFrom(
-                            backgroundColor: Colors.white.withOpacity(0.18),
+                            backgroundColor: Colors.white.withValues(alpha: 0.18),
                           ),
                         ),
                       ],
@@ -2739,10 +2739,10 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.18),
+                            color: Colors.white.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.25),
+                              color: Colors.white.withValues(alpha: 0.25),
                             ),
                           ),
                           child: const Icon(
@@ -2767,7 +2767,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                               'Update subject details below',
                               style: GoogleFonts.poppins(
                                 fontSize: 13,
-                                color: Colors.white.withOpacity(0.85),
+                                color: Colors.white.withValues(alpha: 0.85),
                               ),
                             ),
                           ],
@@ -2777,7 +2777,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                           onPressed: () => Navigator.pop(context),
                           icon: const Icon(Icons.close, color: Colors.black),
                           style: IconButton.styleFrom(
-                            backgroundColor: Colors.black.withOpacity(0.05),
+                            backgroundColor: Colors.black.withValues(alpha: 0.05),
                           ),
                         ),
                       ],
@@ -3007,7 +3007,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                                 }
                               });
                             },
-                            selectedColor: widget.maroonColor.withOpacity(0.2),
+                            selectedColor: widget.maroonColor.withValues(alpha: 0.2),
                             checkmarkColor: widget.maroonColor,
                             labelStyle: GoogleFonts.poppins(
                               color: isSelected
@@ -3352,8 +3352,8 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
   InputDecoration _inputDecoration(String? label, bool isDark, {String? hint}) {
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9);
     final borderColor = isDark
-        ? Colors.white.withOpacity(0.1)
-        : Colors.black.withOpacity(0.05);
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.05);
 
     return InputDecoration(
       labelText: label,

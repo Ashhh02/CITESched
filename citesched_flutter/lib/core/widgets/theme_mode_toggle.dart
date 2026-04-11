@@ -6,6 +6,9 @@ class ThemeModeToggle extends StatelessWidget {
   const ThemeModeToggle({super.key, this.compact = false});
 
   final bool compact;
+  ThemeMode _nextThemeMode(ThemeMode current) {
+    return current == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +19,7 @@ class ThemeModeToggle extends StatelessWidget {
         return InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () {
-            themeModeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+            themeModeNotifier.value = _nextThemeMode(mode);
           },
           child: Container(
             padding: EdgeInsets.symmetric(
@@ -27,7 +30,7 @@ class ThemeModeToggle extends StatelessWidget {
               color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Theme.of(context).dividerColor.withOpacity(0.4),
+                color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
               ),
             ),
             child: Row(

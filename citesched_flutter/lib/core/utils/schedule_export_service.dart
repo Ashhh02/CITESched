@@ -33,7 +33,7 @@ class ScheduleExportService {
           if (sorted.isEmpty)
             pw.Text('No schedules assigned.')
           else
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: const [
                 'Code',
                 'Subject',
@@ -136,7 +136,7 @@ class ScheduleExportService {
           if (sorted.isEmpty)
             pw.Text('No schedules assigned.')
           else
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: const [
                 'Code',
                 'Subject',

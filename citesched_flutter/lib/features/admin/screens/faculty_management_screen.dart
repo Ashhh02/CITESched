@@ -459,7 +459,7 @@ class _FacultyManagementScreenState
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: maroonColor.withOpacity(0.3),
+                    color: maroonColor.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -876,7 +876,7 @@ class _FacultyManagementScreenState
             const SizedBox(height: 8),
             Text(
               'Click \"Add Faculty\" to get started',
-              style: GoogleFonts.poppins(color: textMuted.withOpacity(0.85)),
+              style: GoogleFonts.poppins(color: textMuted.withValues(alpha: 0.85)),
             ),
           ],
         ],
@@ -890,12 +890,12 @@ class _FacultyManagementScreenState
     bool isDark,
   ) {
     if (states.contains(WidgetState.hovered)) {
-      return maroonColor.withOpacity(0.05);
+      return maroonColor.withValues(alpha: 0.05);
     }
     if (!index.isEven) return null;
     return isDark
-        ? Colors.white.withOpacity(0.02)
-        : Colors.grey.withOpacity(0.02);
+        ? Colors.white.withValues(alpha: 0.02)
+        : Colors.grey.withValues(alpha: 0.02);
   }
 
   Widget _buildDesktopFacultyTable(
@@ -914,7 +914,7 @@ class _FacultyManagementScreenState
         border: Border(left: BorderSide(color: maroonColor, width: 4)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -1008,7 +1008,7 @@ class _FacultyManagementScreenState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        color: maroonColor.withOpacity(0.05),
+        color: maroonColor.withValues(alpha: 0.05),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(16),
           topRight: Radius.circular(16),
@@ -1031,7 +1031,7 @@ class _FacultyManagementScreenState
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: maroonColor.withOpacity(0.1),
+                color: maroonColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -1115,7 +1115,7 @@ class _FacultyManagementScreenState
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: maroonColor.withOpacity(0.08),
+              color: maroonColor.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -1167,14 +1167,14 @@ class _FacultyManagementScreenState
               gradient: LinearGradient(
                 colors: [
                   _getStatusColor(faculty.employmentStatus),
-                  _getStatusColor(faculty.employmentStatus).withOpacity(0.7),
+                  _getStatusColor(faculty.employmentStatus).withValues(alpha: 0.7),
                 ],
               ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
                   color: _getStatusColor(faculty.employmentStatus)
-                      .withOpacity(0.3),
+                      .withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 ),
@@ -1342,8 +1342,8 @@ class _FacultyManagementScreenState
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: hasConflict
-            ? Colors.red.withOpacity(0.15)
-            : Colors.green.withOpacity(0.15),
+            ? Colors.red.withValues(alpha: 0.15)
+            : Colors.green.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -1381,7 +1381,7 @@ class _FacultyManagementScreenState
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1465,7 +1465,7 @@ class _FacultyManagementScreenState
       padding: const EdgeInsets.only(bottom: 8, left: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: color.withOpacity(0.7)),
+          Icon(icon, size: 16, color: color.withValues(alpha: 0.7)),
           const SizedBox(width: 8),
           Text(
             label,
@@ -1495,7 +1495,7 @@ class _FacultyManagementScreenState
       decoration: BoxDecoration(
         color: bgBody,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
@@ -1531,7 +1531,7 @@ class _FacultyManagementScreenState
           ),
           child: ExpansionTile(
             leading: CircleAvatar(
-              backgroundColor: maroonColor.withOpacity(0.1),
+              backgroundColor: maroonColor.withValues(alpha: 0.1),
               child: Text(
                 faculty.name[0],
                 style: GoogleFonts.poppins(
@@ -1944,10 +1944,10 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(19),
-          border: Border.all(color: Colors.black.withOpacity(0.05)),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
           boxShadow: [
             BoxShadow(
-              color: primaryPurple.withOpacity(0.15),
+              color: primaryPurple.withValues(alpha: 0.15),
               blurRadius: 30,
               offset: const Offset(0, 15),
             ),
@@ -1975,14 +1975,14 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(19),
                 ),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -2010,7 +2010,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                           'Create a new faculty profile in the system',
                           style: GoogleFonts.poppins(
                             fontSize: 13,
-                            color: Colors.white.withOpacity(0.85),
+                            color: Colors.white.withValues(alpha: 0.85),
                           ),
                         ),
                       ],
@@ -2024,7 +2024,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                     ),
                     onPressed: () => Navigator.pop(context),
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.1),
+                      backgroundColor: Colors.white.withValues(alpha: 0.1),
                     ),
                   ),
                 ],
@@ -2051,7 +2051,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
               decoration: BoxDecoration(
                 color: cardBg,
                 border: Border(
-                  top: BorderSide(color: Colors.black.withOpacity(0.05)),
+                  top: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
                 ),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(19),
@@ -2074,7 +2074,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                               ),
                               elevation: 0,
                               disabledBackgroundColor:
-                                  primaryPurple.withOpacity(0.5),
+                                  primaryPurple.withValues(alpha: 0.5),
                             ),
                             child: _isLoading
                                 ? const SizedBox(
@@ -2118,7 +2118,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 side: BorderSide(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withValues(alpha: 0.1),
                                 ),
                               ),
                             ),
@@ -2147,7 +2147,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 side: BorderSide(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withValues(alpha: 0.1),
                                 ),
                               ),
                             ),
@@ -2175,7 +2175,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                               ),
                               elevation: 0,
                               disabledBackgroundColor:
-                                  primaryPurple.withOpacity(0.5),
+                                  primaryPurple.withValues(alpha: 0.5),
                             ),
                             child: _isLoading
                                 ? const SizedBox(
@@ -2402,7 +2402,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
               decoration: BoxDecoration(
                 color: bgBody,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.black.withOpacity(0.05)),
+                border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
               ),
               child: Row(
                 children: [
@@ -2440,7 +2440,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
       padding: const EdgeInsets.only(bottom: 8, left: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: color.withOpacity(0.7)),
+          Icon(icon, size: 16, color: color.withValues(alpha: 0.7)),
           const SizedBox(width: 8),
           Text(
             label,
@@ -2469,11 +2469,11 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black.withOpacity(0.05)),
+        borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black.withOpacity(0.05)),
+        borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -2501,7 +2501,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
       decoration: BoxDecoration(
         color: bgBody,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
@@ -2541,7 +2541,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
       decoration: BoxDecoration(
         color: bgBody,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
@@ -2630,7 +2630,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: primaryPurple.withOpacity(0.25),
+                            color: primaryPurple.withValues(alpha: 0.25),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -2675,7 +2675,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                   decoration: BoxDecoration(
                     color: bgBody,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.black.withOpacity(0.08)),
+                    border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
                   ),
                   child: Row(
                     children: [
@@ -2740,7 +2740,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                   decoration: BoxDecoration(
                     color: bgBody,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.black.withOpacity(0.08)),
+                    border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
                   ),
                   child: Row(
                     children: [
@@ -2838,9 +2838,9 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: primaryPurple.withOpacity(0.04),
+              color: primaryPurple.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: primaryPurple.withOpacity(0.15)),
+              border: Border.all(color: primaryPurple.withValues(alpha: 0.15)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -3179,10 +3179,10 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(19),
-          border: Border.all(color: Colors.black.withOpacity(0.05)),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
           boxShadow: [
             BoxShadow(
-              color: primaryPurple.withOpacity(0.15),
+              color: primaryPurple.withValues(alpha: 0.15),
               blurRadius: 30,
               offset: const Offset(0, 15),
             ),
@@ -3210,14 +3210,14 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(19),
                 ),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -3245,7 +3245,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                           'Update information for ${widget.faculty.name}',
                           style: GoogleFonts.poppins(
                             fontSize: 13,
-                            color: Colors.white.withOpacity(0.85),
+                            color: Colors.white.withValues(alpha: 0.85),
                           ),
                         ),
                       ],
@@ -3259,7 +3259,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                     ),
                     onPressed: () => Navigator.pop(context),
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.1),
+                      backgroundColor: Colors.white.withValues(alpha: 0.1),
                     ),
                   ),
                 ],
@@ -3286,7 +3286,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
               decoration: BoxDecoration(
                 color: cardBg,
                 border: Border(
-                  top: BorderSide(color: Colors.black.withOpacity(0.05)),
+                  top: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
                 ),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(19),
@@ -3306,7 +3306,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                           side: BorderSide(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                           ),
                         ),
                       ),
@@ -3332,7 +3332,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         elevation: 0,
-                        disabledBackgroundColor: primaryPurple.withOpacity(0.5),
+                        disabledBackgroundColor: primaryPurple.withValues(alpha: 0.5),
                       ),
                       child: _isLoading
                           ? const SizedBox(
@@ -3524,7 +3524,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
               decoration: BoxDecoration(
                 color: bgBody,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.black.withOpacity(0.05)),
+                border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
               ),
               child: Row(
                 children: [
@@ -3562,7 +3562,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
       padding: const EdgeInsets.only(bottom: 8, left: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: color.withOpacity(0.7)),
+          Icon(icon, size: 16, color: color.withValues(alpha: 0.7)),
           const SizedBox(width: 8),
           Text(
             label,
@@ -3591,11 +3591,11 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black.withOpacity(0.05)),
+        borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black.withOpacity(0.05)),
+        borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -3623,7 +3623,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
       decoration: BoxDecoration(
         color: bgBody,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
@@ -3710,7 +3710,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: primaryPurple.withOpacity(0.25),
+                            color: primaryPurple.withValues(alpha: 0.25),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -3756,7 +3756,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                   decoration: BoxDecoration(
                     color: bgBody,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.black.withOpacity(0.08)),
+                    border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
                   ),
                   child: Row(
                     children: [
@@ -3821,7 +3821,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                   decoration: BoxDecoration(
                     color: bgBody,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.black.withOpacity(0.08)),
+                    border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
                   ),
                   child: Row(
                     children: [
@@ -3919,9 +3919,9 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: primaryPurple.withOpacity(0.04),
+              color: primaryPurple.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: primaryPurple.withOpacity(0.15)),
+              border: Border.all(color: primaryPurple.withValues(alpha: 0.15)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

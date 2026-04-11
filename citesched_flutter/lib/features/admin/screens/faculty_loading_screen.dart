@@ -152,9 +152,9 @@ Widget _buildSubjectTypeDisplay({
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.12),
+                  color: accentColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: accentColor.withOpacity(0.3)),
+                  border: Border.all(color: accentColor.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   label,
@@ -202,7 +202,7 @@ Widget _buildLoadTypeSelector({
             selected: selected == SubjectType.lecture,
             onSelected: (value) =>
                 onChanged(value ? SubjectType.lecture : null),
-            selectedColor: accentColor.withOpacity(0.2),
+            selectedColor: accentColor.withValues(alpha: 0.2),
             labelStyle: GoogleFonts.poppins(
               color: selected == SubjectType.lecture
                   ? accentColor
@@ -217,7 +217,7 @@ Widget _buildLoadTypeSelector({
             selected: selected == SubjectType.laboratory,
             onSelected: (value) =>
                 onChanged(value ? SubjectType.laboratory : null),
-            selectedColor: accentColor.withOpacity(0.2),
+            selectedColor: accentColor.withValues(alpha: 0.2),
             labelStyle: GoogleFonts.poppins(
               color: selected == SubjectType.laboratory
                   ? accentColor
@@ -1365,7 +1365,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: maroonColor.withOpacity(0.3),
+                    color: maroonColor.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),

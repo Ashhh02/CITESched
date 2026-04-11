@@ -1,6 +1,5 @@
 import 'package:serverpod_auth_idp_server/providers/google.dart';
 import 'package:serverpod/serverpod.dart';
-import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart';
 
 /// By extending [GoogleIdpBaseEndpoint], the Google identity provider endpoints
 /// are made available on the server and enable the corresponding sign-in widget

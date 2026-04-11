@@ -460,7 +460,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                           border: Border.all(
                             color: isDark
                                 ? Colors.white10
-                                : Colors.black.withOpacity(0.05),
+                                : Colors.black.withValues(alpha: 0.05),
                           ),
                         ),
                         child: ListView.separated(
@@ -475,7 +475,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                               leading: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: maroonColor.withOpacity(0.1),
+                                  color: maroonColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(

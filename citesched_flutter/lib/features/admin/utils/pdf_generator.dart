@@ -93,7 +93,7 @@ class PdfGenerator {
               ),
             ),
             pw.SizedBox(height: 20),
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: [
                 'Faculty Name',
                 'Program',
@@ -266,7 +266,7 @@ class PdfGenerator {
       );
     }
 
-    return pw.Table.fromTextArray(
+    return pw.TableHelper.fromTextArray(
       headers: ['Subject', 'Section', 'Units', 'Room', 'Schedule'],
       data: schedules
           .map(

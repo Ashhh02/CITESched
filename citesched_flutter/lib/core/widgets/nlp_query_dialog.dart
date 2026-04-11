@@ -4,7 +4,6 @@ import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/core/utils/date_utils.dart';
 import 'package:citesched_flutter/core/widgets/full_screen_calendar_scaffold.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
-import 'package:citesched_flutter/features/admin/screens/conflict_screen.dart';
 import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
 import 'package:citesched_flutter/features/admin/screens/admin_layout.dart';
 import 'package:citesched_flutter/features/nlp/providers/chat_history_provider.dart';
@@ -109,17 +108,62 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
   Widget build(BuildContext context) {
     final chatState = ref.watch(nlpQueryChatProvider);
     final sessionsAsync = ref.watch(chatHistorySessionsProvider(30));
-    final historyAsync = _selectedSessionId == null
-        ? null
-        : ref.watch(chatHistorySessionProvider(_selectedSessionId!));
+    final historyAsync = _watchSelectedHistory();
     final auth = ref.watch(authProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final cardBg = _dialogBackground(isDark);
+    final bounds = _dialogBounds(context);
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(16),
+      child: Container(
+        width: bounds.width,
+        height: bounds.height,
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            _buildDialogContent(
+              auth: auth,
+              isDark: isDark,
+              messages: chatState.messages,
+              isLoading: chatState.isLoading,
+              sessionsAsync: sessionsAsync,
+              historyAsync: historyAsync,
+            ),
+            ..._buildResizeHandles(bounds),
+          ],
+        ),
+      ),
+    );
+  }
+
+  AsyncValue<List<ChatHistory>>? _watchSelectedHistory() {
+    final selectedSessionId = _selectedSessionId;
+    if (selectedSessionId == null) return null;
+    return ref.watch(chatHistorySessionProvider(selectedSessionId));
+  }
+
+  Color _dialogBackground(bool isDark) {
+    return isDark ? const Color(0xFF1E293B) : Colors.white;
+  }
+
+  _DialogBounds _dialogBounds(BuildContext context) {
     final media = MediaQuery.of(context);
+    const minWidth = 360.0;
+    const minHeight = 420.0;
     final maxWidth = media.size.width * 0.95;
     final maxHeight = media.size.height * 0.9;
-    final minWidth = 360.0;
-    final minHeight = 420.0;
     final width = (_dialogWidth ?? (media.size.width * 0.75)).clamp(
       minWidth,
       maxWidth,
@@ -128,349 +172,331 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
       minHeight,
       maxHeight,
     );
+    return _DialogBounds(
+      minWidth: minWidth,
+      minHeight: minHeight,
+      maxWidth: maxWidth,
+      maxHeight: maxHeight,
+      width: width,
+      height: height,
+    );
+  }
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(16),
-      child: Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
+  Widget _buildDialogContent({
+    required UserInfo? auth,
+    required bool isDark,
+    required List<Map<String, dynamic>> messages,
+    required bool isLoading,
+    required AsyncValue<List<ChatSessionSummary>> sessionsAsync,
+    required AsyncValue<List<ChatHistory>>? historyAsync,
+  }) {
+    return Column(
+      children: [
+        _buildDialogHeader(auth),
+        _buildChatMessagesArea(messages, isLoading, sessionsAsync, historyAsync),
+        _buildInputArea(isDark, isLoading),
+      ],
+    );
+  }
+
+  Widget _buildDialogHeader(UserInfo? auth) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [maroonColor, const Color(0xFF9d005f)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return constraints.maxWidth < 700
+              ? _buildCompactHeader(context, auth)
+              : _buildWideHeader(context, auth);
+        },
+      ),
+    );
+  }
+
+  Widget _buildCompactHeader(BuildContext context, UserInfo? auth) {
+    final actionButtons = _buildHeaderActions();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              onPressed: _toggleHistory,
+              tooltip: _historyLabel(auth),
+              icon: Icon(
+                _showHistory ? Icons.chat_bubble_outline : Icons.history,
+                color: Colors.white,
+              ),
+            ),
+            const Icon(
+              Icons.auto_awesome_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: _buildHeaderTitle()),
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close, color: Colors.white),
             ),
           ],
         ),
-        child: Stack(
-          children: [
-            Column(
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: actionButtons,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWideHeader(BuildContext context, UserInfo? auth) {
+    final actionButtons = _buildHeaderActions();
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        IconButton(
+          onPressed: _toggleHistory,
+          tooltip: _historyLabel(auth),
+          icon: Icon(
+            _showHistory ? Icons.chat_bubble_outline : Icons.history,
+            color: Colors.white,
+          ),
+        ),
+        const Icon(
+          Icons.auto_awesome_rounded,
+          color: Colors.white,
+          size: 28,
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: _buildHeaderTitle()),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 6,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [maroonColor, const Color(0xFF9d005f)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(24),
-                    ),
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final compactHeader = constraints.maxWidth < 700;
-                      final actionButtons = _buildHeaderActions();
-
-                      if (compactHeader) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                IconButton(
-                                  onPressed: _toggleHistory,
-                                  tooltip: _historyLabel(auth),
-                                  icon: Icon(
-                                    _showHistory
-                                        ? Icons.chat_bubble_outline
-                                        : Icons.history,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.auto_awesome_rounded,
-                                  color: Colors.white,
-                                  size: 28,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(child: _buildHeaderTitle()),
-                                IconButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: actionButtons,
-                              ),
-                            ),
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          IconButton(
-                            onPressed: _toggleHistory,
-                            tooltip: _historyLabel(auth),
-                            icon: Icon(
-                              _showHistory
-                                  ? Icons.chat_bubble_outline
-                                  : Icons.history,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const Icon(
-                            Icons.auto_awesome_rounded,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(child: _buildHeaderTitle()),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: Wrap(
-                                alignment: WrapAlignment.end,
-                                spacing: 6,
-                                runSpacing: 6,
-                                crossAxisAlignment:
-                                    WrapCrossAlignment.center,
-                                children: [
-                                  ...actionButtons,
-                                  IconButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    icon: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-
-                // Chat Messages
-                Expanded(
-                  child: Stack(
-                    children: [
-                      ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(20),
-                        itemCount:
-                            chatState.messages.length +
-                            (chatState.isLoading ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == chatState.messages.length) {
-                            return _TypingIndicator(
-                              maroonColor: maroonColor,
-                            );
-                          }
-
-                          final msg = chatState.messages[index];
-                          return _MessageBubble(
-                            messageData: msg,
-                            maroonColor: maroonColor,
-                          );
-                        },
-                      ),
-                      if (_showHistory)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: _buildHistoryPanel(
-                            sessionsAsync,
-                            historyAsync,
-                          ),
-                        ),
-                      if (_showSuggestionsPanel)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: _buildSuggestionsPanel(),
-                        ),
-                    ],
-                  ),
-                ),
-
-                // Input Area
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(
-                        color: isDark
-                            ? Colors.white.withOpacity(0.1)
-                            : Colors.grey[200]!,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _queryController,
-                          onSubmitted: (_) => _sendQuery(),
-                          style: GoogleFonts.poppins(fontSize: 14),
-                          decoration: InputDecoration(
-                            hintText: "Ask about schedules, rooms, load...",
-                            hintStyle: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide.none,
-                            ),
-                            filled: true,
-                            fillColor: isDark
-                                ? Colors.white.withOpacity(0.05)
-                                : Colors.grey[100],
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Material(
-                        color: maroonColor,
-                        shape: const CircleBorder(),
-                        elevation: 2,
-                        child: IconButton(
-                          onPressed: chatState.isLoading ? null : _sendQuery,
-                          icon: const Icon(
-                            Icons.send_rounded,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                ...actionButtons,
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close, color: Colors.white),
                 ),
               ],
             ),
-            _ResizeEdge(
-              alignment: Alignment.centerLeft,
-              cursor: SystemMouseCursors.resizeLeftRight,
-              onDrag: (delta) {
-                setState(() {
-                  _dialogWidth = (width - delta.dx).clamp(minWidth, maxWidth);
-                });
-              },
-              vertical: true,
-              color: maroonColor,
-            ),
-            _ResizeEdge(
-              alignment: Alignment.centerRight,
-              cursor: SystemMouseCursors.resizeLeftRight,
-              onDrag: (delta) {
-                setState(() {
-                  _dialogWidth = (width + delta.dx).clamp(minWidth, maxWidth);
-                });
-              },
-              vertical: true,
-              color: maroonColor,
-            ),
-            _ResizeEdge(
-              alignment: Alignment.topCenter,
-              cursor: SystemMouseCursors.resizeUpDown,
-              onDrag: (delta) {
-                setState(() {
-                  _dialogHeight = (height - delta.dy).clamp(
-                    minHeight,
-                    maxHeight,
-                  );
-                });
-              },
-              vertical: false,
-              color: maroonColor,
-            ),
-            _ResizeEdge(
-              alignment: Alignment.bottomCenter,
-              cursor: SystemMouseCursors.resizeUpDown,
-              onDrag: (delta) {
-                setState(() {
-                  _dialogHeight = (height + delta.dy).clamp(
-                    minHeight,
-                    maxHeight,
-                  );
-                });
-              },
-              vertical: false,
-              color: maroonColor,
-            ),
-            _ResizeCorner(
-              alignment: Alignment.topLeft,
-              cursor: SystemMouseCursors.resizeUpLeftDownRight,
-              onDrag: (delta) {
-                setState(() {
-                  _dialogWidth = (width - delta.dx).clamp(minWidth, maxWidth);
-                  _dialogHeight = (height - delta.dy).clamp(
-                    minHeight,
-                    maxHeight,
-                  );
-                });
-              },
-              color: maroonColor,
-            ),
-            _ResizeCorner(
-              alignment: Alignment.topRight,
-              cursor: SystemMouseCursors.resizeUpRightDownLeft,
-              onDrag: (delta) {
-                setState(() {
-                  _dialogWidth = (width + delta.dx).clamp(minWidth, maxWidth);
-                  _dialogHeight = (height - delta.dy).clamp(
-                    minHeight,
-                    maxHeight,
-                  );
-                });
-              },
-              color: maroonColor,
-            ),
-            _ResizeCorner(
-              alignment: Alignment.bottomLeft,
-              cursor: SystemMouseCursors.resizeUpRightDownLeft,
-              onDrag: (delta) {
-                setState(() {
-                  _dialogWidth = (width - delta.dx).clamp(minWidth, maxWidth);
-                  _dialogHeight = (height + delta.dy).clamp(
-                    minHeight,
-                    maxHeight,
-                  );
-                });
-              },
-              color: maroonColor,
-            ),
-            _ResizeCorner(
-              alignment: Alignment.bottomRight,
-              cursor: SystemMouseCursors.resizeUpLeftDownRight,
-              onDrag: (delta) {
-                setState(() {
-                  _dialogWidth = (width + delta.dx).clamp(minWidth, maxWidth);
-                  _dialogHeight = (height + delta.dy).clamp(
-                    minHeight,
-                    maxHeight,
-                  );
-                });
-              },
-              color: maroonColor,
-            ),
-          ],
+          ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildChatMessagesArea(
+    List<Map<String, dynamic>> messages,
+    bool isLoading,
+    AsyncValue<List<ChatSessionSummary>> sessionsAsync,
+    AsyncValue<List<ChatHistory>>? historyAsync,
+  ) {
+    return Expanded(
+      child: Stack(
+        children: [
+          ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(20),
+            itemCount: messages.length + (isLoading ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == messages.length) {
+                return _TypingIndicator(maroonColor: maroonColor);
+              }
+
+              final msg = messages[index];
+              return _MessageBubble(messageData: msg, maroonColor: maroonColor);
+            },
+          ),
+          if (_showHistory)
+            Align(
+              alignment: Alignment.centerRight,
+              child: _buildHistoryPanel(sessionsAsync, historyAsync),
+            ),
+          if (_showSuggestionsPanel)
+            Align(
+              alignment: Alignment.centerRight,
+              child: _buildSuggestionsPanel(),
+            ),
+        ],
       ),
     );
+  }
+
+  Widget _buildInputArea(bool isDark, bool isLoading) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200]!,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _queryController,
+              onSubmitted: (_) => _sendQuery(),
+              style: GoogleFonts.poppins(fontSize: 14),
+              decoration: InputDecoration(
+                hintText: "Ask about schedules, rooms, load...",
+                hintStyle: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.grey[100],
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Material(
+            color: maroonColor,
+            shape: const CircleBorder(),
+            elevation: 2,
+            child: IconButton(
+              onPressed: isLoading ? null : _sendQuery,
+              icon: const Icon(Icons.send_rounded, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildResizeHandles(_DialogBounds bounds) {
+    return [
+      _ResizeEdge(
+        alignment: Alignment.centerLeft,
+        cursor: SystemMouseCursors.resizeLeftRight,
+        onDrag: (delta) {
+          setState(() {
+            _dialogWidth =
+                (bounds.width - delta.dx).clamp(bounds.minWidth, bounds.maxWidth);
+          });
+        },
+        vertical: true,
+        color: maroonColor,
+      ),
+      _ResizeEdge(
+        alignment: Alignment.centerRight,
+        cursor: SystemMouseCursors.resizeLeftRight,
+        onDrag: (delta) {
+          setState(() {
+            _dialogWidth =
+                (bounds.width + delta.dx).clamp(bounds.minWidth, bounds.maxWidth);
+          });
+        },
+        vertical: true,
+        color: maroonColor,
+      ),
+      _ResizeEdge(
+        alignment: Alignment.topCenter,
+        cursor: SystemMouseCursors.resizeUpDown,
+        onDrag: (delta) {
+          setState(() {
+            _dialogHeight =
+                (bounds.height - delta.dy).clamp(bounds.minHeight, bounds.maxHeight);
+          });
+        },
+        vertical: false,
+        color: maroonColor,
+      ),
+      _ResizeEdge(
+        alignment: Alignment.bottomCenter,
+        cursor: SystemMouseCursors.resizeUpDown,
+        onDrag: (delta) {
+          setState(() {
+            _dialogHeight =
+                (bounds.height + delta.dy).clamp(bounds.minHeight, bounds.maxHeight);
+          });
+        },
+        vertical: false,
+        color: maroonColor,
+      ),
+      _ResizeCorner(
+        alignment: Alignment.topLeft,
+        cursor: SystemMouseCursors.resizeUpLeftDownRight,
+        onDrag: (delta) {
+          setState(() {
+            _dialogWidth =
+                (bounds.width - delta.dx).clamp(bounds.minWidth, bounds.maxWidth);
+            _dialogHeight =
+                (bounds.height - delta.dy).clamp(bounds.minHeight, bounds.maxHeight);
+          });
+        },
+        color: maroonColor,
+      ),
+      _ResizeCorner(
+        alignment: Alignment.topRight,
+        cursor: SystemMouseCursors.resizeUpRightDownLeft,
+        onDrag: (delta) {
+          setState(() {
+            _dialogWidth =
+                (bounds.width + delta.dx).clamp(bounds.minWidth, bounds.maxWidth);
+            _dialogHeight =
+                (bounds.height - delta.dy).clamp(bounds.minHeight, bounds.maxHeight);
+          });
+        },
+        color: maroonColor,
+      ),
+      _ResizeCorner(
+        alignment: Alignment.bottomLeft,
+        cursor: SystemMouseCursors.resizeUpRightDownLeft,
+        onDrag: (delta) {
+          setState(() {
+            _dialogWidth =
+                (bounds.width - delta.dx).clamp(bounds.minWidth, bounds.maxWidth);
+            _dialogHeight =
+                (bounds.height + delta.dy).clamp(bounds.minHeight, bounds.maxHeight);
+          });
+        },
+        color: maroonColor,
+      ),
+      _ResizeCorner(
+        alignment: Alignment.bottomRight,
+        cursor: SystemMouseCursors.resizeUpLeftDownRight,
+        onDrag: (delta) {
+          setState(() {
+            _dialogWidth =
+                (bounds.width + delta.dx).clamp(bounds.minWidth, bounds.maxWidth);
+            _dialogHeight =
+                (bounds.height + delta.dy).clamp(bounds.minHeight, bounds.maxHeight);
+          });
+        },
+        color: maroonColor,
+      ),
+    ];
   }
 
   Widget _buildHeaderTitle() {
@@ -560,10 +586,10 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF0F172A) : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: maroonColor.withOpacity(0.12)),
+        border: Border.all(color: maroonColor.withValues(alpha: 0.12)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -609,7 +635,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   tileColor: isDark
-                      ? Colors.white.withOpacity(0.04)
+                      ? Colors.white.withValues(alpha: 0.04)
                       : Colors.grey.shade50,
                   title: Text(
                     text,
@@ -634,241 +660,229 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
     AsyncValue<List<ChatHistory>>? historyAsync,
   ) {
     if (_selectedSessionId != null && historyAsync != null) {
-      return Container(
-        width: 320,
-        margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF0F172A)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: maroonColor.withOpacity(0.12)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: historyAsync.when(
+      return _buildPanelContainer(
+        historyAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(
-            child: Text(
-              'Could not load history: $err',
-              style: GoogleFonts.poppins(color: Colors.black54, fontSize: 12),
-            ),
-          ),
-          data: (items) {
-            return Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () {
-                          setState(() => _selectedSessionId = null);
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Chat Details',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () async {
-                          final sessionId = _selectedSessionId;
-                          if (sessionId == null) return;
-                          await ref.read(
-                            chatHistoryDeleteProvider(sessionId).future,
-                          );
-                          ref.invalidate(chatHistorySessionsProvider);
-                          ref.invalidate(chatHistorySessionProvider);
-                          setState(() => _selectedSessionId = null);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: items.isEmpty
-                      ? Center(
-                          child: Text(
-                            'No messages in this chat.',
-                            style: GoogleFonts.poppins(
-                              color: Colors.black54,
-                              fontSize: 12,
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(20),
-                          itemCount: items.length,
-                          itemBuilder: (context, index) {
-                            final entry = items[index];
-                            final isUser = entry.sender == 'user';
-                            return Align(
-                              alignment: isUser
-                                  ? Alignment.centerRight
-                                  : Alignment.centerLeft,
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 10),
-                                padding: const EdgeInsets.all(12),
-                                constraints: const BoxConstraints(
-                                  maxWidth: 240,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isUser
-                                      ? maroonColor
-                                      : (Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? Colors.white.withOpacity(0.08)
-                                            : Colors.grey[200]),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  entry.text,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: isUser
-                                        ? Colors.white
-                                        : (Theme.of(context).brightness ==
-                                                  Brightness.dark
-                                              ? Colors.white70
-                                              : Colors.black87),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            );
-          },
+          error: (err, _) => _buildHistoryStatusText('Could not load history: $err'),
+          data: _buildHistoryDetailsBody,
         ),
       );
     }
 
+    return _buildPanelContainer(
+      sessionsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => _buildHistoryStatusText('Could not load history: $err'),
+        data: _buildSessionsBody,
+      ),
+    );
+  }
+
+  Widget _buildPanelContainer(Widget child) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: 320,
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF0F172A)
-            : Colors.white,
+        color: isDark ? const Color(0xFF0F172A) : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: maroonColor.withOpacity(0.12)),
+        border: Border.all(color: maroonColor.withValues(alpha: 0.12)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: sessionsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Text(
-            'Could not load history: $err',
-            style: GoogleFonts.poppins(color: Colors.black54, fontSize: 12),
-          ),
-        ),
-        data: (sessions) {
-          if (sessions.isEmpty) {
-            return Center(
-              child: Text(
-                'No history yet.',
-                style: GoogleFonts.poppins(color: Colors.black54, fontSize: 12),
-              ),
-            );
-          }
+      child: child,
+    );
+  }
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(20),
-            itemCount: sessions.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final entry = sessions[index];
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: maroonColor.withOpacity(0.12),
-                  ),
-                ),
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    entry.title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  subtitle: Text(
-                    entry.lastMessageText,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(fontSize: 12),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 18),
-                        onPressed: () async {
-                          await ref.read(
-                            chatHistoryDeleteProvider(entry.sessionId).future,
-                          );
-                          ref.invalidate(chatHistorySessionsProvider);
-                          ref.invalidate(chatHistorySessionProvider);
-                          if (_selectedSessionId == entry.sessionId) {
-                            setState(() => _selectedSessionId = null);
-                          }
-                        },
-                      ),
-                      const Icon(Icons.chevron_right),
-                    ],
-                  ),
-                  onTap: () async {
-                    final historyItems = await ref.read(
-                      chatHistorySessionProvider(entry.sessionId).future,
-                    );
-                    if (!mounted) return;
-                    ref.read(nlpQueryChatProvider.notifier).loadSessionHistory(
-                          sessionId: entry.sessionId,
-                          sessionTitle: entry.title,
-                          history: historyItems,
-                        );
-                    setState(() {
-                      _showHistory = false;
-                      _showSuggestionsPanel = false;
-                      _selectedSessionId = entry.sessionId;
-                    });
-                    _scrollToBottom();
-                  },
-                ),
-              );
-            },
-          );
-        },
+  Widget _buildHistoryStatusText(String text) {
+    return Center(
+      child: Text(
+        text,
+        style: GoogleFonts.poppins(color: Colors.black54, fontSize: 12),
       ),
     );
   }
+
+  Widget _buildHistoryDetailsBody(List<ChatHistory> items) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => setState(() => _selectedSessionId = null),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Chat Details',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                onPressed: _deleteSelectedSession,
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: items.isEmpty
+              ? _buildHistoryStatusText('No messages in this chat.')
+              : ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    return _buildHistoryMessageBubble(items[index]);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHistoryMessageBubble(ChatHistory entry) {
+    final isUser = entry.sender == 'user';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final messageColor = isUser
+        ? Colors.white
+        : (isDark ? Colors.white70 : Colors.black87);
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        constraints: const BoxConstraints(maxWidth: 240),
+        decoration: BoxDecoration(
+          color: isUser
+              ? maroonColor
+              : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey[200]),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          entry.text,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: messageColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSessionsBody(List<ChatSessionSummary> sessions) {
+    if (sessions.isEmpty) return _buildHistoryStatusText('No history yet.');
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(20),
+      itemCount: sessions.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) => _buildSessionTile(sessions[index]),
+    );
+  }
+
+  Widget _buildSessionTile(ChatSessionSummary entry) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: maroonColor.withValues(alpha: 0.12)),
+      ),
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(
+          entry.title,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(
+          entry.lastMessageText,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.poppins(fontSize: 12),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.delete_outline, size: 18),
+              onPressed: () => _deleteSession(entry.sessionId),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+        onTap: () => _openSession(entry),
+      ),
+    );
+  }
+
+  Future<void> _deleteSelectedSession() async {
+    final sessionId = _selectedSessionId;
+    if (sessionId == null) return;
+    await _deleteSession(sessionId);
+    if (!mounted) return;
+    setState(() => _selectedSessionId = null);
+  }
+
+  Future<void> _deleteSession(String sessionId) async {
+    await ref.read(chatHistoryDeleteProvider(sessionId).future);
+    ref.invalidate(chatHistorySessionsProvider);
+    ref.invalidate(chatHistorySessionProvider);
+    if (!mounted) return;
+    if (_selectedSessionId == sessionId) {
+      setState(() => _selectedSessionId = null);
+    }
+  }
+
+  Future<void> _openSession(ChatSessionSummary entry) async {
+    final historyItems = await ref.read(
+      chatHistorySessionProvider(entry.sessionId).future,
+    );
+    if (!mounted) return;
+    ref.read(nlpQueryChatProvider.notifier).loadSessionHistory(
+          sessionId: entry.sessionId,
+          sessionTitle: entry.title,
+          history: historyItems,
+        );
+    setState(() {
+      _showHistory = false;
+      _showSuggestionsPanel = false;
+      _selectedSessionId = entry.sessionId;
+    });
+    _scrollToBottom();
+  }
+}
+
+class _DialogBounds {
+  final double minWidth;
+  final double minHeight;
+  final double maxWidth;
+  final double maxHeight;
+  final double width;
+  final double height;
+
+  const _DialogBounds({
+    required this.minWidth,
+    required this.minHeight,
+    required this.maxWidth,
+    required this.maxHeight,
+    required this.width,
+    required this.height,
+  });
 }
 
 class _ResizeEdge extends StatelessWidget {
@@ -902,7 +916,7 @@ class _ResizeEdge extends StatelessWidget {
               width: vertical ? 12 : 80,
               height: vertical ? 80 : 12,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.08),
+                color: color.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Center(
@@ -910,7 +924,7 @@ class _ResizeEdge extends StatelessWidget {
                   width: vertical ? 2 : 36,
                   height: vertical ? 36 : 2,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.6),
+                    color: color.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -952,7 +966,7 @@ class _ResizeCorner extends StatelessWidget {
               width: 18,
               height: 18,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Icon(
@@ -979,7 +993,7 @@ class _TypingIndicator extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: maroonColor.withOpacity(0.1),
+            backgroundColor: maroonColor.withValues(alpha: 0.1),
             radius: 18,
             child: Icon(Icons.smart_toy_rounded, color: maroonColor, size: 20),
           ),
@@ -988,7 +1002,7 @@ class _TypingIndicator extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withOpacity(0.05)
+                  ? Colors.white.withValues(alpha: 0.05)
                   : Colors.grey[100],
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
@@ -1057,7 +1071,7 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
           width: 6,
           height: 6,
           decoration: BoxDecoration(
-            color: widget.color.withOpacity(0.3 + (0.7 * _animation.value)),
+            color: widget.color.withValues(alpha: 0.3 + (0.7 * _animation.value)),
             shape: BoxShape.circle,
           ),
         );
@@ -1090,91 +1104,109 @@ class _MessageBubble extends StatelessWidget {
             ? CrossAxisAlignment.end
             : CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!isUser)
-                CircleAvatar(
-                  backgroundColor: maroonColor.withOpacity(0.1),
-                  radius: 18,
-                  child: Icon(
-                    Icons.smart_toy_rounded,
-                    color: maroonColor,
-                    size: 20,
-                  ),
-                ),
-              if (!isUser) const SizedBox(width: 12),
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isUser
-                        ? maroonColor
-                        : (isError
-                              ? Colors.red.withOpacity(0.05)
-                              : (Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white.withOpacity(0.1)
-                                    : Colors.grey[100])),
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(20),
-                      topRight: const Radius.circular(20),
-                      bottomLeft: Radius.circular(isUser ? 20 : 4),
-                      bottomRight: Radius.circular(isUser ? 4 : 20),
-                    ),
-                    border: isError
-                        ? Border.all(color: Colors.red.withOpacity(0.3))
-                        : null,
-                  ),
-                  child: Text(
-                    text,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      height: 1.4,
-                      color: isUser
-                          ? Colors.white
-                          : (isError
-                                ? Colors.red[700]
-                                : (Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.white
-                                      : const Color(0xFF2D3748))),
-                    ),
-                  ),
-                ),
-              ),
-              if (isUser) const SizedBox(width: 12),
-              if (isUser)
-                CircleAvatar(
-                  backgroundColor: maroonColor.withOpacity(0.1),
-                  radius: 18,
-                  child: Icon(
-                    Icons.person_rounded,
-                    color: maroonColor,
-                    size: 20,
-                  ),
-                ),
-            ],
-          ),
-          if (schedules != null && schedules.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _buildScheduleCards(context, schedules),
-          ],
-          if (schedules != null && schedules.isNotEmpty)
-            _buildTimetablePreview(
-              context,
-              schedules,
-              messageData['showTimetable'] == true,
-            ),
-          if (dataJson != null) ...[
-            const SizedBox(height: 12),
-            _buildDataSummary(context, dataJson),
-          ],
+          _buildMessageRow(context, isUser, isError, text),
+          ..._buildMessageExtras(context, schedules, dataJson),
         ],
       ),
     );
+  }
+
+  Widget _buildMessageRow(
+    BuildContext context,
+    bool isUser,
+    bool isError,
+    String text,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!isUser) _buildBotAvatar(),
+        if (!isUser) const SizedBox(width: 12),
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _bubbleColor(isUser, isError, isDark),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(20),
+                topRight: const Radius.circular(20),
+                bottomLeft: Radius.circular(isUser ? 20 : 4),
+                bottomRight: Radius.circular(isUser ? 4 : 20),
+              ),
+              border: isError ? Border.all(color: Colors.red.withValues(alpha: 0.3)) : null,
+            ),
+            child: Text(
+              text,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                height: 1.4,
+                color: _bubbleTextColor(isUser, isError, isDark),
+              ),
+            ),
+          ),
+        ),
+        if (isUser) const SizedBox(width: 12),
+        if (isUser) _buildUserAvatar(),
+      ],
+    );
+  }
+
+  List<Widget> _buildMessageExtras(
+    BuildContext context,
+    List? schedules,
+    String? dataJson,
+  ) {
+    final widgets = <Widget>[];
+    final hasSchedules = schedules != null && schedules.isNotEmpty;
+
+    if (hasSchedules) {
+      widgets.add(const SizedBox(height: 12));
+      widgets.add(_buildScheduleCards(context, schedules));
+      widgets.add(
+        _buildTimetablePreview(
+          context,
+          schedules,
+          messageData['showTimetable'] == true,
+        ),
+      );
+    }
+
+    if (dataJson != null) {
+      widgets.add(const SizedBox(height: 12));
+      widgets.add(_buildDataSummary(context, dataJson));
+    }
+
+    return widgets;
+  }
+
+  Widget _buildBotAvatar() {
+    return CircleAvatar(
+      backgroundColor: maroonColor.withValues(alpha: 0.1),
+      radius: 18,
+      child: Icon(Icons.smart_toy_rounded, color: maroonColor, size: 20),
+    );
+  }
+
+  Widget _buildUserAvatar() {
+    return CircleAvatar(
+      backgroundColor: maroonColor.withValues(alpha: 0.1),
+      radius: 18,
+      child: Icon(Icons.person_rounded, color: maroonColor, size: 20),
+    );
+  }
+
+  Color _bubbleColor(bool isUser, bool isError, bool isDark) {
+    if (isUser) return maroonColor;
+    if (isError) return Colors.red.withValues(alpha: 0.05);
+    return isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[100]!;
+  }
+
+  Color _bubbleTextColor(bool isUser, bool isError, bool isDark) {
+    if (isUser) return Colors.white;
+    if (isError) return Colors.red.shade700;
+    return isDark ? Colors.white : const Color(0xFF2D3748);
   }
 
   Widget _buildScheduleCards(BuildContext context, List schedules) {
@@ -1190,11 +1222,11 @@ class _MessageBubble extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white.withOpacity(0.05)
+                    ? Colors.white.withValues(alpha: 0.05)
                     : Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: maroonColor.withOpacity(0.1),
+                  color: maroonColor.withValues(alpha: 0.1),
                 ),
               ),
               child: Column(
@@ -1266,62 +1298,67 @@ class _MessageBubble extends StatelessWidget {
   }
 
   Widget _buildDataSummary(BuildContext context, String dataJson) {
-    try {
-      final data = jsonDecode(dataJson);
-      if (data['count'] != null) {
-        // This is a conflict summary
-        return Padding(
-          padding: const EdgeInsets.only(left: 48),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final data = _parseSummaryData(dataJson);
+    if (data == null || data['count'] == null) return const SizedBox();
+
+    final count = data['count'] as int? ?? 0;
+    final room = data['room'];
+    final faculty = data['faculty'];
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 48),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _buildSmallChip(
-                    context,
-                    "Room: ${data['room']}",
-                    Colors.orange,
-                  ),
-                  _buildSmallChip(
-                    context,
-                    "Faculty: ${data['faculty']}",
-                    Colors.red,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if ((data['count'] as int? ?? 0) > 0)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const AdminLayout(initialIndex: 6),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.warning_rounded, size: 16),
-                    label: Text(
-                      'Resolve Conflicts',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red.shade400,
-                    ),
-                  ),
-                ),
+              _buildSmallChip(context, "Room: $room", Colors.orange),
+              _buildSmallChip(context, "Faculty: $faculty", Colors.red),
             ],
           ),
-        );
-      }
-    } catch (_) {}
-    return const SizedBox();
+          const SizedBox(height: 8),
+          if (count > 0) _buildResolveConflictButton(context),
+        ],
+      ),
+    );
+  }
+
+  Map<String, dynamic>? _parseSummaryData(String dataJson) {
+    try {
+      final parsed = jsonDecode(dataJson);
+      if (parsed is Map<String, dynamic>) return parsed;
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
+  Widget _buildResolveConflictButton(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const AdminLayout(initialIndex: 6),
+            ),
+          );
+        },
+        icon: const Icon(Icons.warning_rounded, size: 16),
+        label: Text(
+          'Resolve Conflicts',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.red.shade400,
+        ),
+      ),
+    );
   }
 
   Widget _buildTimetablePreview(
@@ -1353,9 +1390,9 @@ class _MessageBubble extends StatelessWidget {
           Container(
             height: 200,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: maroonColor.withOpacity(0.15)),
+              border: Border.all(color: maroonColor.withValues(alpha: 0.15)),
             ),
             child: WeeklyCalendarView(
               schedules: scheduleInfos,
@@ -1403,9 +1440,9 @@ class _MessageBubble extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,

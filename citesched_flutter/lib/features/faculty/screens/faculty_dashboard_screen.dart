@@ -340,7 +340,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
             ),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white.withOpacity(0.2),
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(
               horizontal: 18,
@@ -418,7 +418,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: maroonColor.withOpacity(0.35),
+                        color: maroonColor.withValues(alpha: 0.35),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -433,7 +433,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                                 CircleAvatar(
                                   radius: 32,
                                   backgroundColor:
-                                      Colors.white.withOpacity(0.18),
+                                      Colors.white.withValues(alpha: 0.18),
                                   child: Text(
                                     (user?.userName?[0] ?? 'F').toUpperCase(),
                                     style: GoogleFonts.poppins(
@@ -452,7 +452,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                                       Text(
                                         'Welcome, Professor',
                                         style: GoogleFonts.poppins(
-                                          color: Colors.white.withOpacity(0.8),
+                                          color: Colors.white.withValues(alpha: 0.8),
                                           fontSize: 13,
                                         ),
                                       ),
@@ -479,7 +479,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                           children: [
                             CircleAvatar(
                               radius: 38,
-                              backgroundColor: Colors.white.withOpacity(0.18),
+                              backgroundColor: Colors.white.withValues(alpha: 0.18),
                               child: Text(
                                 (user?.userName?[0] ?? 'F').toUpperCase(),
                                 style: GoogleFonts.poppins(
@@ -497,7 +497,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                                   Text(
                                     'Welcome, Professor',
                                     style: GoogleFonts.poppins(
-                                      color: Colors.white.withOpacity(0.8),
+                                      color: Colors.white.withValues(alpha: 0.8),
                                       fontSize: 14,
                                     ),
                                   ),
@@ -607,10 +607,10 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                             width: double.infinity,
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.08),
+                              color: Colors.red.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: Colors.red.withOpacity(0.28),
+                                color: Colors.red.withValues(alpha: 0.28),
                               ),
                             ),
                             child: Text(
@@ -653,10 +653,10 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                             width: double.infinity,
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.teal.withOpacity(0.08),
+                              color: Colors.teal.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: Colors.teal.withOpacity(0.28),
+                                color: Colors.teal.withValues(alpha: 0.28),
                               ),
                             ),
                             child: Text(
@@ -729,7 +729,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                         color: cardBg,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: maroonColor.withOpacity(0.1),
+                          color: maroonColor.withValues(alpha: 0.1),
                         ),
                       ),
                       child: ListView.separated(
@@ -747,8 +747,8 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                               CircleAvatar(
                                 radius: 14,
                                 backgroundColor: isUser
-                                    ? maroonColor.withOpacity(0.15)
-                                    : Colors.green.withOpacity(0.15),
+                                    ? maroonColor.withValues(alpha: 0.15)
+                                    : Colors.green.withValues(alpha: 0.15),
                                 child: Icon(
                                   isUser ? Icons.person : Icons.smart_toy,
                                   size: 14,
@@ -791,7 +791,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 10,
                       ),
                     ],
@@ -799,10 +799,10 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                   child: TabBar(
                     controller: _tabController,
                     indicator: BoxDecoration(
-                      color: maroonColor.withOpacity(0.08),
+                      color: maroonColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: maroonColor.withOpacity(0.2),
+                        color: maroonColor.withValues(alpha: 0.2),
                       ),
                     ),
                     indicatorSize: TabBarIndicatorSize.tab,
@@ -1040,7 +1040,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -1060,14 +1060,14 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: hasConflict
-                    ? Colors.red.withOpacity(0.05)
+                    ? Colors.red.withValues(alpha: 0.05)
                     : (isDark
-                        ? Colors.white.withOpacity(0.03)
-                        : Colors.grey.withOpacity(0.04)),
+                        ? Colors.white.withValues(alpha: 0.03)
+                        : Colors.grey.withValues(alpha: 0.04)),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: hasConflict
-                      ? Colors.red.withOpacity(0.2)
+                      ? Colors.red.withValues(alpha: 0.2)
                       : (isDark ? Colors.white12 : Colors.grey.shade200),
                 ),
               ),
@@ -1101,7 +1101,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.12),
+                            color: Colors.red.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
@@ -1162,7 +1162,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1209,11 +1209,11 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                   ),
                   decoration: BoxDecoration(
                     color: hasConflict
-                        ? Colors.red.withOpacity(0.04)
+                        ? Colors.red.withValues(alpha: 0.04)
                         : isEven
                         ? (isDark
-                              ? Colors.white.withOpacity(0.02)
-                              : Colors.grey.withOpacity(0.03))
+                              ? Colors.white.withValues(alpha: 0.02)
+                              : Colors.grey.withValues(alpha: 0.03))
                         : Colors.transparent,
                     border: Border(
                       bottom: BorderSide(
@@ -1289,7 +1289,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: maroonColor.withOpacity(0.08),
+                            color: maroonColor.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -1335,7 +1335,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
               vertical: 12,
             ),
             decoration: BoxDecoration(
-              color: maroonColor.withOpacity(0.04),
+              color: maroonColor.withValues(alpha: 0.04),
               borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(20),
                 bottomRight: Radius.circular(20),
@@ -1368,9 +1368,9 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: maroonColor.withOpacity(0.08),
+        color: maroonColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: maroonColor.withOpacity(0.2)),
+        border: Border.all(color: maroonColor.withValues(alpha: 0.2)),
       ),
       child: Text(
         '$label: $value',
@@ -1395,7 +1395,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.22)),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Row(
         children: [

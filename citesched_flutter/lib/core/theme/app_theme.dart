@@ -241,7 +241,8 @@ class AppTheme {
       dataTableTheme: DataTableThemeData(
         headingRowColor: WidgetStateProperty.all(backgroundColor),
         headingRowHeight: 48,
-        dataRowHeight: 48,
+        dataRowMinHeight: 48,
+        dataRowMaxHeight: 48,
         horizontalMargin: 0,
         columnSpacing: 12,
         decoration: BoxDecoration(

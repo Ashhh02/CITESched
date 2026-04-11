@@ -25,7 +25,7 @@ class HeroSection extends StatelessWidget {
     return Container(
       color: DesignSystem.backgroundColor,
       padding: padding ?? const EdgeInsets.all(DesignSystem.spacing24),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: DesignSystem.backgroundColor,
         border: Border(
           bottom: BorderSide(

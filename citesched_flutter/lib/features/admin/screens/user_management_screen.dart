@@ -257,7 +257,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                     border: Border.all(
                       color: isDark
                           ? Colors.white10
-                          : Colors.black.withOpacity(0.05),
+                          : Colors.black.withValues(alpha: 0.05),
                     ),
                     boxShadow: [
                       BoxShadow(

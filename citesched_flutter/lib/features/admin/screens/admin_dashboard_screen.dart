@@ -421,11 +421,6 @@ class _AdminDashboardScreenState
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pageBg = Theme.of(context).scaffoldBackgroundColor;
     final cardBg = Theme.of(context).cardColor;
-    final textPrimary = Theme.of(context).textTheme.bodyLarge?.color ??
-        (isDark ? const Color(0xFFE2E8F0) : Colors.black);
-    final textMuted = isDark
-        ? const Color(0xFF94A3B8)
-        : const Color(0xFF666666);
 
     final isDesktop = ResponsiveHelper.isDesktop(context);
     final isMobile = ResponsiveHelper.isMobile(context);
@@ -940,9 +935,9 @@ class _AdminDashboardScreenState
     final textPrimary = Theme.of(context).textTheme.bodyLarge?.color ??
         (isDark ? const Color(0xFFE2E8F0) : Colors.black);
     final borderColor =
-        isDark ? Colors.white12 : Colors.black.withOpacity(0.1);
+        isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.1);
     final headerBorder =
-        isDark ? Colors.white12 : Colors.black.withOpacity(0.5);
+        isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.5);
     final iconColor = isDark ? Colors.white70 : Colors.black;
     final iconMuted = isDark ? Colors.white54 : Colors.black54;
 
@@ -1047,9 +1042,9 @@ class _AdminDashboardScreenState
         ? const Color(0xFF94A3B8)
         : const Color(0xFF666666);
     final borderColor =
-        isDark ? Colors.white12 : Colors.black.withOpacity(0.15);
+        isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.15);
     final headerBorder =
-        isDark ? Colors.white12 : Colors.black.withOpacity(1.0);
+        isDark ? Colors.white12 : Colors.black.withValues(alpha: 1.0);
 
     return Container(
       decoration: BoxDecoration(
@@ -1058,7 +1053,7 @@ class _AdminDashboardScreenState
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
@@ -1121,7 +1116,7 @@ class _AdminDashboardScreenState
                               decoration: BoxDecoration(
                                 color: const Color(
                                   0xFFb5179e,
-                                ).withOpacity(0.05),
+                                ).withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(8),
                                 border: const Border(
                                   left: BorderSide(
@@ -1146,7 +1141,7 @@ class _AdminDashboardScreenState
                                     conflict.message,
                                     style: GoogleFonts.poppins(
                                       fontSize: 11,
-                                      color: textMuted.withOpacity(0.75),
+                                      color: textMuted.withValues(alpha: 0.75),
                                     ),
                                   ),
                                 ],
@@ -1212,7 +1207,7 @@ class _AdminDashboardScreenState
                         borderRadius: BorderRadius.circular(30),
                       ),
                       elevation: 0,
-                      shadowColor: primaryColor.withOpacity(0.3),
+                      shadowColor: primaryColor.withValues(alpha: 0.3),
                     ),
                     child: const Text('Resolve All Conflicts'),
                   ),
@@ -1240,9 +1235,9 @@ class _AdminDashboardScreenState
         ? const Color(0xFF94A3B8)
         : const Color(0xFF666666);
     final borderColor =
-        isDark ? Colors.white12 : Colors.black.withOpacity(0.15);
+        isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.15);
     final headerBorder =
-        isDark ? Colors.white12 : Colors.black.withOpacity(1.0);
+        isDark ? Colors.white12 : Colors.black.withValues(alpha: 1.0);
 
     return Container(
       decoration: BoxDecoration(
@@ -1251,7 +1246,7 @@ class _AdminDashboardScreenState
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),

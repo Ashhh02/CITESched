@@ -325,9 +325,9 @@ class _FacultyLoadTab extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         status.toUpperCase(),
@@ -365,7 +365,7 @@ class _FacultyLoadTab extends ConsumerWidget {
             border: Border(left: BorderSide(color: maroonColor, width: 4)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 16,
                 offset: const Offset(0, 4),
               ),
@@ -379,7 +379,7 @@ class _FacultyLoadTab extends ConsumerWidget {
                   vertical: 16,
                 ),
                 decoration: BoxDecoration(
-                  color: maroonColor.withOpacity(0.05),
+                  color: maroonColor.withValues(alpha: 0.05),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -576,12 +576,12 @@ class _RoomUtilizationTab extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 15,
                         offset: const Offset(0, 5),
                       ),
                     ],
-                    border: Border.all(color: color.withOpacity(0.2), width: 2),
+                    border: Border.all(color: color.withValues(alpha: 0.2), width: 2),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -626,7 +626,7 @@ class _RoomUtilizationTab extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(10),
                             child: LinearProgressIndicator(
                               value: item.utilizationPercentage / 100,
-                              backgroundColor: color.withOpacity(0.1),
+                              backgroundColor: color.withValues(alpha: 0.1),
                               color: color,
                               minHeight: 8,
                             ),
@@ -737,7 +737,7 @@ class _ConflictSummaryTab extends ConsumerWidget {
           child: Card(
             color: cardBg,
             elevation: 4,
-            shadowColor: Colors.black.withOpacity(0.15),
+            shadowColor: Colors.black.withValues(alpha: 0.15),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
@@ -779,7 +779,7 @@ class _ConflictSummaryTab extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.1),
+            color: statusColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
@@ -858,13 +858,13 @@ class _ConflictSummaryTab extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.08),
+                color: Colors.green.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.verified_rounded,
                 size: 64,
-                color: Colors.green.withOpacity(0.7),
+                color: Colors.green.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 20),
@@ -907,11 +907,11 @@ class _ConflictSummaryTab extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isDark
-                  ? cfg.color.withOpacity(0.08)
-                  : cfg.color.withOpacity(0.04),
+                  ? cfg.color.withValues(alpha: 0.08)
+                  : cfg.color.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: cfg.color.withOpacity(0.25),
+                color: cfg.color.withValues(alpha: 0.25),
               ),
             ),
             child: Row(
@@ -920,7 +920,7 @@ class _ConflictSummaryTab extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: cfg.color.withOpacity(0.12),
+                    color: cfg.color.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -940,7 +940,7 @@ class _ConflictSummaryTab extends ConsumerWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: cfg.color.withOpacity(0.12),
+                          color: cfg.color.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -978,7 +978,7 @@ class _ConflictSummaryTab extends ConsumerWidget {
                 Icon(
                   Icons.warning_amber_rounded,
                   size: 18,
-                  color: cfg.color.withOpacity(0.7),
+                  color: cfg.color.withValues(alpha: 0.7),
                 ),
               ],
             ),
@@ -998,9 +998,9 @@ class _ConflictSummaryTab extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1192,7 +1192,7 @@ class _ScheduleOverviewTab extends ConsumerWidget {
         border: Border(left: BorderSide(color: maroonColor, width: 4)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -1203,7 +1203,7 @@ class _ScheduleOverviewTab extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(
-              color: maroonColor.withOpacity(0.05),
+              color: maroonColor.withValues(alpha: 0.05),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -1406,7 +1406,7 @@ class _ScheduleOverviewTab extends ConsumerWidget {
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10),
         ],
       ),
       child: Row(
@@ -1414,7 +1414,7 @@ class _ScheduleOverviewTab extends ConsumerWidget {
           Container(
             padding: EdgeInsets.all(isMobile ? 12 : 16),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, color: color, size: isMobile ? 26 : 32),
@@ -1494,7 +1494,7 @@ class _ScheduleOverviewTab extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: 0.7, // Placeholder ratio
-                      backgroundColor: Colors.grey.withOpacity(0.1),
+                      backgroundColor: Colors.grey.withValues(alpha: 0.1),
                       color: const Color(0xFF720045),
                       minHeight: 6,
                     ),

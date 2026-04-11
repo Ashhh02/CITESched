@@ -7,7 +7,6 @@ import 'package:citesched_flutter/features/nlp/utils/nlp_query_parser.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/features/nlp/providers/chat_history_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 
 final nlpChatProvider = NotifierProvider<NLPChatNotifier, NLPChatState>(
   NLPChatNotifier.new,

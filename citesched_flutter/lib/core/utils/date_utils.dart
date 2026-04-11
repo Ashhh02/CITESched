@@ -45,7 +45,12 @@ class CITESchedDateUtils {
       final hour = int.parse(parts[0]);
       final minute = int.parse(parts[1]);
       final period = hour >= 12 ? 'PM' : 'AM';
-      final h = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+      var h = hour;
+      if (hour > 12) {
+        h = hour - 12;
+      } else if (hour == 0) {
+        h = 12;
+      }
       return '$h:${minute.toString().padLeft(2, '0')} $period';
     } catch (e) {
       return time;

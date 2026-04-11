@@ -60,8 +60,8 @@ class ResponseDisplay extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
-        border: Border.all(color: Colors.red.withOpacity(0.3)),
+        color: Colors.red.withValues(alpha: 0.1),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -157,8 +157,8 @@ class ResponseDisplay extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: barColor.withOpacity(0.1),
-        border: Border.all(color: barColor.withOpacity(0.3)),
+        color: barColor.withValues(alpha: 0.1),
+        border: Border.all(color: barColor.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -230,8 +230,8 @@ class ResponseDisplay extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.blue.withOpacity(0.1),
-          border: Border.all(color: Colors.blue.withOpacity(0.3)),
+          color: Colors.blue.withValues(alpha: 0.1),
+          border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -253,8 +253,8 @@ class ResponseDisplay extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF720045).withOpacity(0.1),
-        border: Border.all(color: const Color(0xFF720045).withOpacity(0.3)),
+        color: const Color(0xFF720045).withValues(alpha: 0.1),
+        border: Border.all(color: const Color(0xFF720045).withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -315,9 +315,9 @@ class ResponseDisplay extends StatelessWidget {
         Container(
           height: 220,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.03),
+            color: Colors.white.withValues(alpha: 0.03),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: WeeklyCalendarView(
             schedules: scheduleInfos,
@@ -363,9 +363,9 @@ class ResponseDisplay extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,8 +432,8 @@ class ResponseDisplay extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
-        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+        color: Colors.orange.withValues(alpha: 0.1),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(

@@ -48,12 +48,12 @@ class _StatCardState extends State<StatCard> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(19),
             border: Border.all(
-              color: _isHovered ? Colors.black : Colors.black.withOpacity(0.15),
+              color: _isHovered ? Colors.black : Colors.black.withValues(alpha: 0.15),
               width: _isHovered ? 1.5 : 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(_isHovered ? 0.1 : 0.04),
+                color: Colors.black.withValues(alpha: _isHovered ? 0.1 : 0.04),
                 blurRadius: _isHovered ? 25 : 12,
                 offset: Offset(0, _isHovered ? 12 : 4),
               ),
@@ -82,7 +82,7 @@ class _StatCardState extends State<StatCard> {
                   Container(
                     padding: EdgeInsets.all(isMobile ? 6 : 8),
                     decoration: BoxDecoration(
-                      color: widget.iconColor.withOpacity(0.1),
+                      color: widget.iconColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(

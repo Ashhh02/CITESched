@@ -224,7 +224,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: _isDayHighlighted(day)
-                  ? maroonColor.withOpacity(0.1)
+                  ? maroonColor.withValues(alpha: 0.1)
                   : Colors.transparent,
               border: Border(
                 bottom: BorderSide(color: gridColor),
@@ -427,10 +427,10 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
       child: IgnorePointer(
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               width: 2.5,
               style: BorderStyle
                   .none, // Dashed look via custom painter? No, just use a solid faded border for now
@@ -440,7 +440,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
             margin: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               border: Border.all(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 width: 1,
               ),
               borderRadius: BorderRadius.circular(10),
@@ -452,7 +452,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                   Icon(
                     Icons.stars_rounded,
                     size: 22,
-                    color: Colors.black.withOpacity(0.12),
+                    color: Colors.black.withValues(alpha: 0.12),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -467,7 +467,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                       fontWeight: FontWeight.w700,
                       color: isLunchSlot
                           ? Colors.black54
-                          : Colors.black.withOpacity(0.65),
+                          : Colors.black.withValues(alpha: 0.65),
                       letterSpacing: 0.2,
                       height: 1.2,
                     ),
@@ -533,10 +533,10 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           decoration: BoxDecoration(
-            color: maroonColor.withOpacity(0.08),
+            color: maroonColor.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: maroonColor.withOpacity(0.35),
+              color: maroonColor.withValues(alpha: 0.35),
               width: 2.0,
               style: BorderStyle.solid,
             ),
@@ -548,7 +548,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
               Icon(
                 Icons.stars_rounded,
                 size: 20,
-                color: maroonColor.withOpacity(0.6),
+                color: maroonColor.withValues(alpha: 0.6),
               ),
               const SizedBox(height: 6),
               Text(
@@ -556,7 +556,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 style: GoogleFonts.poppins(
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
-                  color: maroonColor.withOpacity(0.8),
+                  color: maroonColor.withValues(alpha: 0.8),
                   letterSpacing: 1.0,
                 ),
               ),
@@ -565,7 +565,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 style: GoogleFonts.poppins(
                   fontSize: 9,
                   fontWeight: FontWeight.w600,
-                  color: maroonColor.withOpacity(0.6),
+                  color: maroonColor.withValues(alpha: 0.6),
                   letterSpacing: 0.5,
                 ),
                 textAlign: TextAlign.center,
@@ -578,7 +578,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: maroonColor.withOpacity(0.15),
+                    color: maroonColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -682,7 +682,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
+                  color: Colors.black.withValues(alpha: 0.12),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -751,10 +751,10 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
       child: IgnorePointer(
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.12),
+            color: Colors.black.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: Colors.black.withOpacity(0.25),
+              color: Colors.black.withValues(alpha: 0.25),
               width: 1.5,
             ),
           ),
@@ -765,7 +765,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
               style: GoogleFonts.poppins(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
-                color: Colors.black.withOpacity(0.55),
+                color: Colors.black.withValues(alpha: 0.55),
                 letterSpacing: 1.2,
               ),
             ),
@@ -781,10 +781,10 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
     bool isPreferredTime,
   ) {
     if (isPreferredTime) {
-      return Colors.black.withOpacity(0.04);
+      return Colors.black.withValues(alpha: 0.04);
     }
     if (_isDayHighlighted(day) && _isTimeHighlighted(hour)) {
-      return maroonColor.withOpacity(0.03);
+      return maroonColor.withValues(alpha: 0.03);
     }
     return Colors.transparent;
   }
@@ -911,7 +911,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                   fontWeight: FontWeight.w600,
                   color: isStudentView
                       ? Colors.black87
-                      : Colors.white.withOpacity(0.85),
+                      : Colors.white.withValues(alpha: 0.85),
                   height: 1.0,
                 ),
               ),

@@ -17,6 +17,8 @@ class ConflictScreen extends StatefulWidget {
 }
 
 class _ConflictScreenState extends State<ConflictScreen> {
+  static const String _sourceFacultyLoadingTimetable =
+      'FACULTY LOADING · TIMETABLE';
   List<ScheduleConflict> _conflicts = [];
   bool _isLoading = true;
   final Set<String> _resolvingConflictKeys = <String>{};
@@ -31,13 +33,13 @@ class _ConflictScreenState extends State<ConflictScreen> {
     setState(() => _isLoading = true);
     try {
       final conflicts = await client.admin.getAllConflicts();
-      if (!mounted) return;
+      if (!context.mounted) return;
       setState(() {
         _conflicts = conflicts;
         _isLoading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       setState(() => _isLoading = false);
       AppErrorDialog.show(context, e);
     }
@@ -48,21 +50,21 @@ class _ConflictScreenState extends State<ConflictScreen> {
   static const _typeConfig = <String, _ConflictTypeConfig>{
     'room_conflict': _ConflictTypeConfig(
       label: 'ROOM CONFLICT',
-      source: 'FACULTY LOADING · TIMETABLE',
+      source: _sourceFacultyLoadingTimetable,
       icon: Icons.meeting_room_rounded,
       color: Colors.red,
       severity: 'CRITICAL',
     ),
     'faculty_conflict': _ConflictTypeConfig(
       label: 'FACULTY TIME CONFLICT',
-      source: 'FACULTY LOADING · TIMETABLE',
+      source: _sourceFacultyLoadingTimetable,
       icon: Icons.person_off_rounded,
       color: Colors.deepOrange,
       severity: 'CRITICAL',
     ),
     'section_conflict': _ConflictTypeConfig(
       label: 'SECTION CONFLICT',
-      source: 'FACULTY LOADING · TIMETABLE',
+      source: _sourceFacultyLoadingTimetable,
       icon: Icons.groups_rounded,
       color: Colors.purple,
       severity: 'CRITICAL',
@@ -394,9 +396,9 @@ class _ConflictScreenState extends State<ConflictScreen> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: config.color.withOpacity(isDark ? 0.15 : 0.08),
+            color: config.color.withValues(alpha: isDark ? 0.15 : 0.08),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: config.color.withOpacity(0.3)),
+            border: Border.all(color: config.color.withValues(alpha: 0.3)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -417,7 +419,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
                 style: GoogleFonts.poppins(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: config.color.withOpacity(0.7),
+                  color: config.color.withValues(alpha: 0.7),
                   letterSpacing: 0.5,
                 ),
               ),
@@ -436,13 +438,13 @@ class _ConflictScreenState extends State<ConflictScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.08),
+              color: Colors.green.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.verified_rounded,
               size: 64,
-              color: Colors.green.withOpacity(0.7),
+              color: Colors.green.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 20),
@@ -478,7 +480,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
         border: Border(left: BorderSide(color: maroonColor, width: 4)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -489,7 +491,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
-              color: maroonColor.withOpacity(0.05),
+              color: maroonColor.withValues(alpha: 0.05),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -543,16 +545,18 @@ class _ConflictScreenState extends State<ConflictScreen> {
                 final config = _getConfig(conflict.type);
                 final conflictKey = _conflictKey(conflict, index);
                 final isResolving = _resolvingConflictKeys.contains(conflictKey);
+                final severityColor =
+                    config.severity == 'CRITICAL' ? Colors.red : Colors.orange;
 
                 return Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: cardBg,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: config.color.withOpacity(0.2)),
+                    border: Border.all(color: config.color.withValues(alpha: 0.2)),
                     boxShadow: [
                       BoxShadow(
-                        color: config.color.withOpacity(0.05),
+                        color: config.color.withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -565,7 +569,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: config.color.withOpacity(0.1),
+                          color: config.color.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(config.icon, color: config.color, size: 22),
@@ -588,7 +592,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: config.color.withOpacity(0.1),
+                                    color: config.color.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -608,7 +612,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.grey.withOpacity(0.1),
+                                    color: Colors.grey.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -627,11 +631,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color:
-                                        (config.severity == 'CRITICAL'
-                                                ? Colors.red
-                                                : Colors.orange)
-                                            .withOpacity(0.1),
+                                    color: severityColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Row(
@@ -640,9 +640,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
                                       Icon(
                                         Icons.warning_amber_rounded,
                                         size: 11,
-                                        color: config.severity == 'CRITICAL'
-                                            ? Colors.red
-                                            : Colors.orange,
+                                        color: severityColor,
                                       ),
                                       const SizedBox(width: 3),
                                       Text(
@@ -650,9 +648,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
                                         style: GoogleFonts.poppins(
                                           fontSize: 9,
                                           fontWeight: FontWeight.bold,
-                                          color: config.severity == 'CRITICAL'
-                                              ? Colors.red
-                                              : Colors.orange,
+                                          color: severityColor,
                                         ),
                                       ),
                                     ],
@@ -745,11 +741,14 @@ class _ConflictScreenState extends State<ConflictScreen> {
     ScheduleConflict conflict, {
     required String conflictKey,
   }) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     if (conflict.type == 'max_load_exceeded' && conflict.facultyId != null) {
       final shouldContinue = await _showMaxLoadConfirmationDialog();
-      if (!mounted || shouldContinue != true) return;
+      if (!context.mounted || shouldContinue != true) return;
 
-      Navigator.of(context).push(
+      navigator.push(
         MaterialPageRoute(
           builder: (_) => AdminLayout(
             initialIndex: 1,
@@ -763,7 +762,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
     setState(() => _resolvingConflictKeys.add(conflictKey));
     try {
       final suggestion = await _buildResolutionSuggestion(conflict);
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       if (suggestion == null) {
         await _showManualResolutionDialog(conflict);
@@ -771,19 +770,19 @@ class _ConflictScreenState extends State<ConflictScreen> {
       }
 
       final shouldApply = await _showSuggestionDialog(suggestion);
-      if (!mounted || shouldApply != true) return;
+      if (!context.mounted || shouldApply != true) return;
 
       await client.admin.updateSchedule(suggestion.updatedSchedule);
       await _fetchConflicts();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!context.mounted) return;
+      messenger.showSnackBar(
         SnackBar(content: Text(suggestion.successMessage)),
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       AppErrorDialog.show(context, e);
     } finally {
-      if (mounted) {
+      if (context.mounted) {
         setState(() => _resolvingConflictKeys.remove(conflictKey));
       }
     }
@@ -1094,6 +1093,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
 
   Future<void> _showManualResolutionDialog(ScheduleConflict conflict) async {
     final index = _manualResolutionIndex(conflict.type);
+    final rootNavigator = Navigator.of(context);
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -1114,7 +1114,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop();
-                Navigator.of(context).push(
+                rootNavigator.push(
                   MaterialPageRoute(
                     builder: (_) => AdminLayout(initialIndex: index),
                   ),

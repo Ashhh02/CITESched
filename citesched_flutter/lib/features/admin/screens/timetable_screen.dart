@@ -207,9 +207,9 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.08),
+                color: Colors.orange.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -499,7 +499,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.06),
+                  color: Colors.grey.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -544,7 +544,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, size: 16, color: color),
@@ -970,9 +970,9 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: maroonColor.withOpacity(0.05),
+        color: maroonColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: maroonColor.withOpacity(0.1)),
+        border: Border.all(color: maroonColor.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
