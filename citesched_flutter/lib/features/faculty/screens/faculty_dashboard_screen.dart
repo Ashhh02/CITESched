@@ -33,6 +33,8 @@ final facultyAvailabilityProvider = FutureProvider<List<FacultyAvailability>>((
   }
 });
 
+const _weeklyCalendarLabel = 'Weekly Calendar';
+
 class FacultyDashboardScreen extends ConsumerStatefulWidget {
   const FacultyDashboardScreen({super.key});
 
@@ -133,6 +135,14 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
   double _computeAssignedHoursWithinPreferred(
     List<ScheduleInfo> schedules,
     List<FacultyAvailability> availabilities,
+  ) => _computeAssignedHoursWithinPreferredImpl(
+        schedules,
+        availabilities,
+      );
+
+  double _computeAssignedHoursWithinPreferredImpl(
+    List<ScheduleInfo> schedules,
+    List<FacultyAvailability> availabilities,
   ) {
     final preferred = availabilities.where((a) => a.isPreferred).toList();
     double overlapMinutes = 0;
@@ -159,6 +169,11 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
   }
 
   List<String> _computeFreeSlotLabels(
+    List<ScheduleInfo> schedules,
+    List<FacultyAvailability> availabilities,
+  ) => _computeFreeSlotLabelsImpl(schedules, availabilities);
+
+  List<String> _computeFreeSlotLabelsImpl(
     List<ScheduleInfo> schedules,
     List<FacultyAvailability> availabilities,
   ) {
@@ -226,7 +241,9 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildFacultyDashboard(context);
+
+  Widget _buildFacultyDashboard(BuildContext context) {
     final scheduleAsync = ref.watch(facultyScheduleProvider);
     final availabilityAsync = ref.watch(facultyAvailabilityProvider);
     final historyAsync = ref.watch(chatHistoryProvider(20));
@@ -819,7 +836,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                     tabs: const [
                       Tab(
                         icon: Icon(Icons.view_week_rounded, size: 18),
-                        text: 'Weekly Calendar',
+                        text: _weeklyCalendarLabel,
                       ),
                       Tab(
                         icon: Icon(Icons.table_rows_rounded, size: 18),
@@ -890,7 +907,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                                       MaterialPageRoute(
                                         builder: (_) =>
                                             FullScreenCalendarScaffold(
-                                          title: 'Weekly Calendar',
+                                    title: _weeklyCalendarLabel,
                                           backgroundColor: isDark
                                               ? const Color(0xFF0F172A)
                                               : const Color(0xFFF8F9FA),
@@ -934,7 +951,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                                       MaterialPageRoute(
                                         builder: (_) =>
                                             FullScreenCalendarScaffold(
-                                          title: 'Weekly Calendar',
+                                    title: _weeklyCalendarLabel,
                                           backgroundColor: isDark
                                               ? const Color(0xFF0F172A)
                                               : const Color(0xFFF8F9FA),
@@ -1007,6 +1024,13 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
   }
 
   Widget _buildScheduleTable(
+    BuildContext context,
+    List<ScheduleInfo> schedules,
+    Color cardBg,
+    bool isDark,
+  ) => _buildScheduleTableImpl(context, schedules, cardBg, isDark);
+
+  Widget _buildScheduleTableImpl(
     BuildContext context,
     List<ScheduleInfo> schedules,
     Color cardBg,

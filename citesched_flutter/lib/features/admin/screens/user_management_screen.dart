@@ -48,7 +48,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildMainScreen(context);
+
+  Widget _buildMainScreen(BuildContext context) {
     final studentsAsync = _isShowingArchived
         ? ref.watch(archivedStudentsProvider)
         : ref.watch(studentsProvider);
@@ -653,7 +655,9 @@ class _StudentModalState extends ConsumerState<_StudentModal> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit() async => _submitStudentForm();
+
+  Future<void> _submitStudentForm() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
@@ -705,7 +709,9 @@ class _StudentModalState extends ConsumerState<_StudentModal> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildStudentDialog(context);
+
+  Widget _buildStudentDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgBody = isDark ? const Color(0xFF1E293B) : const Color(0xFFF0F0F5);
     final textPrimary = isDark ? Colors.white : Colors.black87;
@@ -1017,6 +1023,24 @@ class _StudentModalState extends ConsumerState<_StudentModal> {
   }
 
   Widget _buildSectionDropdown({
+    required String label,
+    required IconData icon,
+    required Color bgBody,
+    required Color textPrimary,
+    required Color textMuted,
+    required List<Section> sections,
+    bool isLoading = false,
+  }) => _buildSectionDropdownContent(
+        label: label,
+        icon: icon,
+        bgBody: bgBody,
+        textPrimary: textPrimary,
+        textMuted: textMuted,
+        sections: sections,
+        isLoading: isLoading,
+      );
+
+  Widget _buildSectionDropdownContent({
     required String label,
     required IconData icon,
     required Color bgBody,

@@ -12,7 +12,9 @@ class FacultyLoadChart extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildChart(context);
+
+  Widget _buildChart(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 

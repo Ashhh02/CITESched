@@ -542,7 +542,9 @@ class _FacultyManagementScreenState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildMainScreen(context);
+
+  Widget _buildMainScreen(BuildContext context) {
     final facultyAsync = _isShowingArchived
         ? ref.watch(archivedFacultyListProvider)
         : ref.watch(facultyListProvider);
@@ -1791,7 +1793,9 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit() async => _submitAddFaculty();
+
+  Future<void> _submitAddFaculty() async {
     debugPrint('Submitting Add Faculty form...');
     if (!_formKey.currentState!.validate()) {
       debugPrint('Add Faculty validation failed');
@@ -1925,7 +1929,9 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildAddFacultyDialog(context);
+
+  Widget _buildAddFacultyDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryPurple = widget.maroonColor; // Use maroon as primaryPurple
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
@@ -2520,6 +2526,18 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
     Color textPrimary,
     Color textMuted,
     Color bgBody,
+  ) => _buildDayPickerSectionContent(
+        primaryPurple,
+        textPrimary,
+        textMuted,
+        bgBody,
+      );
+
+  Widget _buildDayPickerSectionContent(
+    Color primaryPurple,
+    Color textPrimary,
+    Color textMuted,
+    Color bgBody,
   ) {
     const days = [
       DayOfWeek.mon,
@@ -3000,7 +3018,9 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit() async => _submitEditFaculty();
+
+  Future<void> _submitEditFaculty() async {
     debugPrint('Submitting Edit Faculty form...');
     if (!_formKey.currentState!.validate()) {
       debugPrint('Edit Faculty validation failed');
@@ -3066,7 +3086,9 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildEditFacultyDialog(context);
+
+  Widget _buildEditFacultyDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryPurple = widget.maroonColor;
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;

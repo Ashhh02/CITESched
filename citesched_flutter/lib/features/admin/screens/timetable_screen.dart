@@ -308,7 +308,10 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     }
   }
 
-  Future<void> _generateScheduleForFaculty(int facultyId) async {
+  Future<void> _generateScheduleForFaculty(int facultyId) async =>
+      _generateScheduleForFacultyImpl(facultyId);
+
+  Future<void> _generateScheduleForFacultyImpl(int facultyId) async {
     final selected = _facultyList.where((f) => f.id == facultyId).toList();
     if (selected.isEmpty) {
       AppErrorDialog.show(context, 'Faculty not found.');

@@ -82,7 +82,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   ); // Used for right side background if distinct
   static const _cardBgDark = Color(0xFF1E293B);
 
-  Future<void> _login() async {
+  Future<void> _login() async => _loginImpl();
+
+  Future<void> _loginImpl() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -2059,7 +2061,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildLoginScreen(context);
+
+  Widget _buildLoginScreen(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final localeTag = Localizations.maybeLocaleOf(
       context,
@@ -2739,6 +2743,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<String?> _resolveGoogleRoleSelection({
+    required UserInfo? userInfo,
+    required String? email,
+    required String? displayName,
+    required AuthNotifier authNotifier,
+  }) async =>
+      _resolveGoogleRoleSelectionImpl(
+        userInfo: userInfo,
+        email: email,
+        displayName: displayName,
+        authNotifier: authNotifier,
+      );
+
+  Future<String?> _resolveGoogleRoleSelectionImpl({
     required UserInfo? userInfo,
     required String? email,
     required String? displayName,

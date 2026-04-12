@@ -9,6 +9,11 @@ class ReportService {
   /// Generates a report on faculty teaching loads.
   Future<List<FacultyLoadReport>> generateFacultyLoadReport(
     Session session,
+  ) async =>
+      generateFacultyLoadReportImpl(session);
+
+  Future<List<FacultyLoadReport>> generateFacultyLoadReportImpl(
+    Session session,
   ) async {
     var facultyList = await Faculty.db.find(session);
     var allSchedules = await Schedule.db.find(session);

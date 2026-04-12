@@ -27,7 +27,9 @@ class _ReportModalState extends State<ReportModal>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildReportModal(context);
+
+  Widget _buildReportModal(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryPurple = isDark
         ? const Color(0xFFa21caf)
@@ -182,7 +184,9 @@ class _FacultyLoadTab extends StatelessWidget {
   const _FacultyLoadTab();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildFacultyLoadReportCard(context);
+
+  Widget _buildFacultyLoadReportCard(BuildContext context) {
     return FutureBuilder<List<FacultyLoadReport>>(
       future: client.admin.getFacultyLoadReport(),
       builder: (context, snapshot) {
@@ -320,7 +324,9 @@ class _RoomUtilizationTab extends StatelessWidget {
   const _RoomUtilizationTab();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildRoomUtilizationReportCard(context);
+
+  Widget _buildRoomUtilizationReportCard(BuildContext context) {
     return FutureBuilder<List<RoomUtilizationReport>>(
       future: client.admin.getRoomUtilizationReport(),
       builder: (context, snapshot) {
@@ -426,7 +432,9 @@ class _ConflictSummaryTab extends StatelessWidget {
   const _ConflictSummaryTab();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildConflictSummaryReportCard(context);
+
+  Widget _buildConflictSummaryReportCard(BuildContext context) {
     return FutureBuilder<ConflictSummaryReport>(
       future: client.admin.getConflictSummaryReport(),
       builder: (context, snapshot) {
@@ -470,7 +478,9 @@ class _ScheduleOverviewTab extends StatelessWidget {
   const _ScheduleOverviewTab();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildScheduleOverviewReportCard(context);
+
+  Widget _buildScheduleOverviewReportCard(BuildContext context) {
     return FutureBuilder<ScheduleOverviewReport>(
       future: client.admin.getScheduleOverviewReport(),
       builder: (context, snapshot) {

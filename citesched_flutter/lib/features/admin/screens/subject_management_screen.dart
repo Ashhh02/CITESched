@@ -463,7 +463,9 @@ class _SubjectManagementScreenState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildMainScreen(context);
+
+  Widget _buildMainScreen(BuildContext context) {
     final subjectsAsync = _isShowingArchived
         ? ref.watch(archivedSubjectsProvider)
         : ref.watch(subjectsProvider);
@@ -1624,7 +1626,9 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildAddSubjectDialog(context);
+
+  Widget _buildAddSubjectDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final textPrimary = isDark ? Colors.white : const Color(0xFF333333);
@@ -2477,7 +2481,9 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
     );
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit() async => _submitAddSubject();
+
+  Future<void> _submitAddSubject() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedTypes.isEmpty) {
       _showErrorDialog(context, 'Select at least one subject type.');
@@ -2646,7 +2652,9 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildEditSubjectDialog(context);
+
+  Widget _buildEditSubjectDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final textPrimary = isDark ? Colors.white : const Color(0xFF333333);
@@ -3386,7 +3394,9 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
     );
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit() async => _submitEditSubject();
+
+  Future<void> _submitEditSubject() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedTypes.isEmpty) {
       _showErrorDialog(context, 'Select at least one subject type.');

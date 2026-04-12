@@ -78,7 +78,9 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
     return int.tryParse(match.group(1)!);
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit() async => _submitForm();
+
+  Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_passwordController.text != _confirmPasswordController.text) {
@@ -206,7 +208,9 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildCreateUserDialog(context);
+
+  Widget _buildCreateUserDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryPurple = isDark
         ? const Color(0xFFa21caf)

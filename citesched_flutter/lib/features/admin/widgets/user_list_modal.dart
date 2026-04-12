@@ -396,7 +396,9 @@ class _UserListModalState extends ConsumerState<UserListModal>
   // ─── Build ───────────────────────────────────────────────────────────────
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildUserListDialog(context);
+
+  Widget _buildUserListDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryPurple = isDark
         ? const Color(0xFFa21caf)
@@ -1745,7 +1747,9 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildArchiveUserDialog(context);
+
+  Widget _buildArchiveUserDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final maroon = isDark ? const Color(0xFFa21caf) : const Color(0xFF720045);
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;

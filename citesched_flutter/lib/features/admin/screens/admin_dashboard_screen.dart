@@ -1410,10 +1410,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   int _maxDistributionCount(List<DistributionData> data) {
-    return data.map((e) => e.count).reduce((a, b) {
-      if (a > b) return a;
-      return b;
-    });
+    var maxCount = 1;
+    for (final item in data) {
+      if (item.count > maxCount) {
+        maxCount = item.count;
+      }
+    }
+    return maxCount;
   }
 }
 

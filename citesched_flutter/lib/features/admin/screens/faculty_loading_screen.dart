@@ -241,6 +241,24 @@ String _formatLoadValue(double value) {
   return value.toStringAsFixed(1);
 }
 
+class _FacultySummaryStats {
+  final Faculty faculty;
+  final int assignedSubjects;
+  final double totalUnits;
+  final double totalHours;
+  final bool hasConflicts;
+  final double remainingLoad;
+
+  const _FacultySummaryStats({
+    required this.faculty,
+    required this.assignedSubjects,
+    required this.totalUnits,
+    required this.totalHours,
+    required this.hasConflicts,
+    required this.remainingLoad,
+  });
+}
+
 bool _isRoomAllowedForTypes({
   required Room room,
   required List<SubjectType> loadTypes,
@@ -558,6 +576,73 @@ bool _matchesSection(
   return false;
 }
 
+bool _isCurrentSchedule(
+  Schedule schedule,
+  int? currentScheduleId,
+) {
+  return currentScheduleId != null && schedule.id == currentScheduleId;
+}
+
+bool _isSameSubjectDifferentFaculty({
+  required bool sameSection,
+  required Schedule schedule,
+  required int subjectId,
+  required int facultyId,
+}) {
+  return sameSection &&
+      schedule.subjectId == subjectId &&
+      schedule.facultyId != facultyId;
+}
+
+bool _isSameAssignment({
+  required bool sameSection,
+  required Schedule schedule,
+  required int subjectId,
+  required int facultyId,
+}) {
+  return sameSection &&
+      schedule.subjectId == subjectId &&
+      schedule.facultyId == facultyId;
+}
+
+bool _isFacultyTimeConflict({
+  required bool isAutoAssign,
+  required Schedule schedule,
+  required int facultyId,
+  required int? timeslotId,
+}) {
+  return !isAutoAssign &&
+      timeslotId != null &&
+      schedule.facultyId == facultyId &&
+      schedule.timeslotId == timeslotId;
+}
+
+bool _isRoomTimeConflict({
+  required bool isAutoAssign,
+  required Schedule schedule,
+  required int? roomId,
+  required int? timeslotId,
+}) {
+  return !isAutoAssign &&
+      roomId != null &&
+      timeslotId != null &&
+      schedule.roomId == roomId &&
+      schedule.timeslotId == timeslotId;
+}
+
+bool _isSectionTimeConflict({
+  required bool isAutoAssign,
+  required Schedule schedule,
+  required int? sectionId,
+  required String? sectionCodeFallback,
+  required int? timeslotId,
+}) {
+  return !isAutoAssign &&
+      timeslotId != null &&
+      schedule.timeslotId == timeslotId &&
+      _matchesSection(schedule, sectionId, sectionCodeFallback);
+}
+
 String? _detectAssignmentConflict({
   required List<Schedule> schedules,
   required int? currentScheduleId,
@@ -585,7 +670,7 @@ String? _detectAssignmentConflict({
   final roomLabel = _roomNameById(roomList, roomId);
 
   for (final schedule in schedules) {
-    if (currentScheduleId != null && schedule.id == currentScheduleId) {
+    if (_isCurrentSchedule(schedule, currentScheduleId)) {
       continue;
     }
 
@@ -595,45 +680,454 @@ String? _detectAssignmentConflict({
       sectionCodeFallback,
     );
 
-    if (sameSection &&
-        schedule.subjectId == subjectId &&
-        schedule.facultyId != facultyId) {
+    if (_isSameSubjectDifferentFaculty(
+      sameSection: sameSection,
+      schedule: schedule,
+      subjectId: subjectId,
+      facultyId: facultyId,
+    )) {
       final otherFaculty = _facultyNameById(facultyList, schedule.facultyId);
       return 'Subject $subjectName is already assigned to $otherFaculty for $sectionLabel.';
     }
 
-    if (sameSection &&
-        schedule.subjectId == subjectId &&
-        schedule.facultyId == facultyId) {
+    if (_isSameAssignment(
+      sameSection: sameSection,
+      schedule: schedule,
+      subjectId: subjectId,
+      facultyId: facultyId,
+    )) {
       return 'This assignment already exists for $facultyName in $sectionLabel.';
     }
 
-    if (!isAutoAssign &&
-        timeslotId != null &&
-        schedule.facultyId == facultyId &&
-        schedule.timeslotId == timeslotId) {
+    if (_isFacultyTimeConflict(
+      isAutoAssign: isAutoAssign,
+      schedule: schedule,
+      facultyId: facultyId,
+      timeslotId: timeslotId,
+    )) {
       return '$facultyName already has a class at $timeslotLabel.';
     }
 
-    if (!isAutoAssign &&
-        roomId != null &&
-        timeslotId != null &&
-        schedule.roomId == roomId &&
-        schedule.timeslotId == timeslotId) {
+    if (_isRoomTimeConflict(
+      isAutoAssign: isAutoAssign,
+      schedule: schedule,
+      roomId: roomId,
+      timeslotId: timeslotId,
+    )) {
       return 'Room $roomLabel is already booked at $timeslotLabel.';
     }
 
-    // Section conflict: same section already has a class at this timeslot
-    if (!isAutoAssign &&
-        timeslotId != null &&
-        schedule.timeslotId == timeslotId &&
-        _matchesSection(schedule, sectionId, sectionCodeFallback)) {
+    if (_isSectionTimeConflict(
+      isAutoAssign: isAutoAssign,
+      schedule: schedule,
+      sectionId: sectionId,
+      sectionCodeFallback: sectionCodeFallback,
+      timeslotId: timeslotId,
+    )) {
       return 'Section $sectionLabel already has a class at $timeslotLabel. '
           'A section cannot be scheduled in two places at the same time.';
     }
   }
 
   return null;
+}
+
+bool _facultyMatchesSearch(Faculty faculty, String searchQuery) {
+  if (searchQuery.isEmpty) {
+    return true;
+  }
+  return faculty.name.toLowerCase().contains(searchQuery.toLowerCase());
+}
+
+double _scheduleHours(Schedule schedule, Map<int, Timeslot> timeslotMap) {
+  if (schedule.hours != null) {
+    return schedule.hours!;
+  }
+  final timeslotId = schedule.timeslotId;
+  if (timeslotId == null) {
+    return 0;
+  }
+  final t = timeslotMap[timeslotId];
+  if (t == null) {
+    return 0;
+  }
+  try {
+    final startParts = t.startTime.split(':');
+    final endParts = t.endTime.split(':');
+    final startMin = int.parse(startParts[0]) * 60 + int.parse(startParts[1]);
+    final endMin = int.parse(endParts[0]) * 60 + int.parse(endParts[1]);
+    return (endMin - startMin) / 60.0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+bool _hasFacultySummaryConflict({
+  required Faculty faculty,
+  required Schedule schedule,
+  required AsyncValue<List<ScheduleConflict>> allConflicts,
+}) {
+  return allConflicts.maybeWhen(
+    data: (conflicts) => conflicts.any(
+      (c) =>
+          c.facultyId == faculty.id ||
+          c.conflictingScheduleId == schedule.id ||
+          c.scheduleId == schedule.id,
+    ),
+    orElse: () => false,
+  );
+}
+
+List<_FacultySummaryStats> _buildFacultySummaryStats({
+  required List<Faculty> facultyList,
+  required List<Schedule> schedules,
+  required Map<int, Subject> subjectMap,
+  required Map<int, Timeslot> timeslotMap,
+  required AsyncValue<List<ScheduleConflict>> allConflicts,
+  required String searchQuery,
+}) {
+  return facultyList
+      .where((faculty) => _facultyMatchesSearch(faculty, searchQuery))
+      .map((faculty) {
+        final assignments = schedules.where((s) => s.facultyId == faculty.id).toList();
+
+        var totalUnits = 0.0;
+        var totalHours = 0.0;
+        var hasConflicts = false;
+
+        for (final schedule in assignments) {
+          totalUnits +=
+              schedule.units ??
+              (subjectMap[schedule.subjectId]?.units.toDouble() ?? 0.0);
+          totalHours += _scheduleHours(schedule, timeslotMap);
+          hasConflicts = hasConflicts ||
+              _hasFacultySummaryConflict(
+                faculty: faculty,
+                schedule: schedule,
+                allConflicts: allConflicts,
+              );
+        }
+
+        return _FacultySummaryStats(
+          faculty: faculty,
+          assignedSubjects: assignments.length,
+          totalUnits: totalUnits,
+          totalHours: totalHours,
+          hasConflicts: hasConflicts,
+          remainingLoad: (faculty.maxLoad ?? 0) - totalUnits,
+        );
+      })
+      .toList();
+}
+
+Widget _buildFacultySummaryTable({
+  required BuildContext context,
+  required List<_FacultySummaryStats> facultyStats,
+  required List<Schedule> schedules,
+  required bool isDark,
+  required Color headerBg,
+  required Color rowBgA,
+  required Color rowBgB,
+  required Color dividerColor,
+}) {
+  return Container(
+    decoration: BoxDecoration(
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: constraints.maxWidth),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: DataTable(
+                    columnSpacing: 28,
+                    horizontalMargin: 16,
+                    headingRowHeight: 44,
+                    dataRowMinHeight: 52,
+                    dataRowMaxHeight: 60,
+                    showCheckboxColumn: false,
+                    showBottomBorder: true,
+                    dividerThickness: 0.6,
+                    headingRowColor: WidgetStateProperty.all(headerBg),
+                    headingTextStyle: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.85)
+                          : Colors.grey[700],
+                      letterSpacing: 0.8,
+                    ),
+                    dataTextStyle: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.9)
+                          : Colors.black87,
+                    ),
+                    border: TableBorder(
+                      horizontalInside: BorderSide(color: dividerColor),
+                      bottom: BorderSide(color: dividerColor),
+                      top: BorderSide(color: dividerColor),
+                    ),
+                    columns: [
+                      DataColumn(
+                        label: Text('FACULTY NAME', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                      DataColumn(
+                        label: Text('SUBJECTS', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                      DataColumn(
+                        label: Text('UNITS', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                      DataColumn(
+                        label: Text('HOURS', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                      DataColumn(
+                        label: Text('REMAINING', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                      DataColumn(
+                        label: Text('STATUS', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                    ],
+                    rows: facultyStats.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final stats = entry.value;
+                      final faculty = stats.faculty;
+                      final hasConflict = stats.hasConflicts;
+                      final remainingLoad = stats.remainingLoad;
+                      return DataRow(
+                        color: WidgetStateProperty.all(index.isEven ? rowBgA : rowBgB),
+                        onSelectChanged: (_) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => FacultyLoadDetailsScreen(
+                                faculty: faculty,
+                                initialSchedules: schedules
+                                    .where((s) => s.facultyId == faculty.id)
+                                    .toList(),
+                              ),
+                            ),
+                          );
+                        },
+                        cells: [
+                          DataCell(
+                            Row(
+                              children: [
+                                if (hasConflict)
+                                  const Icon(Icons.warning_rounded, color: Colors.orange, size: 16),
+                                if (hasConflict) const SizedBox(width: 4),
+                                Text(
+                                  faculty.name,
+                                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                          ),
+                          DataCell(Text(stats.assignedSubjects.toString())),
+                          DataCell(Text(stats.totalUnits.toString())),
+                          DataCell(Text('${stats.totalHours.toStringAsFixed(1)}h')),
+                          DataCell(
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: remainingLoad < 0
+                                    ? Colors.red.withValues(alpha: 0.1)
+                                    : Colors.green.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                remainingLoad.toStringAsFixed(1),
+                                style: GoogleFonts.poppins(
+                                  color: remainingLoad < 0 ? Colors.red : Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            hasConflict
+                                ? const Icon(Icons.error_outline, color: Colors.red)
+                                : const Icon(Icons.check_circle_outline, color: Colors.green),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    ),
+  );
+}
+
+Widget _buildConflictList(List<String> conflicts) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Conflict Details:',
+        style: GoogleFonts.poppins(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
+      ),
+      const SizedBox(height: 12),
+      ...conflicts.take(5).map((conflict) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              Icon(Icons.error_outline, size: 16, color: Colors.red[700]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  conflict,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+      if (conflicts.length > 5)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(
+            '... and ${conflicts.length - 5} more conflicts',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: Colors.grey[600],
+            ),
+          ),
+        ),
+    ],
+  );
+}
+
+Widget _buildConflictBannerCard({
+  required bool hasConflicts,
+  required bool showConflictDetails,
+  required VoidCallback? onTap,
+  required List<String> conflicts,
+}) {
+  return AnimatedContainer(
+    duration: const Duration(milliseconds: 300),
+    decoration: BoxDecoration(
+      color: hasConflicts ? Colors.red[50] : Colors.green[50],
+      borderRadius: BorderRadius.circular(12),
+      border: Border(
+        left: BorderSide(
+          color: hasConflicts ? Colors.red : Colors.green,
+          width: 4,
+        ),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: (hasConflicts ? Colors.red : Colors.green).withValues(alpha: 0.1),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: hasConflicts
+                        ? Colors.red.withValues(alpha: 0.1)
+                        : Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    hasConflicts ? Icons.warning_rounded : Icons.check_circle_rounded,
+                    color: hasConflicts ? Colors.red : Colors.green,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hasConflicts ? 'Schedule Conflicts Detected' : 'No Conflicts Detected',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: hasConflicts ? Colors.red[900] : Colors.green[900],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        hasConflicts
+                            ? '${conflicts.length} conflict(s) found. Click to view details.'
+                            : 'All faculty schedules are properly assigned without conflicts.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: hasConflicts ? Colors.red[700] : Colors.green[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (hasConflicts)
+                  Icon(
+                    showConflictDetails
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: Colors.red[700],
+                    size: 28,
+                  ),
+              ],
+            ),
+          ),
+        ),
+        if (hasConflicts && showConflictDetails)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+            ),
+            child: _buildConflictList(conflicts),
+          ),
+      ],
+    ),
+  );
 }
 
 // ─── Error Helper Functions ────────────────────────────────────────────
@@ -1660,6 +2154,24 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
   }
 
   Widget _buildSubjectAssignmentsView(
+    AsyncValue<List<Schedule>> schedulesAsync,
+    AsyncValue<List<Faculty>> facultyAsync,
+    AsyncValue<List<Subject>> subjectsAsync,
+    AsyncValue<List<Room>> roomsAsync,
+    AsyncValue<List<Timeslot>> timeslotsAsync,
+    bool isDark,
+    Color maroonColor,
+  ) => _buildSubjectAssignmentsViewContent(
+        schedulesAsync,
+        facultyAsync,
+        subjectsAsync,
+        roomsAsync,
+        timeslotsAsync,
+        isDark,
+        maroonColor,
+      );
+
+  Widget _buildSubjectAssignmentsViewContent(
     AsyncValue<List<Schedule>> schedulesAsync,
     AsyncValue<List<Faculty>> facultyAsync,
     AsyncValue<List<Subject>> subjectsAsync,
@@ -3105,6 +3617,22 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
     AsyncValue<List<Room>> roomsAsync,
     AsyncValue<List<Timeslot>> timeslotsAsync,
     bool isDark,
+  ) => _buildFacultySummaryViewContent(
+        schedulesAsync,
+        facultyAsync,
+        subjectsAsync,
+        roomsAsync,
+        timeslotsAsync,
+        isDark,
+      );
+
+  Widget _buildFacultySummaryViewContent(
+    AsyncValue<List<Schedule>> schedulesAsync,
+    AsyncValue<List<Faculty>> facultyAsync,
+    AsyncValue<List<Subject>> subjectsAsync,
+    AsyncValue<List<Room>> roomsAsync,
+    AsyncValue<List<Timeslot>> timeslotsAsync,
+    bool isDark,
   ) {
     const maroonColor = Color(0xFF4f003b);
     final headerBg = isDark
@@ -3131,307 +3659,25 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
             data: (d) => d,
             orElse: () => <Timeslot>[],
           );
-
-          final subjectMap = {for (var s in subjectList) s.id ?? -1: s};
-          final timeslotMap = {for (var t in timeslotList) t.id ?? -1: t};
           final allConflicts = ref.watch(allConflictsProvider);
+          final facultyStats = _buildFacultySummaryStats(
+            facultyList: facultyList,
+            schedules: schedules,
+            subjectMap: {for (var s in subjectList) s.id ?? -1: s},
+            timeslotMap: {for (var t in timeslotList) t.id ?? -1: t},
+            allConflicts: allConflicts,
+            searchQuery: _searchQuery,
+          );
 
-          // Pre-calculate stats for each faculty to avoid work in build/rows
-          final List<Map<String, dynamic>> facultyStats = facultyList
-              .where((f) {
-                if (_searchQuery.isEmpty) return true;
-                return f.name.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                );
-              })
-              .map((faculty) {
-                final assignments = schedules
-                    .where((s) => s.facultyId == faculty.id)
-                    .toList();
-
-                double totalUnits = 0;
-                double totalHours = 0;
-                bool hasConflicts = false;
-
-                for (var schedule in assignments) {
-                  // Units from schedule or fallback to subject
-                  totalUnits +=
-                      schedule.units ??
-                      (subjectMap[schedule.subjectId]?.units.toDouble() ?? 0.0);
-
-                  // Hours (prefer explicit hours field, fallback to timeslot)
-                  if (schedule.hours != null) {
-                    totalHours += schedule.hours!;
-                  } else if (schedule.timeslotId != null) {
-                    final t = timeslotMap[schedule.timeslotId];
-                    if (t != null) {
-                      try {
-                        final startParts = t.startTime.split(':');
-                        final endParts = t.endTime.split(':');
-                        final startMin =
-                            int.parse(startParts[0]) * 60 +
-                            int.parse(startParts[1]);
-                        final endMin =
-                            int.parse(endParts[0]) * 60 +
-                            int.parse(endParts[1]);
-                        totalHours += (endMin - startMin) / 60.0;
-                      } catch (e) {
-                        /* ignore */
-                      }
-                    }
-                  }
-
-                  // Conflicts check
-                  final conflictsForSchedule = allConflicts.maybeWhen(
-                    data: (conflicts) => conflicts
-                        .where(
-                          (c) =>
-                              c.facultyId == faculty.id ||
-                              c.conflictingScheduleId == schedule.id ||
-                              c.scheduleId == schedule.id,
-                        )
-                        .isNotEmpty,
-                    orElse: () => false,
-                  );
-
-                  if (conflictsForSchedule) hasConflicts = true;
-                }
-
-                return {
-                  'faculty': faculty,
-                  'assignedSubjects': assignments.length,
-                  'totalUnits': totalUnits,
-                  'totalHours': totalHours,
-                  'hasConflicts': hasConflicts,
-                  'remainingLoad': (faculty.maxLoad ?? 0) - totalUnits,
-                };
-              })
-              .toList();
-
-          return Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minWidth: constraints.maxWidth,
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.vertical,
-                          child: DataTable(
-                            columnSpacing: 28,
-                            horizontalMargin: 16,
-                            headingRowHeight: 44,
-                            dataRowMinHeight: 52,
-                            dataRowMaxHeight: 60,
-                            showCheckboxColumn: false,
-                            showBottomBorder: true,
-                            dividerThickness: 0.6,
-                            headingRowColor: WidgetStateProperty.all(headerBg),
-                            headingTextStyle: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.85)
-                                  : Colors.grey[700],
-                              letterSpacing: 0.8,
-                            ),
-                            dataTextStyle: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.9)
-                                  : Colors.black87,
-                            ),
-                            border: TableBorder(
-                              horizontalInside: BorderSide(color: dividerColor),
-                              bottom: BorderSide(color: dividerColor),
-                              top: BorderSide(color: dividerColor),
-                            ),
-                            columns: [
-                              DataColumn(
-                                label: Text(
-                                  'FACULTY NAME',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              DataColumn(
-                                label: Text(
-                                  'SUBJECTS',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              DataColumn(
-                                label: Text(
-                                  'UNITS',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              DataColumn(
-                                label: Text(
-                                  'HOURS',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              DataColumn(
-                                label: Text(
-                                  'REMAINING',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              DataColumn(
-                                label: Text(
-                                  'STATUS',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            rows: facultyStats.asMap().entries.map((entry) {
-                              final index = entry.key;
-                              final stats = entry.value;
-                              final f = stats['faculty'] as Faculty;
-                              final hasC = stats['hasConflicts'] as bool;
-                              final remLoad = stats['remainingLoad'] as double;
-
-                              return DataRow(
-                                color: WidgetStateProperty.all(
-                                  index.isEven ? rowBgA : rowBgB,
-                                ),
-                                onSelectChanged: (_) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          FacultyLoadDetailsScreen(
-                                            faculty: f,
-                                            initialSchedules: schedules
-                                                .where(
-                                                  (s) => s.facultyId == f.id,
-                                                )
-                                                .toList(),
-                                          ),
-                                    ),
-                                  );
-                                },
-                                cells: [
-                                  DataCell(
-                                    Row(
-                                      children: [
-                                        if (hasC)
-                                          const Icon(
-                                            Icons.warning_rounded,
-                                            color: Colors.orange,
-                                            size: 16,
-                                          ),
-                                        if (hasC) const SizedBox(width: 4),
-                                        Text(
-                                          f.name,
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  DataCell(
-                                    Text(
-                                      stats['assignedSubjects'].toString(),
-                                      style: GoogleFonts.poppins(),
-                                    ),
-                                  ),
-                                  DataCell(
-                                    Text(
-                                      stats['totalUnits'].toString(),
-                                      style: GoogleFonts.poppins(),
-                                    ),
-                                  ),
-                                  DataCell(
-                                    Text(
-                                      '${(stats['totalHours'] as double).toStringAsFixed(1)}h',
-                                      style: GoogleFonts.poppins(),
-                                    ),
-                                  ),
-                                  DataCell(
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: remLoad < 0
-                                            ? Colors.red.withValues(alpha: 0.1)
-                                            : Colors.green.withValues(
-                                                alpha: 0.1,
-                                              ),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        remLoad.toStringAsFixed(1),
-                                        style: GoogleFonts.poppins(
-                                          color: remLoad < 0
-                                              ? Colors.red
-                                              : Colors.green,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  DataCell(
-                                    hasC
-                                        ? const Icon(
-                                            Icons.error_outline,
-                                            color: Colors.red,
-                                          )
-                                        : const Icon(
-                                            Icons.check_circle_outline,
-                                            color: Colors.green,
-                                          ),
-                                  ),
-                                ],
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+          return _buildFacultySummaryTable(
+            context: context,
+            facultyStats: facultyStats,
+            schedules: schedules,
+            isDark: isDark,
+            headerBg: headerBg,
+            rowBgA: rowBgA,
+            rowBgB: rowBgB,
+            dividerColor: dividerColor,
           );
         },
       ),
@@ -3490,12 +3736,21 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
     AsyncValue<List<Schedule>> schedulesAsync,
     AsyncValue<List<Faculty>> facultyAsync,
     AsyncValue<List<ScheduleConflict>> allConflicts,
+  ) => _buildConflictBannerContent(
+        schedulesAsync,
+        facultyAsync,
+        allConflicts,
+      );
+
+  Widget _buildConflictBannerContent(
+    AsyncValue<List<Schedule>> schedulesAsync,
+    AsyncValue<List<Faculty>> facultyAsync,
+    AsyncValue<List<ScheduleConflict>> allConflicts,
   ) {
     return schedulesAsync.when(
       loading: () => const SizedBox(),
       error: (error, stack) => const SizedBox(),
-      data: (schedules) {
-        // Use centralized conflict service results for professional detail.
+      data: (_) {
         final conflicts = allConflicts.maybeWhen(
           data: (list) => list
               .map(
@@ -3507,165 +3762,19 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
           orElse: () => <String>[],
         );
         final hasConflicts = conflicts.isNotEmpty;
+        final onTap = hasConflicts
+            ? () {
+                setState(() {
+                  _showConflictDetails = !_showConflictDetails;
+                });
+              }
+            : null;
 
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          decoration: BoxDecoration(
-            color: hasConflicts ? Colors.red[50] : Colors.green[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border(
-              left: BorderSide(
-                color: hasConflicts ? Colors.red : Colors.green,
-                width: 4,
-              ),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: (hasConflicts ? Colors.red : Colors.green).withValues(
-                  alpha: 0.1,
-                ),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              InkWell(
-                onTap: hasConflicts
-                    ? () {
-                        setState(() {
-                          _showConflictDetails = !_showConflictDetails;
-                        });
-                      }
-                    : null,
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: hasConflicts
-                              ? Colors.red.withValues(alpha: 0.1)
-                              : Colors.green.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          hasConflicts
-                              ? Icons.warning_rounded
-                              : Icons.check_circle_rounded,
-                          color: hasConflicts ? Colors.red : Colors.green,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              hasConflicts
-                                  ? 'Schedule Conflicts Detected'
-                                  : 'No Conflicts Detected',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: hasConflicts
-                                    ? Colors.red[900]
-                                    : Colors.green[900],
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              hasConflicts
-                                  ? '${conflicts.length} conflict(s) found. Click to view details.'
-                                  : 'All faculty schedules are properly assigned without conflicts.',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                color: hasConflicts
-                                    ? Colors.red[700]
-                                    : Colors.green[700],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (hasConflicts)
-                        Icon(
-                          _showConflictDetails
-                              ? Icons.keyboard_arrow_up
-                              : Icons.keyboard_arrow_down,
-                          color: Colors.red[700],
-                          size: 28,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              if (hasConflicts && _showConflictDetails)
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(12),
-                      bottomRight: Radius.circular(12),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Conflict Details:',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ...conflicts.take(5).map((conflict) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                size: 16,
-                                color: Colors.red[700],
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  conflict,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: Colors.grey[700],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                      if (conflicts.length > 5)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            '... and ${conflicts.length - 5} more conflicts',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
+        return _buildConflictBannerCard(
+          hasConflicts: hasConflicts,
+          showConflictDetails: _showConflictDetails,
+          onTap: onTap,
+          conflicts: conflicts,
         );
       },
     );
@@ -3719,6 +3828,99 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
     _hoursController.text = _formatLoadValue(
       _hoursForSubjectTypes(effectiveTypes),
     );
+  }
+
+  Section _resolveSection(List<Section> sections) {
+    return sections.firstWhere(
+      (s) => s.id == _selectedSectionId,
+      orElse: () => sections.isNotEmpty
+          ? sections.first
+          : Section(
+              sectionCode: '',
+              program: Program.it,
+              yearLevel: 1,
+              semester: 1,
+              academicYear: '',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+    );
+  }
+
+  Faculty? _findFaculty(List<Faculty> facultyList) {
+    for (final faculty in facultyList) {
+      if (faculty.id == _selectedFacultyId) {
+        return faculty;
+      }
+    }
+    return null;
+  }
+
+  Subject? _findSubject(List<Subject> subjectList) {
+    for (final subject in subjectList) {
+      if (subject.id == _selectedSubjectId) {
+        return subject;
+      }
+    }
+    return null;
+  }
+
+  Room? _findRoom(List<Room> roomList) {
+    for (final room in roomList) {
+      if (room.id == _selectedRoomId) {
+        return room;
+      }
+    }
+    return null;
+  }
+
+  void _validateSelectedAssignment({
+    required Faculty faculty,
+    required Subject subject,
+    required Section section,
+    required List<Room> roomList,
+  }) {
+    if (faculty.program != null && faculty.program != section.program) {
+      final isEmcTeachingIt =
+          faculty.program == Program.emc && section.program == Program.it;
+      if (!isEmcTeachingIt) {
+        throw Exception('Faculty program must match the selected section program.');
+      }
+    }
+
+    if (subject.program != section.program) {
+      throw Exception('Subject program must match the selected section program.');
+    }
+
+    if (_isBlendedSubject(subject.types) && _selectedLoadType == null) {
+      throw Exception('Please select whether this blended subject is Lecture or Lab.');
+    }
+
+    if (_isAutoAssign || _selectedRoomId == null) {
+      return;
+    }
+
+    final effectiveTypes = _effectiveAssignmentTypes(
+      subject.types,
+      _selectedLoadType,
+    );
+    final selectedRoom = _findRoom(roomList);
+    if (selectedRoom == null) {
+      return;
+    }
+
+    if (!_isSupportedSchedulingRoom(selectedRoom)) {
+      throw Exception('Only IT LAB, EMC LAB, and ROOM 1 are allowed for scheduling.');
+    }
+
+    if (effectiveTypes.isNotEmpty &&
+        !_isRoomAllowedForTypes(room: selectedRoom, loadTypes: effectiveTypes)) {
+      throw Exception(
+        _requiresLaboratoryRoom(effectiveTypes)
+            ? 'Laboratory or blended subjects can only be assigned to IT LAB or EMC LAB.'
+            : 'Lecture-only subjects can only be assigned to ROOM 1.',
+      );
+    }
   }
 
   @override
@@ -3823,140 +4025,60 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
     );
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit() async => _submitAssignment();
+
+  Future<void> _submitAssignment() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      final sections = ref
-          .read(sectionListProvider)
-          .maybeWhen(
-            data: (s) => s,
-            orElse: () => <Section>[],
-          );
-      final section = sections.firstWhere(
-        (s) => s.id == _selectedSectionId,
-        orElse: () => sections.isNotEmpty
-            ? sections.first
-            : Section(
-                sectionCode: '',
-                program: Program.it,
-                yearLevel: 1,
-                semester: 1,
-                academicYear: '',
-                createdAt: DateTime.now(),
-                updatedAt: DateTime.now(),
-              ),
+      final sections = ref.read(sectionListProvider).maybeWhen(
+        data: (s) => s,
+        orElse: () => <Section>[],
       );
+      final schedules = ref.read(schedulesProvider).maybeWhen(
+        data: (s) => s,
+        orElse: () => <Schedule>[],
+      );
+      final facultyList = ref.read(facultyListProvider).maybeWhen(
+        data: (s) => s,
+        orElse: () => <Faculty>[],
+      );
+      final subjectList = ref.read(subjectsProvider).maybeWhen(
+        data: (s) => s,
+        orElse: () => <Subject>[],
+      );
+      final roomList = ref.read(roomsProvider).maybeWhen(
+        data: (s) => s,
+        orElse: () => <Room>[],
+      );
+      final timeslotList = ref.read(timeslotsProvider).maybeWhen(
+        data: (s) => s,
+        orElse: () => <Timeslot>[],
+      );
+      final section = _resolveSection(sections);
+      final selectedFaculty = _findFaculty(facultyList);
+      final selectedSubject = _findSubject(subjectList);
 
-      final schedules = ref
-          .read(schedulesProvider)
-          .maybeWhen(
-            data: (s) => s,
-            orElse: () => <Schedule>[],
-          );
-      final facultyList = ref
-          .read(facultyListProvider)
-          .maybeWhen(
-            data: (s) => s,
-            orElse: () => <Faculty>[],
-          );
-      final subjectList = ref
-          .read(subjectsProvider)
-          .maybeWhen(
-            data: (s) => s,
-            orElse: () => <Subject>[],
-          );
-      final roomList = ref
-          .read(roomsProvider)
-          .maybeWhen(
-            data: (s) => s,
-            orElse: () => <Room>[],
-          );
-      final timeslotList = ref
-          .read(timeslotsProvider)
-          .maybeWhen(
-            data: (s) => s,
-            orElse: () => <Timeslot>[],
-          );
-      Faculty? selectedFaculty;
-      for (final faculty in facultyList) {
-        if (faculty.id == _selectedFacultyId) {
-          selectedFaculty = faculty;
-          break;
-        }
-      }
-      Subject? selectedSubject;
-      for (final subject in subjectList) {
-        if (subject.id == _selectedSubjectId) {
-          selectedSubject = subject;
-          break;
-        }
-      }
       if (selectedSubject == null) {
-        throw Exception(
-          'Please select a valid subject assigned to this faculty.',
-        );
+        throw Exception('Please select a valid subject assigned to this faculty.');
       }
-
       if (selectedFaculty == null) {
         throw Exception('Please select a valid faculty member.');
       }
-      if (selectedFaculty.program != null &&
-          selectedFaculty.program != section.program) {
-        final isEmcTeachingIt =
-            selectedFaculty.program == Program.emc &&
-            section.program == Program.it;
-        if (!isEmcTeachingIt) {
-          throw Exception(
-            'Faculty program must match the selected section program.',
-          );
-        }
-      }
-      if (selectedSubject.program != section.program) {
-        throw Exception(
-          'Subject program must match the selected section program.',
-        );
-      }
 
-      if (_isBlendedSubject(selectedSubject.types) &&
-          _selectedLoadType == null) {
-        throw Exception(
-          'Please select whether this blended subject is Lecture or Lab.',
-        );
-      }
+      _validateSelectedAssignment(
+        faculty: selectedFaculty,
+        subject: selectedSubject,
+        section: section,
+        roomList: roomList,
+      );
+
       final effectiveTypes = _effectiveAssignmentTypes(
         selectedSubject.types,
         _selectedLoadType,
       );
-
-      if (!_isAutoAssign && _selectedRoomId != null) {
-        Room? selectedRoom;
-        for (final room in roomList) {
-          if (room.id == _selectedRoomId) {
-            selectedRoom = room;
-            break;
-          }
-        }
-        if (selectedRoom != null && !_isSupportedSchedulingRoom(selectedRoom)) {
-          throw Exception(
-            'Only IT LAB, EMC LAB, and ROOM 1 are allowed for scheduling.',
-          );
-        }
-        if (selectedRoom != null &&
-            effectiveTypes.isNotEmpty &&
-            !_isRoomAllowedForTypes(
-              room: selectedRoom,
-              loadTypes: effectiveTypes,
-            )) {
-          throw Exception(
-            _requiresLaboratoryRoom(effectiveTypes)
-                ? 'Laboratory or blended subjects can only be assigned to IT LAB or EMC LAB.'
-                : 'Lecture-only subjects can only be assigned to ROOM 1.',
-          );
-        }
-      }
 
       final conflictMessage = _detectAssignmentConflict(
         schedules: schedules,
@@ -4021,7 +4143,9 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildAssignmentDialog(context);
+
+  Widget _buildAssignmentDialog(BuildContext context) {
     final isMobile = ResponsiveHelper.isMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final facultyAsync = ref.watch(facultyListProvider);
@@ -4845,6 +4969,102 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
     );
   }
 
+  Section _resolveSection(List<Section> sections) {
+    return sections.firstWhere(
+      (s) => s.id == _selectedSectionId,
+      orElse: () => sections.firstWhere(
+        (s) => s.sectionCode == widget.schedule.section,
+        orElse: () => sections.isNotEmpty
+            ? sections.first
+            : Section(
+                sectionCode: widget.schedule.section,
+                program: Program.it,
+                yearLevel: 1,
+                semester: 1,
+                academicYear: '',
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ),
+      ),
+    );
+  }
+
+  Faculty? _findFaculty(List<Faculty> facultyList) {
+    for (final faculty in facultyList) {
+      if (faculty.id == _selectedFacultyId) {
+        return faculty;
+      }
+    }
+    return null;
+  }
+
+  Subject? _findSubject(List<Subject> subjectList) {
+    for (final subject in subjectList) {
+      if (subject.id == _selectedSubjectId) {
+        return subject;
+      }
+    }
+    return null;
+  }
+
+  Room? _findRoom(List<Room> roomList) {
+    for (final room in roomList) {
+      if (room.id == _selectedRoomId) {
+        return room;
+      }
+    }
+    return null;
+  }
+
+  void _validateSelectedAssignment({
+    required Faculty faculty,
+    required Subject subject,
+    required Section section,
+    required List<Room> roomList,
+  }) {
+    if (faculty.program != null && faculty.program != section.program) {
+      final isEmcTeachingIt =
+          faculty.program == Program.emc && section.program == Program.it;
+      if (!isEmcTeachingIt) {
+        throw Exception('Faculty program must match the selected section program.');
+      }
+    }
+
+    if (subject.program != section.program) {
+      throw Exception('Subject program must match the selected section program.');
+    }
+
+    if (_isBlendedSubject(subject.types) && _selectedLoadType == null) {
+      throw Exception('Please select whether this blended subject is Lecture or Lab.');
+    }
+
+    if (_isAutoAssign || _selectedRoomId == null) {
+      return;
+    }
+
+    final effectiveTypes = _effectiveAssignmentTypes(
+      subject.types,
+      _selectedLoadType,
+    );
+    final selectedRoom = _findRoom(roomList);
+    if (selectedRoom == null) {
+      return;
+    }
+
+    if (!_isSupportedSchedulingRoom(selectedRoom)) {
+      throw Exception('Only IT LAB, EMC LAB, and ROOM 1 are allowed for scheduling.');
+    }
+
+    if (effectiveTypes.isNotEmpty &&
+        !_isRoomAllowedForTypes(room: selectedRoom, loadTypes: effectiveTypes)) {
+      throw Exception(
+        _requiresLaboratoryRoom(effectiveTypes)
+            ? 'Laboratory or blended subjects can only be assigned to IT LAB or EMC LAB.'
+            : 'Lecture-only subjects can only be assigned to ROOM 1.',
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -4982,122 +5202,66 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
     );
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit() async => _submitAssignment();
+
+  Future<void> _submitAssignment() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      final sections = ref
-          .read(sectionListProvider)
-          .maybeWhen(
+      final sections = ref.read(sectionListProvider).maybeWhen(
             data: (s) => s,
             orElse: () => <Section>[],
           );
-      final section = sections.firstWhere(
-        (s) => s.id == _selectedSectionId,
-        orElse: () => sections.firstWhere(
-          (s) => s.sectionCode == widget.schedule.section,
-          orElse: () => sections.isNotEmpty
-              ? sections.first
-              : Section(
-                  sectionCode: widget.schedule.section,
-                  program: Program.it,
-                  yearLevel: 1,
-                  semester: 1,
-                  academicYear: '',
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                ),
-        ),
-      );
-
-      final schedules = ref
-          .read(schedulesProvider)
-          .maybeWhen(
+      final schedules = ref.read(schedulesProvider).maybeWhen(
             data: (s) => s,
             orElse: () => <Schedule>[],
           );
-      final facultyList = ref
-          .read(facultyListProvider)
-          .maybeWhen(
+      final facultyList = ref.read(facultyListProvider).maybeWhen(
             data: (s) => s,
             orElse: () => <Faculty>[],
           );
-      final subjectList = ref
-          .read(subjectsProvider)
-          .maybeWhen(
+      final subjectList = ref.read(subjectsProvider).maybeWhen(
             data: (s) => s,
             orElse: () => <Subject>[],
           );
-      final roomList = ref
-          .read(roomsProvider)
-          .maybeWhen(
+      final roomList = ref.read(roomsProvider).maybeWhen(
             data: (s) => s,
             orElse: () => <Room>[],
           );
-      final timeslotList = ref
-          .read(timeslotsProvider)
-          .maybeWhen(
+      final timeslotList = ref.read(timeslotsProvider).maybeWhen(
             data: (s) => s,
             orElse: () => <Timeslot>[],
           );
-      Subject? selectedSubject;
-      for (final subject in subjectList) {
-        if (subject.id == _selectedSubjectId) {
-          selectedSubject = subject;
-          break;
-        }
+
+      final section = _resolveSection(sections);
+      final selectedFaculty = _findFaculty(facultyList);
+      final selectedSubject = _findSubject(subjectList);
+      if (selectedFaculty == null) {
+        throw Exception('Please select a valid faculty member.');
       }
       if (selectedSubject == null) {
         throw Exception(
           'Please select a valid subject assigned to this faculty.',
         );
       }
-
-      if (_isBlendedSubject(selectedSubject.types) &&
-          _selectedLoadType == null) {
-        throw Exception(
-          'Please select whether this blended subject is Lecture or Lab.',
-        );
-      }
+      _validateSelectedAssignment(
+        faculty: selectedFaculty,
+        subject: selectedSubject,
+        section: section,
+        roomList: roomList,
+      );
       final effectiveTypes = _effectiveAssignmentTypes(
         selectedSubject.types,
         _selectedLoadType,
       );
 
-      if (!_isAutoAssign && _selectedRoomId != null) {
-        Room? selectedRoom;
-        for (final room in roomList) {
-          if (room.id == _selectedRoomId) {
-            selectedRoom = room;
-            break;
-          }
-        }
-        if (selectedRoom != null && !_isSupportedSchedulingRoom(selectedRoom)) {
-          throw Exception(
-            'Only IT LAB, EMC LAB, and ROOM 1 are allowed for scheduling.',
-          );
-        }
-        if (selectedRoom != null &&
-            effectiveTypes.isNotEmpty &&
-            !_isRoomAllowedForTypes(
-              room: selectedRoom,
-              loadTypes: effectiveTypes,
-            )) {
-          throw Exception(
-            _requiresLaboratoryRoom(effectiveTypes)
-                ? 'Laboratory or blended subjects can only be assigned to IT LAB or EMC LAB.'
-                : 'Lecture-only subjects can only be assigned to ROOM 1.',
-          );
-        }
-      }
-
       final conflictMessage = _detectAssignmentConflict(
         schedules: schedules,
         currentScheduleId: widget.schedule.id,
-        facultyId: _selectedFacultyId,
-        subjectId: _selectedSubjectId,
+        facultyId: selectedFaculty.id!,
+        subjectId: selectedSubject.id!,
         sectionId: _selectedSectionId ?? widget.schedule.sectionId,
         sectionCodeFallback: section.sectionCode,
         roomId: _selectedRoomId,
@@ -5119,8 +5283,8 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
 
       final updatedSchedule = Schedule(
         id: widget.schedule.id,
-        facultyId: _selectedFacultyId,
-        subjectId: _selectedSubjectId,
+        facultyId: selectedFaculty.id!,
+        subjectId: selectedSubject.id!,
         roomId: _isAutoAssign ? null : _selectedRoomId,
         timeslotId: _isAutoAssign ? null : _selectedTimeslotId,
         section: section.sectionCode,

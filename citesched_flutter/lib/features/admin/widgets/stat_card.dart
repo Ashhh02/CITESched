@@ -29,7 +29,9 @@ class _StatCardState extends State<StatCard> {
   bool _isHovered = false;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildStatCard(context);
+
+  Widget _buildStatCard(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 

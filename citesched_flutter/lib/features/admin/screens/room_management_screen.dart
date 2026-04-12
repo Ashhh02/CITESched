@@ -446,7 +446,9 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildMainScreen(context);
+
+  Widget _buildMainScreen(BuildContext context) {
     final roomsAsync = _isShowingArchived
         ? ref.watch(archivedRoomListProvider)
         : ref.watch(roomListProvider);
@@ -1612,7 +1614,9 @@ class _AddRoomModalState extends State<_AddRoomModal> {
   bool _isLoading = false;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildAddRoomDialog(context);
+
+  Widget _buildAddRoomDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final textPrimary = isDark ? Colors.white : const Color(0xFF333333);
@@ -2055,7 +2059,9 @@ class _AddRoomModalState extends State<_AddRoomModal> {
     );
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit() async => _submitAddRoom();
+
+  Future<void> _submitAddRoom() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
@@ -2121,7 +2127,9 @@ class _EditRoomModalState extends State<_EditRoomModal> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildEditRoomDialog(context);
+
+  Widget _buildEditRoomDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final textPrimary = isDark ? Colors.white : const Color(0xFF333333);
@@ -2604,7 +2612,9 @@ class _EditRoomModalState extends State<_EditRoomModal> {
     );
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit() async => _submitEditRoom();
+
+  Future<void> _submitEditRoom() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {

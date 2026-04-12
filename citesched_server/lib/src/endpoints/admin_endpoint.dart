@@ -1655,6 +1655,17 @@ class AdminEndpoint extends Endpoint {
     Session session,
     int facultyId,
     List<FacultyAvailability> availabilities,
+  ) async =>
+      setFacultyAvailabilityImpl(
+        session,
+        facultyId,
+        availabilities,
+      );
+
+  Future<List<FacultyAvailability>> setFacultyAvailabilityImpl(
+    Session session,
+    int facultyId,
+    List<FacultyAvailability> availabilities,
   ) async {
     try {
       print('--- SET FACULTY AVAILABILITY DEBUG ---');

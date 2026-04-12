@@ -422,6 +422,15 @@ class SetupEndpoint extends Endpoint {
   Future<String?> getExistingAccountRoleByEmail(
     Session session, {
     required String email,
+  }) async =>
+      getExistingAccountRoleByEmailImpl(
+        session,
+        email: email,
+      );
+
+  Future<String?> getExistingAccountRoleByEmailImpl(
+    Session session, {
+    required String email,
   }) async {
     final normalizedEmail = email.trim().toLowerCase();
     if (normalizedEmail.isEmpty) return null;

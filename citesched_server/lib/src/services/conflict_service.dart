@@ -751,7 +751,10 @@ class ConflictService {
     return conflicts;
    }
 
-  Future<_ConflictContext> _buildConflictContext(Session session) async {
+  Future<_ConflictContext> _buildConflictContext(Session session) async =>
+      _buildConflictContextImpl(session);
+
+  Future<_ConflictContext> _buildConflictContextImpl(Session session) async {
     final schedules = await Schedule.db.find(session);
     final subjects = await Subject.db.find(session);
     final rooms = await Room.db.find(session);
@@ -1052,6 +1055,12 @@ class ConflictService {
   }
 
   void _addContinuousBlockConflicts(
+    _ConflictContext context,
+    List<ScheduleConflict> conflicts,
+  ) =>
+      _addContinuousBlockConflictsImpl(context, conflicts);
+
+  void _addContinuousBlockConflictsImpl(
     _ConflictContext context,
     List<ScheduleConflict> conflicts,
   ) {

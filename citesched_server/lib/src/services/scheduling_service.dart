@@ -865,6 +865,21 @@ class SchedulingService {
     required int requiredMinutes,
     required Map<String, Timeslot> cache,
     required bool requireLabStartAfterNine,
+  }) async =>
+      _candidateTimeslotsFromExistingImpl(
+        session: session,
+        allTimeslots: allTimeslots,
+        requiredMinutes: requiredMinutes,
+        cache: cache,
+        requireLabStartAfterNine: requireLabStartAfterNine,
+      );
+
+  Future<List<Timeslot>> _candidateTimeslotsFromExistingImpl({
+    required Session session,
+    required List<Timeslot> allTimeslots,
+    required int requiredMinutes,
+    required Map<String, Timeslot> cache,
+    required bool requireLabStartAfterNine,
   }) async {
     final stepMinutes = requiredMinutes % 60 == 0 ? 60 : 30;
     final candidates = <Timeslot>[];
@@ -902,6 +917,21 @@ class SchedulingService {
   }
 
   Future<List<Timeslot>> _candidateTimeslotsFromAvailability({
+    required Session session,
+    required List<FacultyAvailability> availability,
+    required int requiredMinutes,
+    required Map<String, Timeslot> cache,
+    required bool requireLabStartAfterNine,
+  }) async =>
+      _candidateTimeslotsFromAvailabilityImpl(
+        session: session,
+        availability: availability,
+        requiredMinutes: requiredMinutes,
+        cache: cache,
+        requireLabStartAfterNine: requireLabStartAfterNine,
+      );
+
+  Future<List<Timeslot>> _candidateTimeslotsFromAvailabilityImpl({
     required Session session,
     required List<FacultyAvailability> availability,
     required int requiredMinutes,

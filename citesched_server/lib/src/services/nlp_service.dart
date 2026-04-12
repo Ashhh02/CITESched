@@ -263,6 +263,14 @@ class NLPService {
     String query,
     String? userId,
     List<String> scopes,
+  ) async =>
+      processQueryImpl(session, query, userId, scopes);
+
+  Future<NLPResponse> processQueryImpl(
+    Session session,
+    String query,
+    String? userId,
+    List<String> scopes,
   ) async {
     // Sanitize and validate input
     if (query.isEmpty || query.length > 500) {
@@ -479,6 +487,19 @@ class NLPService {
   }
 
   Future<NLPResponse?> _tryRoomTypeScheduleQuery(
+    Session session,
+    String query,
+    DayOfWeek? requestedDay,
+    List<String> scopes,
+  ) async =>
+      _tryRoomTypeScheduleQueryImpl(
+        session,
+        query,
+        requestedDay,
+        scopes,
+      );
+
+  Future<NLPResponse?> _tryRoomTypeScheduleQueryImpl(
     Session session,
     String query,
     DayOfWeek? requestedDay,
@@ -907,6 +928,14 @@ class NLPService {
     String userId,
     List<String> scopes,
     String query,
+  ) async =>
+      _handleOverloadQueryImpl(session, userId, scopes, query);
+
+  Future<NLPResponse> _handleOverloadQueryImpl(
+    Session session,
+    String userId,
+    List<String> scopes,
+    String query,
   ) async {
     try {
       final isAdmin = scopes.contains('admin');
@@ -1147,6 +1176,23 @@ class NLPService {
   }
 
   Future<NLPResponse> _handleScheduleQuery(
+    Session session,
+    String query,
+    String? userId,
+    List<String> scopes,
+    DayOfWeek? requestedDay,
+    List<DayOfWeek> requestedDays,
+  ) async =>
+      _handleScheduleQueryImpl(
+        session,
+        query,
+        userId,
+        scopes,
+        requestedDay,
+        requestedDays,
+      );
+
+  Future<NLPResponse> _handleScheduleQueryImpl(
     Session session,
     String query,
     String? userId,
@@ -1801,6 +1847,12 @@ class NLPService {
   List<Schedule> _applyExactStartOrEndFilter(
     String query,
     List<Schedule> schedules,
+  ) =>
+      _applyExactStartOrEndFilterImpl(query, schedules);
+
+  List<Schedule> _applyExactStartOrEndFilterImpl(
+    String query,
+    List<Schedule> schedules,
   ) {
     var filtered = schedules;
     final asksStartAt =
@@ -1917,6 +1969,25 @@ class NLPService {
   }
 
   Future<NLPResponse?> _tryFilteredScheduleQuery(
+    Session session,
+    String query,
+    String? userId,
+    List<String> scopes,
+    DayOfWeek? requestedDay,
+    List<DayOfWeek> relativeDays,
+    _TimeRange? timeRange,
+  ) async =>
+      _tryFilteredScheduleQueryImpl(
+        session,
+        query,
+        userId,
+        scopes,
+        requestedDay,
+        relativeDays,
+        timeRange,
+      );
+
+  Future<NLPResponse?> _tryFilteredScheduleQueryImpl(
     Session session,
     String query,
     String? userId,
