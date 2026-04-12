@@ -20,7 +20,10 @@ String _subjectInitial(String code) {
 }
 
 String _yearLabel(dynamic yearLevel) {
-  return 'YR ${yearLevel ?? "N/A"}';
+  if (yearLevel == null) {
+    return 'YR N/A';
+  }
+  return 'YR $yearLevel';
 }
 
 String _scheduleSummary(Schedule schedule) {
@@ -378,9 +381,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                             const SizedBox(height: 12),
                             _buildSimpleStatCard(
                               'Year Level',
-                              subject.yearLevel != null
-                                  ? 'Year ${subject.yearLevel}'
-                                  : 'N/A',
+                              _yearLabel(subject.yearLevel),
                               Icons.grade_rounded,
                               Colors.green,
                               cardBg,
@@ -410,9 +411,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                           const SizedBox(width: 16),
                           _buildSimpleStatCard(
                             'Year Level',
-                            subject.yearLevel != null
-                                ? 'Year ${subject.yearLevel}'
-                                : 'N/A',
+                            _yearLabel(subject.yearLevel),
                             Icons.grade_rounded,
                             Colors.green,
                             cardBg,

@@ -27,9 +27,19 @@ Color _facultyStatusColor(EmploymentStatus? status, bool inverted) {
     return Colors.grey;
   }
   if (status == EmploymentStatus.fullTime) {
-    return inverted ? Colors.white : Colors.green;
+    if (inverted) {
+      return Colors.white;
+    }
+    return Colors.green;
   }
-  return inverted ? Colors.white70 : Colors.blue;
+  if (inverted) {
+    return Colors.white70;
+  }
+  return Colors.blue;
+}
+
+String _scheduleSummary(Schedule schedule) {
+  return '${schedule.timeslot?.day ?? "N/A"} | ${schedule.timeslot?.startTime} - ${schedule.timeslot?.endTime} | Room ${schedule.room?.name ?? "N/A"}';
 }
 
 class FacultyDetailsScreen extends ConsumerWidget {
@@ -415,7 +425,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
                                 ),
                               ),
                               subtitle: Text(
-                                '${s.timeslot?.day ?? "N/A"} | ${s.timeslot?.startTime} - ${s.timeslot?.endTime} | Room ${s.room?.name ?? "N/A"}',
+                                _scheduleSummary(s),
                                 style: GoogleFonts.poppins(fontSize: 12),
                               ),
                               trailing: Container(

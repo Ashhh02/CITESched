@@ -1487,28 +1487,8 @@ class _FacultyManagementScreenState
     );
   }
 
-  Widget _buildLabel(String label, IconData icon, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8, left: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: color.withValues(alpha: 0.7)),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildDropdown<T>({
-    required T value,
+    required T? value,
     required List<T> items,
     required ValueChanged<T?> onChanged,
     required String Function(T) itemLabel,
@@ -1908,43 +1888,6 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
         setState(() => _isLoading = false);
       }
     }
-  }
-
-  Future<void> _showCustomHoursPicker() async {
-    final TimeOfDay? startTime = await showTimePicker(
-      context: context,
-      initialTime: const TimeOfDay(hour: 7, minute: 0),
-      helpText: kSelectStartTimeLabel,
-    );
-
-    if (startTime == null || !mounted) return;
-
-    final TimeOfDay? endTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(
-        hour: startTime.hour + 2,
-        minute: startTime.minute,
-      ),
-      helpText: kSelectEndTimeLabel,
-    );
-
-    if (endTime == null || !mounted) return;
-
-    // Basic validation
-    final startMinutes = startTime.hour * 60 + startTime.minute;
-    final endMinutes = endTime.hour * 60 + endTime.minute;
-
-    if (endMinutes <= startMinutes) {
-      if (mounted) {
-        _showErrorDialog(context, kEndTimeAfterStartMessage);
-      }
-      return;
-    }
-
-    setState(() {
-      _customPreferredHours =
-          '${startTime.format(context)} - ${endTime.format(context)}';
-    });
   }
 
   @override
@@ -2508,45 +2451,6 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Colors.red, width: 1),
-      ),
-    );
-  }
-
-  Widget _buildDropdown<T>({
-    required T? value,
-    required List<T> items,
-    required ValueChanged<T?> onChanged,
-    required String Function(T) itemLabel,
-    required Color bgBody,
-    required Color textPrimary,
-    required Color textMuted,
-    required Color primaryPurple,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgBody,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          value: value,
-          isExpanded: true,
-          icon: Icon(Icons.keyboard_arrow_down_rounded, color: textMuted),
-          style: GoogleFonts.poppins(
-            fontSize: 15,
-            color: textPrimary,
-            fontWeight: FontWeight.w500,
-          ),
-          items: items.map((T item) {
-            return DropdownMenuItem<T>(
-              value: item,
-              child: Text(itemLabel(item)),
-            );
-          }).toList(),
-          onChanged: onChanged,
-        ),
       ),
     );
   }
@@ -3146,43 +3050,6 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  Future<void> _showCustomHoursPicker() async {
-    final TimeOfDay? startTime = await showTimePicker(
-      context: context,
-      initialTime: const TimeOfDay(hour: 7, minute: 0),
-      helpText: kSelectStartTimeLabel,
-    );
-
-    if (startTime == null || !mounted) return;
-
-    final TimeOfDay? endTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(
-        hour: startTime.hour + 2,
-        minute: startTime.minute,
-      ),
-      helpText: kSelectEndTimeLabel,
-    );
-
-    if (endTime == null || !mounted) return;
-
-    // Basic validation
-    final startMinutes = startTime.hour * 60 + startTime.minute;
-    final endMinutes = endTime.hour * 60 + endTime.minute;
-
-    if (endMinutes <= startMinutes) {
-      if (mounted) {
-        _showErrorDialog(context, kEndTimeAfterStartMessage);
-      }
-      return;
-    }
-
-    setState(() {
-      _customPreferredHours =
-          '${startTime.format(context)} - ${endTime.format(context)}';
-    });
   }
 
   @override
@@ -4046,3 +3913,4 @@ class _AvailabilityEntry {
     required this.end,
   });
 }
+

@@ -21,9 +21,19 @@ IconData _roomTypeIcon(RoomType type) {
 
 Color _roomStatusColor(bool isActive, bool inverted) {
   if (isActive) {
-    return inverted ? Colors.white : Colors.green;
+    if (inverted) {
+      return Colors.white;
+    }
+    return Colors.green;
   }
-  return inverted ? Colors.white70 : Colors.red;
+  if (inverted) {
+    return Colors.white70;
+  }
+  return Colors.red;
+}
+
+String _scheduleSummary(Schedule schedule) {
+  return '${schedule.timeslot?.day ?? "N/A"} | ${schedule.timeslot?.startTime} - ${schedule.timeslot?.endTime} | Section: ${schedule.section} | Faculty: ${schedule.faculty?.name ?? "N/A"}';
 }
 
 class RoomDetailsScreen extends ConsumerWidget {
@@ -450,7 +460,7 @@ class RoomDetailsScreen extends ConsumerWidget {
                                 ),
                               ),
                               subtitle: Text(
-                                '${s.timeslot?.day ?? "N/A"} | ${s.timeslot?.startTime} - ${s.timeslot?.endTime} | Section: ${s.section} | Faculty: ${s.faculty?.name ?? "N/A"}',
+                                _scheduleSummary(s),
                                 style: GoogleFonts.poppins(fontSize: 12),
                               ),
                             );
