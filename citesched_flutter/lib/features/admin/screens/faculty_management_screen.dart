@@ -16,6 +16,33 @@ import 'package:citesched_flutter/core/utils/error_handler.dart';
 
 const String kEndTimeAfterStartMessage =
     'End time must be after start time.';
+const String kDeletePermanentlyLabel = 'Delete Permanently';
+const String kAddFacultyMemberLabel = 'Add Faculty Member';
+const String kSelectStartTimeLabel = 'Select Start Time';
+const String kSelectEndTimeLabel = 'Select End Time';
+const String kFullTimeLabel = 'Full-Time';
+const String kPartTimeLabel = 'Part-Time';
+
+String _employmentStatusLabel(EmploymentStatus status) {
+  if (status == EmploymentStatus.fullTime) {
+    return kFullTimeLabel;
+  }
+  return kPartTimeLabel;
+}
+
+String _nameInitial(String name) {
+  if (name.isEmpty) {
+    return '?';
+  }
+  return name[0].toUpperCase();
+}
+
+String _dayLabelOrUnknown(int dayIndex, List<String> labels) {
+  if (dayIndex < 0 || dayIndex >= labels.length) {
+    return '?';
+  }
+  return labels[dayIndex];
+}
 
 // Helper extension for conflicts (already in core/providers/conflict_provider.dart)
 
@@ -183,7 +210,7 @@ class _FacultyManagementScreenState
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text('Delete Permanently', style: GoogleFonts.poppins()),
+            child: Text(kDeletePermanentlyLabel, style: GoogleFonts.poppins()),
           ),
         ],
       ),
@@ -400,7 +427,7 @@ class _FacultyManagementScreenState
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text('Delete Permanently', style: GoogleFonts.poppins()),
+            child: Text(kDeletePermanentlyLabel, style: GoogleFonts.poppins()),
           ),
         ],
       ),
@@ -574,7 +601,7 @@ class _FacultyManagementScreenState
                             icon:
                                 const Icon(Icons.person_add_rounded, size: 20),
                             label: Text(
-                              'Add Faculty Member',
+                              kAddFacultyMemberLabel,
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -648,7 +675,7 @@ class _FacultyManagementScreenState
                           onPressed: _showAddFacultyModal,
                           icon: const Icon(Icons.person_add_rounded, size: 24),
                           label: Text(
-                            'Add Faculty Member',
+                            kAddFacultyMemberLabel,
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
@@ -771,12 +798,12 @@ class _FacultyManagementScreenState
   }
 
   String _getStatusText(EmploymentStatus? status) {
-    if (status == null) return '�';
+    if (status == null) return '?';
     switch (status) {
       case EmploymentStatus.fullTime:
-        return 'Full-Time';
+        return kFullTimeLabel;
       case EmploymentStatus.partTime:
-        return 'Part-Time';
+        return kPartTimeLabel;
     }
   }
 
@@ -1312,7 +1339,7 @@ class _FacultyManagementScreenState
           ),
           child: Center(
             child: Text(
-              faculty.name.isNotEmpty ? faculty.name[0].toUpperCase() : '?',
+              _nameInitial(faculty.name),
               style: GoogleFonts.poppins(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -1887,7 +1914,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
     final TimeOfDay? startTime = await showTimePicker(
       context: context,
       initialTime: const TimeOfDay(hour: 7, minute: 0),
-      helpText: 'Select Start Time',
+      helpText: kSelectStartTimeLabel,
     );
 
     if (startTime == null || !mounted) return;
@@ -1898,7 +1925,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
         hour: startTime.hour + 2,
         minute: startTime.minute,
       ),
-      helpText: 'Select End Time',
+      helpText: kSelectEndTimeLabel,
     );
 
     if (endTime == null || !mounted) return;
@@ -2092,7 +2119,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                                       const SizedBox(width: 8),
                                       Flexible(
                                         child: Text(
-                                          'Add Faculty Member',
+                                          kAddFacultyMemberLabel,
                                           overflow: TextOverflow.ellipsis,
                                           style: GoogleFonts.poppins(
                                             fontSize: 15,
@@ -2192,7 +2219,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                                       const Icon(Icons.check_rounded, size: 20),
                                       const SizedBox(width: 8),
                                       Text(
-                                        'Add Faculty Member',
+                                        kAddFacultyMemberLabel,
                                         style: GoogleFonts.poppins(
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
@@ -2347,8 +2374,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
             primaryPurple: primaryPurple,
             items: EmploymentStatus.values,
             onChanged: (value) => setState(() => _employmentStatus = value),
-            itemLabel: (status) =>
-                status == EmploymentStatus.fullTime ? 'Full-Time' : 'Part-Time',
+            itemLabel: _employmentStatusLabel,
             hint: 'Select Status',
           ),
           const SizedBox(height: 20),
@@ -2733,7 +2759,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                 final p = await showTimePicker(
                   context: context,
                   initialTime: _startTime,
-                  helpText: 'Select Start Time',
+                  helpText: kSelectStartTimeLabel,
                 );
                 if (p != null) {
                   setState(() {
@@ -2750,7 +2776,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                 final p = await showTimePicker(
                   context: context,
                   initialTime: _endTime,
-                  helpText: 'Select End Time',
+                  helpText: kSelectEndTimeLabel,
                 );
                 if (p != null) {
                   setState(() {
@@ -2875,7 +2901,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            idx >= 0 ? dl[idx] : '?',
+                            _dayLabelOrUnknown(idx, dl),
                             style: GoogleFonts.poppins(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -3126,7 +3152,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
     final TimeOfDay? startTime = await showTimePicker(
       context: context,
       initialTime: const TimeOfDay(hour: 7, minute: 0),
-      helpText: 'Select Start Time',
+      helpText: kSelectStartTimeLabel,
     );
 
     if (startTime == null || !mounted) return;
@@ -3137,7 +3163,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
         hour: startTime.hour + 2,
         minute: startTime.minute,
       ),
-      helpText: 'Select End Time',
+      helpText: kSelectEndTimeLabel,
     );
 
     if (endTime == null || !mounted) return;
@@ -3463,8 +3489,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
             primaryPurple: primaryPurple,
             items: EmploymentStatus.values,
             onChanged: (value) => setState(() => _employmentStatus = value!),
-            itemLabel: (status) =>
-                status == EmploymentStatus.fullTime ? 'Full-Time' : 'Part-Time',
+            itemLabel: _employmentStatusLabel,
           ),
 
           const SizedBox(height: 20),
@@ -3818,7 +3843,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                 final picked = await showTimePicker(
                   context: context,
                   initialTime: _startTime,
-                  helpText: 'Select Start Time',
+                  helpText: kSelectStartTimeLabel,
                 );
                 if (picked != null) {
                   setState(() {
@@ -3835,7 +3860,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                 final picked = await showTimePicker(
                   context: context,
                   initialTime: _endTime,
-                  helpText: 'Select End Time',
+                  helpText: kSelectEndTimeLabel,
                 );
                 if (picked != null) {
                   setState(() {
@@ -3970,7 +3995,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            dayIdx >= 0 ? dayLabels2[dayIdx] : '?',
+                            _dayLabelOrUnknown(dayIdx, dayLabels2),
                             style: GoogleFonts.poppins(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,

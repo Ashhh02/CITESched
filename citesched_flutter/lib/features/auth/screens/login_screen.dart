@@ -19,6 +19,10 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   static const List<String> _allowedCourses = ['BSIT', 'BSEMC'];
   static const _googleDeclinedNoticeStoragePrefix = 'google_declined_notice:';
+  static const _facultyIdLabel = 'Faculty ID';
+  static const _studentIdLabel = 'Student ID';
+  static const _enterFacultyIdHint = 'Enter Faculty ID';
+  static const _enterStudentIdHint = 'Enter Student ID';
   final _idController = TextEditingController();
   final _passwordController = TextEditingController();
   final _secureStorage = const FlutterSecureStorage();
@@ -43,6 +47,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+
+  String get _loginTitle => _isFaculty ? 'Faculty Login' : 'Student Login';
+  String get _idLabel => _isFaculty ? _facultyIdLabel : _studentIdLabel;
+  String get _idHint =>
+      _isFaculty ? _enterFacultyIdHint : _enterStudentIdHint;
+
+  String _employmentStatusText(EmploymentStatus status) {
+    if (status == EmploymentStatus.fullTime) {
+      return 'Full-Time';
+    }
+    return 'Part-Time';
+  }
 
   // Design Constants - Light Mode Theme Colors
   static const _facultyColorLight = Color(0xFF4F003B);
@@ -963,12 +979,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ] else ...[
                                 const SizedBox(height: 20),
                                 _buildModalLabel(
-                                  'Faculty ID',
+                                  _facultyIdLabel,
                                   Icons.badge_rounded,
                                 ),
                                 TextFormField(
                                   controller: idController,
-                                  decoration: fieldDecoration('Faculty ID'),
+                                  decoration: fieldDecoration(_facultyIdLabel),
                                   style: GoogleFonts.poppins(
                                     fontSize: 15,
                                     color: textPrimary,
@@ -1016,9 +1032,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         ) => DropdownMenuItem<EmploymentStatus>(
                                           value: status,
                                           child: Text(
-                                            status == EmploymentStatus.fullTime
-                                                ? 'Full-Time'
-                                                : 'Part-Time',
+                                            _employmentStatusText(status),
                                             style: GoogleFonts.poppins(
                                               fontSize: 15,
                                               color: textPrimary,
@@ -2259,7 +2273,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                               // HEADER TEXT (Fixed Color)
                               Text(
-                                _isFaculty ? 'Faculty Login' : 'Student Login',
+                                _loginTitle,
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.poppins(
                                   fontSize: 24,
@@ -2310,16 +2324,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const SizedBox(height: 30),
 
                               // Inputs
-                              _buildLabel(
-                                _isFaculty ? 'Faculty ID' : 'Student ID',
-                                textPrimary,
-                              ),
+                              _buildLabel(_idLabel, textPrimary),
                               const SizedBox(height: 8),
                               buildCustomField(
                                 controller: _idController,
-                                hintText: _isFaculty
-                                    ? 'Enter Faculty ID'
-                                    : 'Enter Student ID',
+                                hintText: _idHint,
                               ),
 
                               const SizedBox(height: 16),

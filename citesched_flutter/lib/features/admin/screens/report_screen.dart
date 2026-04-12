@@ -540,6 +540,16 @@ class _FacultyLoadTab extends ConsumerWidget {
 class _RoomUtilizationTab extends ConsumerWidget {
   const _RoomUtilizationTab();
 
+  int _roomGridColumns(double width) {
+    if (width < 650) {
+      return 1;
+    }
+    if (width < 1000) {
+      return 2;
+    }
+    return 3;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reportAsync = ref.watch(roomUtilizationReportProvider);
@@ -554,7 +564,7 @@ class _RoomUtilizationTab extends ConsumerWidget {
         return LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final crossAxisCount = width < 650 ? 1 : (width < 1000 ? 2 : 3);
+            final crossAxisCount = _roomGridColumns(width);
             final childAspectRatio = width < 650 ? 1.6 : 1.4;
 
             return GridView.builder(

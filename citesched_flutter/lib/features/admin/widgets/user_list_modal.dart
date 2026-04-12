@@ -382,6 +382,17 @@ class _UserListModalState extends ConsumerState<UserListModal>
     }
   }
 
+  String _nameInitial(String name) {
+    if (name.isEmpty) {
+      return '?';
+    }
+    return name[0].toUpperCase();
+  }
+
+  String _programNameOrUnknown(Program? program) {
+    return (program?.name ?? '?').toUpperCase();
+  }
+
   // ─── Build ───────────────────────────────────────────────────────────────
 
   @override
@@ -965,7 +976,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                       ),
                       child: Center(
                         child: Text(
-                          f.name.isNotEmpty ? f.name[0].toUpperCase() : '?',
+                          _nameInitial(f.name),
                           style: GoogleFonts.poppins(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -1027,7 +1038,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                         border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
                       ),
                       child: Text(
-                        (f.program?.name ?? '?').toUpperCase(),
+                        _programNameOrUnknown(f.program),
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -1070,7 +1081,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                   ),
                   child: Center(
                     child: Text(
-                      f.name.isNotEmpty ? f.name[0].toUpperCase() : '?',
+                      _nameInitial(f.name),
                       style: GoogleFonts.poppins(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -1117,7 +1128,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                     border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
                   ),
                   child: Text(
-                    (f.program?.name ?? '?').toUpperCase(),
+                    _programNameOrUnknown(f.program),
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -1236,7 +1247,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                       ),
                       child: Center(
                         child: Text(
-                          s.name.isNotEmpty ? s.name[0].toUpperCase() : '?',
+                          _nameInitial(s.name),
                           style: GoogleFonts.poppins(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -1386,7 +1397,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                   ),
                   child: Center(
                     child: Text(
-                      s.name.isNotEmpty ? s.name[0].toUpperCase() : '?',
+                      _nameInitial(s.name),
                       style: GoogleFonts.poppins(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,

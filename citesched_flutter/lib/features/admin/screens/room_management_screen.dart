@@ -13,6 +13,11 @@ import 'package:citesched_flutter/core/providers/conflict_provider.dart';
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
 import 'package:citesched_flutter/core/utils/error_handler.dart';
 
+const String kDeletePermanentlyLabel = 'Delete Permanently';
+const String kAddNewRoomLabel = 'Add New Room';
+const String kRoomNameLabel = 'Room Name';
+const String kSavingLabel = 'Saving...';
+
 class RoomManagementScreen extends ConsumerStatefulWidget {
   const RoomManagementScreen({super.key});
 
@@ -168,7 +173,7 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text('Delete Permanently', style: GoogleFonts.poppins()),
+            child: Text(kDeletePermanentlyLabel, style: GoogleFonts.poppins()),
           ),
         ],
       ),
@@ -360,7 +365,7 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text('Delete Permanently', style: GoogleFonts.poppins()),
+            child: Text(kDeletePermanentlyLabel, style: GoogleFonts.poppins()),
           ),
         ],
       ),
@@ -534,7 +539,7 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
                             onPressed: _showAddRoomModal,
                             icon: const Icon(Icons.add_rounded, size: 20),
                             label: Text(
-                              'Add New Room',
+                              kAddNewRoomLabel,
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -608,7 +613,7 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
                           onPressed: _showAddRoomModal,
                           icon: const Icon(Icons.add_rounded, size: 24),
                           label: Text(
-                            'Add New Room',
+                            kAddNewRoomLabel,
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
@@ -1374,7 +1379,7 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
                                 Icons.delete_forever_rounded,
                                 color: Colors.red,
                               ),
-                              tooltip: 'Delete Permanently',
+                              tooltip: kDeletePermanentlyLabel,
                               onPressed: () => _permanentDeleteRoom(room),
                             ),
                           ],
@@ -1713,7 +1718,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Add New Room',
+                              kAddNewRoomLabel,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.poppins(
@@ -1763,7 +1768,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
                           ? Column(
                               children: [
                                 _buildTextField(
-                                  'Room Name',
+                                  kRoomNameLabel,
                                   _nameController,
                                   isDark,
                                   hint: 'e.g., CL1',
@@ -1781,7 +1786,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
                               children: [
                                 Expanded(
                                   child: _buildTextField(
-                                    'Room Name',
+                                    kRoomNameLabel,
                                     _nameController,
                                     isDark,
                                     hint: 'e.g., CL1',
@@ -1910,7 +1915,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
                                   )
                                 : const Icon(Icons.check_rounded, size: 20),
                             label: Text(
-                              _isLoading ? 'Saving...' : 'Create Room',
+                              _isLoading ? kSavingLabel : 'Create Room',
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.w600,
@@ -1979,7 +1984,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
                                 )
                               : const Icon(Icons.check_rounded, size: 20),
                           label: Text(
-                            _isLoading ? 'Saving...' : 'Create Room',
+                            _isLoading ? kSavingLabel : 'Create Room',
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w600,
                             ),
@@ -2352,7 +2357,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
                           ? Column(
                               children: [
                                 _buildTextField(
-                                  'Room Name',
+                                  kRoomNameLabel,
                                   _nameController,
                                   isDark,
                                   hint: 'e.g., IT LAB 327',
@@ -2370,7 +2375,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
                               children: [
                                 Expanded(
                                   child: _buildTextField(
-                                    'Room Name',
+                                    kRoomNameLabel,
                                     _nameController,
                                     isDark,
                                     hint: 'e.g., IT LAB 327',
@@ -2513,7 +2518,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
                                 )
                               : const Icon(Icons.check_rounded, size: 20),
                           label: Text(
-                            _isLoading ? 'Saving...' : 'Save Changes',
+                            _isLoading ? kSavingLabel : 'Save Changes',
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w600,
                             ),
@@ -2563,7 +2568,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
                                 )
                               : const Icon(Icons.check_rounded, size: 20),
                           label: Text(
-                            _isLoading ? 'Saving...' : 'Save Changes',
+                            _isLoading ? kSavingLabel : 'Save Changes',
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w600,
                             ),
