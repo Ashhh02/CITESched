@@ -55,6 +55,9 @@ void main() {
         overrides: [
           authProvider.overrideWith(_FakeAuthNotifier.new),
           dashboardStatsProvider.overrideWith((ref) async => stats),
+          pendingFacultyRequestsProvider.overrideWith(
+            (ref) async => const <Faculty>[],
+          ),
         ],
         child: const MaterialApp(
           home: AdminDashboardScreen(),
@@ -69,5 +72,7 @@ void main() {
     expect(find.text('STUDENTS'), findsOneWidget);
     expect(find.text('SCHEDULES'), findsOneWidget);
     expect(find.text('CONFLICTS'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 }

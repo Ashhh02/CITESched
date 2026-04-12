@@ -129,9 +129,7 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 12),
                           SizedBox(
-                            width: constraints.maxWidth > 260
-                                ? constraints.maxWidth - 140
-                                : 120,
+                            width: _headerContentWidth(constraints.maxWidth),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -369,6 +367,13 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  double _headerContentWidth(double maxWidth) {
+    if (maxWidth > 260) {
+      return maxWidth - 140;
+    }
+    return 120;
   }
 
   Widget _buildLoadStatsSection({

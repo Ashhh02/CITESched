@@ -266,12 +266,19 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          if (isMobile) _buildMobileHeader(userInfo) else _buildDesktopHeader(userInfo),
+          _buildDashboardHeader(userInfo, isMobile),
           const SizedBox(height: 32),
           _buildHeaderActions(context, primaryPurple, isMobile),
         ],
       ),
     );
+  }
+
+  Widget _buildDashboardHeader(UserInfo? userInfo, bool isMobile) {
+    if (isMobile) {
+      return _buildMobileHeader(userInfo);
+    }
+    return _buildDesktopHeader(userInfo);
   }
 
   Widget _buildMobileHeader(UserInfo? userInfo) {
