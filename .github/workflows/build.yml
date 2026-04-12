@@ -36,7 +36,7 @@ jobs:
 
           # Generate coverage file for Server (unit tests only)
           pushd citesched_server
-          dart test test/unit --coverage=coverage
+          dart test test/unit -r expanded --chain-stack-traces --coverage=coverage
           dart run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --packages=.dart_tool/package_config.json --report-on=lib
           popd
 
