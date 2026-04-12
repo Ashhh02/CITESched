@@ -41,7 +41,7 @@ class AuthField extends StatelessWidget {
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.white30),
+            hintStyle: const TextStyle(color: Colors.white30),
             filled: true,
             fillColor: const Color(0xFF1A1A1A), // Surface color
             contentPadding: const EdgeInsets.symmetric(

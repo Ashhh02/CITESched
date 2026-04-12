@@ -876,16 +876,16 @@ class _SubjectManagementScreenState
                                             checkColor: maroonColor,
                                           ),
                                         ),
-                                        DataColumn(label: Text('CODE')),
-                                        DataColumn(label: Text('TITLE')),
-                                        DataColumn(label: Text('UNITS')),
-                                        DataColumn(label: Text('PROGRAM')),
-                                        DataColumn(
+                                        const DataColumn(label: Text('CODE')),
+                                        const DataColumn(label: Text('TITLE')),
+                                        const DataColumn(label: Text('UNITS')),
+                                        const DataColumn(label: Text('PROGRAM')),
+                                        const DataColumn(
                                           label: Text('YEAR/TERM'),
                                         ),
-                                        DataColumn(label: Text('TYPE')),
-                                        DataColumn(label: Text('STUDENTS')),
-                                        DataColumn(label: Text('ACTIONS')),
+                                        const DataColumn(label: Text('TYPE')),
+                                        const DataColumn(label: Text('STUDENTS')),
+                                        const DataColumn(label: Text('ACTIONS')),
                                       ],
                                       rows: filtered.asMap().entries.map((
                                         entry,
@@ -1103,7 +1103,7 @@ class _SubjectManagementScreenState
                                                                     8,
                                                                   ),
                                                             ),
-                                                            child: Icon(
+                                                            child: const Icon(
                                                               Icons
                                                                   .delete_forever_rounded,
                                                               color: Colors.red,

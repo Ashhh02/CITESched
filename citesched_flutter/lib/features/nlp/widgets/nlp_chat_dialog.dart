@@ -46,12 +46,12 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
         ? null
         : ref.watch(chatHistorySessionProvider(_selectedSessionId!));
     final auth = ref.watch(authProvider);
-    final maroonColor = const Color(0xFF720045);
+    const maroonColor = Color(0xFF720045);
     final media = MediaQuery.of(context);
     final maxWidth = media.size.width * 0.95;
     final maxHeight = media.size.height * 0.9;
-    final minWidth = 360.0;
-    final minHeight = 420.0;
+    const minWidth = 360.0;
+    const minHeight = 420.0;
     final width = (_dialogWidth ?? (media.size.width * 0.85))
         .clamp(minWidth, maxWidth);
     final height = (_dialogHeight ?? (media.size.height * 0.7))
@@ -75,9 +75,9 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
             // Header
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: maroonColor,
-                borderRadius: const BorderRadius.vertical(
+                borderRadius: BorderRadius.vertical(
                   top: Radius.circular(16),
                 ),
               ),
@@ -300,7 +300,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
+                          borderSide: const BorderSide(
                             color: maroonColor,
                             width: 2,
                           ),
@@ -318,7 +318,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
                   ),
                   const SizedBox(width: 12),
                   Container(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: maroonColor,
                       shape: BoxShape.circle,
                     ),
@@ -336,6 +336,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
             _ResizeEdge(
               alignment: Alignment.centerLeft,
               cursor: SystemMouseCursors.resizeLeftRight,
+              sensitivity: 1,
               onDrag: (delta) {
                 setState(() {
                   _dialogWidth = (width - delta.dx).clamp(minWidth, maxWidth);
@@ -347,6 +348,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
             _ResizeEdge(
               alignment: Alignment.centerRight,
               cursor: SystemMouseCursors.resizeLeftRight,
+              sensitivity: 1,
               onDrag: (delta) {
                 setState(() {
                   _dialogWidth = (width + delta.dx).clamp(minWidth, maxWidth);
@@ -358,6 +360,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
             _ResizeEdge(
               alignment: Alignment.topCenter,
               cursor: SystemMouseCursors.resizeUpDown,
+              sensitivity: 1,
               onDrag: (delta) {
                 setState(() {
                   _dialogHeight = (height - delta.dy).clamp(minHeight, maxHeight);
@@ -369,6 +372,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
             _ResizeEdge(
               alignment: Alignment.bottomCenter,
               cursor: SystemMouseCursors.resizeUpDown,
+              sensitivity: 1,
               onDrag: (delta) {
                 setState(() {
                   _dialogHeight = (height + delta.dy).clamp(minHeight, maxHeight);
@@ -380,6 +384,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
             _ResizeCorner(
               alignment: Alignment.topLeft,
               cursor: SystemMouseCursors.resizeUpLeftDownRight,
+              sensitivity: 1,
               onDrag: (delta) {
                 setState(() {
                   _dialogWidth = (width - delta.dx).clamp(minWidth, maxWidth);
@@ -391,6 +396,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
             _ResizeCorner(
               alignment: Alignment.topRight,
               cursor: SystemMouseCursors.resizeUpRightDownLeft,
+              sensitivity: 1,
               onDrag: (delta) {
                 setState(() {
                   _dialogWidth = (width + delta.dx).clamp(minWidth, maxWidth);
@@ -402,6 +408,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
             _ResizeCorner(
               alignment: Alignment.bottomLeft,
               cursor: SystemMouseCursors.resizeUpRightDownLeft,
+              sensitivity: 1,
               onDrag: (delta) {
                 setState(() {
                   _dialogWidth = (width - delta.dx).clamp(minWidth, maxWidth);
@@ -413,6 +420,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
             _ResizeCorner(
               alignment: Alignment.bottomRight,
               cursor: SystemMouseCursors.resizeUpLeftDownRight,
+              sensitivity: 1,
               onDrag: (delta) {
                 setState(() {
                   _dialogWidth = (width + delta.dx).clamp(minWidth, maxWidth);
@@ -460,7 +468,8 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
       builder: (context) => ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: suggestions.length,
-        separatorBuilder: (_, __) => const Divider(color: Colors.white12),
+        separatorBuilder: (context, index) =>
+            const Divider(color: Colors.white12),
         itemBuilder: (context, index) {
           final text = suggestions[index];
           return ListTile(
@@ -661,7 +670,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: sessions.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final entry = sessions[index];
               return Container(
@@ -744,7 +753,7 @@ class _ResizeEdge extends StatelessWidget {
     required this.onDrag,
     required this.vertical,
     required this.color,
-    this.sensitivity = 5.0,
+    required this.sensitivity,
   });
 
   @override
@@ -795,7 +804,7 @@ class _ResizeCorner extends StatelessWidget {
     required this.cursor,
     required this.onDrag,
     required this.color,
-    this.sensitivity = 5.0,
+    required this.sensitivity,
   });
 
   @override

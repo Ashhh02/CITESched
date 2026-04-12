@@ -521,7 +521,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
 
                 scheduleAsync.when(
                   loading: () => const SizedBox.shrink(),
-                  error: (_, __) => const SizedBox.shrink(),
+                  error: (error, stackTrace) => const SizedBox.shrink(),
                   data: (schedules) {
                     final availabilities = availabilityAsync.maybeWhen(
                       data: (v) => v,
@@ -736,7 +736,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: visible.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (context, index) =>
                             const Divider(height: 16),
                         itemBuilder: (context, index) {
                           final entry = visible[index];
@@ -1140,7 +1140,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                     children: [
                       _miniChip(
                         label: 'Section',
-                        value: s.section ?? '--',
+                        value: s.section,
                       ),
                       _miniChip(
                         label: 'Room',

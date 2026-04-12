@@ -362,7 +362,7 @@ class _FacultyLoadTab extends ConsumerWidget {
           decoration: BoxDecoration(
             color: cardBg,
             borderRadius: BorderRadius.circular(16),
-            border: Border(left: BorderSide(color: maroonColor, width: 4)),
+            border: const Border(left: BorderSide(color: maroonColor, width: 4)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.08),
@@ -390,7 +390,7 @@ class _FacultyLoadTab extends ConsumerWidget {
                     final isCompact = constraints.maxWidth < 420;
                     return Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.leaderboard_rounded,
                           color: maroonColor,
                           size: 20,
@@ -899,7 +899,7 @@ class _ConflictSummaryTab extends ConsumerWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: conflicts.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
           final conflict = conflicts[index];
           final cfg = _cfg(conflict.type);
@@ -1189,7 +1189,7 @@ class _ScheduleOverviewTab extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border(left: BorderSide(color: maroonColor, width: 4)),
+        border: const Border(left: BorderSide(color: maroonColor, width: 4)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -1211,7 +1211,7 @@ class _ScheduleOverviewTab extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.table_chart_rounded, color: maroonColor, size: 20),
+                const Icon(Icons.table_chart_rounded, color: maroonColor, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

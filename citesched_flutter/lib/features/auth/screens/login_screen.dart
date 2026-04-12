@@ -396,13 +396,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             children: [
               Container(
                 padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
                     colors: [Color(0xFF720045), Color(0xFFB5179E)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: const BorderRadius.vertical(
+                  borderRadius: BorderRadius.vertical(
                     top: Radius.circular(24),
                   ),
                 ),
@@ -466,9 +466,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.rule_folder_outlined,
-                            color: const Color(0xFF720045),
+                            color: Color(0xFF720045),
                             size: 18,
                           ),
                           const SizedBox(width: 10),
@@ -1718,7 +1718,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [
                           _facultyColorLight,
                           _studentColorLight,

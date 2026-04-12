@@ -79,7 +79,7 @@ class StudentDashboardScreen extends ConsumerWidget {
     final isMobile = ResponsiveHelper.isMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final maroonColor = const Color(0xFF720045);
+    const maroonColor = Color(0xFF720045);
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
 
@@ -118,8 +118,8 @@ class StudentDashboardScreen extends ConsumerWidget {
                         ResponsiveHelper.isMobile(context) ? 16 : 32,
                       ),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [maroonColor, const Color(0xFF8e005b)],
+                        gradient: const LinearGradient(
+                          colors: [maroonColor, Color(0xFF8e005b)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -554,7 +554,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: visible.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (context, index) =>
                                 const Divider(height: 16),
                             itemBuilder: (context, index) {
                               final entry = visible[index];
@@ -813,7 +813,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: schedules.length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (context, index) =>
                                     const Divider(height: 12),
                                 itemBuilder: (context, index) {
                                   final info = schedules[index];

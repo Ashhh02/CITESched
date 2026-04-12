@@ -710,7 +710,7 @@ class _FacultyManagementScreenState
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red),
+                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
                       const SizedBox(height: 16),
                       Text(
                         'Error loading faculty',
@@ -724,7 +724,7 @@ class _FacultyManagementScreenState
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: () => ref.refresh(facultyListProvider),
-                        child: Text('Retry'),
+                        child: const Text('Retry'),
                       ),
                     ],
                   ),
@@ -875,7 +875,7 @@ class _FacultyManagementScreenState
           if (!hasQuery) ...[
             const SizedBox(height: 8),
             Text(
-              'Click \"Add Faculty\" to get started',
+              'Click "Add Faculty" to get started',
               style: GoogleFonts.poppins(color: textMuted.withValues(alpha: 0.85)),
             ),
           ],
@@ -968,15 +968,15 @@ class _FacultyManagementScreenState
                               checkColor: maroonColor,
                             ),
                           ),
-                          DataColumn(label: Text('FACULTY ID')),
-                          DataColumn(label: Text('NAME')),
-                          DataColumn(label: Text('EMAIL')),
-                          DataColumn(label: Text('PROGRAM')),
-                          DataColumn(label: Text('STATUS')),
-                          DataColumn(label: Text('CONFLICTS')),
-                          DataColumn(label: Text('SHIFT')),
-                          DataColumn(label: Text('MAX LOAD')),
-                          DataColumn(label: Text('ACTIONS')),
+                          const DataColumn(label: Text('FACULTY ID')),
+                          const DataColumn(label: Text('NAME')),
+                          const DataColumn(label: Text('EMAIL')),
+                          const DataColumn(label: Text('PROGRAM')),
+                          const DataColumn(label: Text('STATUS')),
+                          const DataColumn(label: Text('CONFLICTS')),
+                          const DataColumn(label: Text('SHIFT')),
+                          const DataColumn(label: Text('MAX LOAD')),
+                          const DataColumn(label: Text('ACTIONS')),
                         ],
                         rows: filteredFaculty.asMap().entries.map(
                           (entry) => _facultyDataRow(

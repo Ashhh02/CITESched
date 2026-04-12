@@ -23,7 +23,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = MediaQuery.of(context).size.width < 768;
 
-    final maroonColor = const Color(0xFF720045);
+    const maroonColor = Color(0xFF720045);
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
 
@@ -322,7 +322,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                       runSpacing: 8,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Icon(Icons.category_rounded, color: maroonColor),
+                        const Icon(Icons.category_rounded, color: maroonColor),
                         Text(
                           'SUBJECT TYPES:',
                           style: GoogleFonts.poppins(
@@ -423,7 +423,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Icon(Icons.calendar_today_rounded, color: maroonColor),
+                      const Icon(Icons.calendar_today_rounded, color: maroonColor),
                       Text(
                         'Assigned Class Schedules',
                         style: GoogleFonts.poppins(
@@ -478,7 +478,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                                   color: maroonColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(
+                                child: const Icon(
                                   Icons.calendar_today,
                                   color: maroonColor,
                                   size: 20,

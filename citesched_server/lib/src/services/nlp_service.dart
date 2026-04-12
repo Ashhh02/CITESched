@@ -1540,7 +1540,7 @@ class NLPService {
     final entries = counts.entries
         .map((e) => '"${e.key.name}": ${e.value}')
         .join(', ');
-    return '{${entries}}';
+    return '{$entries}';
   }
 
   String _normalizeQuery(String query) {
@@ -1572,8 +1572,12 @@ class NLPService {
     if (b.isEmpty) return a.length;
 
     final dp = List.generate(a.length + 1, (_) => List.filled(b.length + 1, 0));
-    for (var i = 0; i <= a.length; i++) dp[i][0] = i;
-    for (var j = 0; j <= b.length; j++) dp[0][j] = j;
+    for (var i = 0; i <= a.length; i++) {
+      dp[i][0] = i;
+    }
+    for (var j = 0; j <= b.length; j++) {
+      dp[0][j] = j;
+    }
 
     for (var i = 1; i <= a.length; i++) {
       for (var j = 1; j <= b.length; j++) {
@@ -2111,13 +2115,13 @@ class NLPService {
     }
 
     if (_containsKeywordFuzzy(query, ['morning'])) {
-      return _TimeRange(7 * 60, 12 * 60);
+      return const _TimeRange(7 * 60, 12 * 60);
     }
     if (_containsKeywordFuzzy(query, ['afternoon'])) {
-      return _TimeRange(12 * 60, 17 * 60);
+      return const _TimeRange(12 * 60, 17 * 60);
     }
     if (_containsKeywordFuzzy(query, ['evening'])) {
-      return _TimeRange(17 * 60, 21 * 60);
+      return const _TimeRange(17 * 60, 21 * 60);
     }
 
     final match = RegExp(

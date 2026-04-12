@@ -1,11 +1,12 @@
 import 'package:citesched_server/src/generated/protocol.dart';
+import 'package:citesched_server/src/auth/scopes.dart';
 import 'package:test/test.dart';
 
 import 'test_tools/serverpod_test_tools.dart';
 
 void main() {
   withServerpod('Given NLP Endpoint', (sessionBuilder, endpoints) {
-    Future<void> _seedScheduleData() async {
+    Future<void> seedScheduleData() async {
       final faculty = await endpoints.admin.createFaculty(
         sessionBuilder,
         Faculty(
@@ -104,12 +105,12 @@ void main() {
     test(
       'returns schedule matches for authenticated student queries',
       () async {
-        await _seedScheduleData();
+        await seedScheduleData();
 
         final studentSession = sessionBuilder.copyWith(
           authentication: AuthenticationOverride.authenticationInfo(
             '901',
-            {const Scope('student')},
+            {AppScopes.student},
           ),
         );
 

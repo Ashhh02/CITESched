@@ -63,7 +63,7 @@ class _DraggableFabState extends State<DraggableFab> {
     final safeBottom = media.padding.bottom + 8;
     final fabSize = previousSize ?? _childSize;
 
-    final minX = 8.0;
+    const minX = 8.0;
     final maxX = screen.width - fabSize.width - 8;
     final minY = safeTop;
     final maxY = screen.height - fabSize.height - safeBottom;

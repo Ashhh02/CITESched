@@ -18,7 +18,7 @@ class AdminSidebar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Formal maroon theme color from design system
-    final maroonColor = DesignSystem.headerColor;
+    const maroonColor = DesignSystem.headerColor;
     final innerMenuBg =
         Color.lerp(DesignSystem.headerColor, Colors.black, 0.15) ??
         DesignSystem.headerColor;
@@ -168,7 +168,7 @@ class AdminSidebar extends ConsumerWidget {
   }) {
     final isSelected = selectedIndex == index;
     // Hover/Active color: #8c0056 (var(--sidebar-hover))
-    final hoverColor = const Color(0xFF8c0056);
+    const hoverColor = Color(0xFF8c0056);
 
     return Material(
       color: Colors.transparent,

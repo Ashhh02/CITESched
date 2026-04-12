@@ -257,8 +257,8 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
       try {
         final archivedRoom = room.copyWith(isActive: false);
         await client.admin.updateRoom(archivedRoom);
-        ref.refresh(roomListProvider);
-        ref.refresh(archivedRoomListProvider);
+        ref.invalidate(roomListProvider);
+        ref.invalidate(archivedRoomListProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -309,8 +309,8 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
       try {
         final restoredRoom = room.copyWith(isActive: true);
         await client.admin.updateRoom(restoredRoom);
-        ref.refresh(roomListProvider);
-        ref.refresh(archivedRoomListProvider);
+        ref.invalidate(roomListProvider);
+        ref.invalidate(archivedRoomListProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -369,8 +369,8 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
     if (confirm == true && mounted) {
       try {
         await client.admin.deleteRoom(room.id!);
-        ref.refresh(roomListProvider);
-        ref.refresh(archivedRoomListProvider);
+        ref.invalidate(roomListProvider);
+        ref.invalidate(archivedRoomListProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -880,12 +880,12 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
                                             checkColor: maroonColor,
                                           ),
                                         ),
-                                        DataColumn(label: Text('ROOM')),
-                                        DataColumn(label: Text('CAPACITY')),
-                                        DataColumn(label: Text('TYPE')),
-                                        DataColumn(label: Text('PROGRAM')),
-                                        DataColumn(label: Text('STATUS')),
-                                        DataColumn(label: Text('ACTIONS')),
+                                        const DataColumn(label: Text('ROOM')),
+                                        const DataColumn(label: Text('CAPACITY')),
+                                        const DataColumn(label: Text('TYPE')),
+                                        const DataColumn(label: Text('PROGRAM')),
+                                        const DataColumn(label: Text('STATUS')),
+                                        const DataColumn(label: Text('ACTIONS')),
                                       ],
                                       rows: filtered.asMap().entries.map((
                                         entry,
@@ -1178,7 +1178,7 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
                                                                   8,
                                                                 ),
                                                           ),
-                                                          child: Icon(
+                                                          child: const Icon(
                                                             Icons
                                                                 .delete_forever_rounded,
                                                             color: Colors.red,
@@ -1370,7 +1370,7 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
                               onPressed: () => _restoreRoom(room),
                             ),
                             IconButton(
-                              icon: Icon(
+                              icon: const Icon(
                                 Icons.delete_forever_rounded,
                                 color: Colors.red,
                               ),

@@ -516,7 +516,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                               );
                             },
                             loading: () => const SizedBox.shrink(),
-                            error: (_, __) => const SizedBox.shrink(),
+                            error: (error, stackTrace) =>
+                                const SizedBox.shrink(),
                           ),
                           const SizedBox(width: 8),
                           const ThemeModeToggle(compact: true),
@@ -1173,11 +1174,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.check_circle_rounded,
                                 size:
                                     80, // font-size: 3.5rem ~= 56px, increased slightly
-                                color: const Color(0xFF2e7d32),
+                                color: Color(0xFF2e7d32),
                               ),
                               const SizedBox(height: 16),
                               Text(

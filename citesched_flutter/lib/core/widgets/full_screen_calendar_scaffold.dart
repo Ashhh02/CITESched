@@ -15,7 +15,7 @@ class FullScreenCalendarScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maroonColor = const Color(0xFF720045);
+    const maroonColor = Color(0xFF720045);
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(

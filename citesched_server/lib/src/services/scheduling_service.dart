@@ -728,7 +728,7 @@ class SchedulingService {
     final hasBlended = types.contains(SubjectType.blended);
 
     if (hasBlended || (hasLecture && hasLab)) {
-      final totalHours = _lectureHours + _labHours;
+      const totalHours = _lectureHours + _labHours;
       final totalUnits = subject.units.toDouble();
       final lectureUnits = totalUnits * (_lectureHours / totalHours);
       final labUnits = (totalUnits - lectureUnits);

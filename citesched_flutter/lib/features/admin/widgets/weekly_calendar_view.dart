@@ -282,9 +282,9 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                       alignment: Alignment.topCenter,
                       padding: const EdgeInsets.all(4),
                       decoration: isPreferredTime
-                          ? BoxDecoration(
+                          ? const BoxDecoration(
                               color: Colors.black,
-                              borderRadius: const BorderRadius.only(
+                              borderRadius: BorderRadius.only(
                                 topRight: Radius.circular(8),
                                 bottomRight: Radius.circular(8),
                               ),
@@ -740,7 +740,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
 
     final double top = (lunchStartHour - startHour) * hourHeight + 2;
     final double height = (lunchEndHour - lunchStartHour) * hourHeight - 4;
-    final double left = 80 + 4;
+    const double left = 80 + 4;
     final double width = (dayWidth * days.length) - 8;
 
     return Positioned(

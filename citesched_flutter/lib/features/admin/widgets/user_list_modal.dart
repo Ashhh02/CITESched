@@ -676,7 +676,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                   padding: const EdgeInsets.all(4),
                   tabs: [
                     Tab(text: isMobile ? 'Staff' : 'Faculty & Admin'),
-                    Tab(text: 'Students'),
+                    const Tab(text: 'Students'),
                   ],
                 ),
               ),
@@ -799,7 +799,8 @@ class _UserListModalState extends ConsumerState<UserListModal>
                     vertical: 8,
                   ),
                   itemCount: _filteredFaculty.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final f = _filteredFaculty[index];
                     return _buildFacultyCard(
@@ -912,7 +913,8 @@ class _UserListModalState extends ConsumerState<UserListModal>
                     vertical: 8,
                   ),
                   itemCount: _sortedStudents.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final s = _sortedStudents[index];
                     return _buildStudentCard(

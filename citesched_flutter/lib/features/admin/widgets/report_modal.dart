@@ -68,16 +68,16 @@ class _ReportModalState extends State<ReportModal>
             // Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFF720045),
-                    const Color(0xFF8e005b),
+                    Color(0xFF720045),
+                    Color(0xFF8e005b),
                   ],
                 ),
-                borderRadius: const BorderRadius.vertical(
+                borderRadius: BorderRadius.vertical(
                   top: Radius.circular(19),
                 ),
               ),
@@ -334,7 +334,7 @@ class _RoomUtilizationTab extends StatelessWidget {
         final data = snapshot.data ?? [];
         return ListView.separated(
           padding: const EdgeInsets.all(24),
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
           itemCount: data.length,
           itemBuilder: (context, index) {
             final item = data[index];
@@ -444,7 +444,7 @@ class _ConflictSummaryTab extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.check_circle_outline, size: 80, color: Colors.green),
+              const Icon(Icons.check_circle_outline, size: 80, color: Colors.green),
               const SizedBox(height: 16),
               Text(
                 'Total Conflicts: ${data.totalConflicts}',
@@ -511,7 +511,7 @@ class _ScheduleOverviewTab extends StatelessWidget {
           return ListView.separated(
             padding: const EdgeInsets.all(20),
             itemBuilder: (context, index) => cards[index],
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemCount: cards.length,
           );
         }

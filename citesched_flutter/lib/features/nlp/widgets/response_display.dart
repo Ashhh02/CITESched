@@ -51,7 +51,7 @@ class ResponseDisplay extends StatelessWidget {
 
   Widget _buildConflictDisplay(BuildContext context) {
     final conflictData = metadata;
-    if (conflictData == null) return SizedBox.shrink();
+    if (conflictData == null) return const SizedBox.shrink();
 
     final roomConflicts = conflictData['room'] as int? ?? 0;
     final facultyConflicts = conflictData['faculty'] as int? ?? 0;
@@ -143,13 +143,13 @@ class ResponseDisplay extends StatelessWidget {
   }
 
   Widget _buildOverloadDisplay(BuildContext context) {
-    if (metadata == null) return SizedBox.shrink();
+    if (metadata == null) return const SizedBox.shrink();
 
     final isOverloaded = metadata!['isOverloaded'] as bool? ?? false;
     final totalUnits = metadata!['totalUnits'] as double?;
     final maxLoad = metadata!['maxLoad'] as int?;
 
-    if (totalUnits == null || maxLoad == null) return SizedBox.shrink();
+    if (totalUnits == null || maxLoad == null) return const SizedBox.shrink();
 
     final overloadPercentage = (totalUnits / maxLoad) * 100;
     final barColor = isOverloaded ? Colors.red : Colors.green;
@@ -263,7 +263,7 @@ class ResponseDisplay extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.calendar_today, color: Colors.cyan, size: 20),
+              const Icon(Icons.calendar_today, color: Colors.cyan, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Schedule (${schedules!.length} classes)',
@@ -277,7 +277,7 @@ class ResponseDisplay extends StatelessWidget {
           ),
           ListView.builder(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: schedules!.length,
             itemBuilder: (context, index) {
               final schedule = schedules![index];
@@ -409,7 +409,7 @@ class ResponseDisplay extends StatelessWidget {
     return Row(
       spacing: 6,
       children: [
-        Text(emoji, style: TextStyle(fontSize: 12)),
+        Text(emoji, style: const TextStyle(fontSize: 12)),
         Expanded(
           child: Text(
             text,
@@ -425,7 +425,7 @@ class ResponseDisplay extends StatelessWidget {
   }
 
   Widget _buildRoomDisplay(BuildContext context) {
-    if (metadata == null) return SizedBox.shrink();
+    if (metadata == null) return const SizedBox.shrink();
 
     final capacity = metadata!['capacity'] as int?;
 

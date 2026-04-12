@@ -23,7 +23,7 @@ class NLPChatState {
     this.isLoading = false,
     this.error,
     ChatContext? context,
-  }) : context = context ?? ChatContext();
+  }) : context = context ?? const ChatContext();
 
   NLPChatState copyWith({
     List<ChatMessage>? messages,

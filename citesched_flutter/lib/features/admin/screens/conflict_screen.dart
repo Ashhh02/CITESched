@@ -142,7 +142,7 @@ class _ConflictScreenState extends State<ConflictScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final maroonColor = const Color(0xFF720045);
+    const maroonColor = Color(0xFF720045);
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final textPrimary = isDark ? Colors.white : Colors.black87;
@@ -539,7 +539,8 @@ class _ConflictScreenState extends State<ConflictScreen> {
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: _filteredConflicts().length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final conflict = _filteredConflicts()[index];
                 final config = _getConfig(conflict.type);

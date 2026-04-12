@@ -33,7 +33,7 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = MediaQuery.of(context).size.width < 768;
-    final maroonColor = const Color(0xFF800000);
+    const maroonColor = Color(0xFF800000);
 
     // Watch all conflicts and filter for this faculty
     final allConflictsAsync = ref.watch(allConflictsProvider);
@@ -360,9 +360,9 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.calendar_view_week_rounded,
-                        color: const Color(0xFF720045),
+                        color: Color(0xFF720045),
                       ),
                       Text(
                         'Weekly Schedule Analysis',
@@ -481,9 +481,9 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.list_alt_rounded,
-                        color: const Color(0xFF720045),
+                        color: Color(0xFF720045),
                       ),
                       Text(
                         'Detailed Assignments & Conflicts',

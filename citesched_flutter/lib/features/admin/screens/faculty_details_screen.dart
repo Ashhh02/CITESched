@@ -33,7 +33,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
     );
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final maroonColor = const Color(0xFF720045);
+    const maroonColor = Color(0xFF720045);
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
 
@@ -164,7 +164,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.business_rounded, color: maroonColor),
+                        const Icon(Icons.business_rounded, color: maroonColor),
                         const SizedBox(width: 12),
                         Text(
                           'PROGRAM ASSIGNMENT:',
@@ -220,7 +220,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
 
                   Row(
                     children: [
-                      Icon(Icons.menu_book_rounded, color: maroonColor),
+                      const Icon(Icons.menu_book_rounded, color: maroonColor),
                       const SizedBox(width: 12),
                       Text(
                         'Handled Subjects',
@@ -283,7 +283,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
                                   color: maroonColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(
+                                child: const Icon(
                                   Icons.auto_stories_rounded,
                                   color: maroonColor,
                                   size: 20,
@@ -329,7 +329,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
                   // Teaching Timetable Section
                   Row(
                     children: [
-                      Icon(Icons.calendar_today_rounded, color: maroonColor),
+                      const Icon(Icons.calendar_today_rounded, color: maroonColor),
                       const SizedBox(width: 12),
                       Text(
                         'Teaching Timetable',
@@ -385,7 +385,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
                                   color: maroonColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(
+                                child: const Icon(
                                   Icons.book,
                                   color: maroonColor,
                                   size: 20,

@@ -17,7 +17,7 @@ class AppLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final maroonColor = const Color(0xFF4f003b);
+    const maroonColor = Color(0xFF4f003b);
 
     final scaffold = Scaffold(
       body: child,

@@ -26,12 +26,12 @@ class ScheduleDisplayWidget extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Table(
-        columnWidths: {
-          0: const FixedColumnWidth(100),
-          1: const FixedColumnWidth(150),
-          2: const FixedColumnWidth(100),
-          3: const FixedColumnWidth(100),
-          4: const FixedColumnWidth(100),
+        columnWidths: const {
+          0: FixedColumnWidth(100),
+          1: FixedColumnWidth(150),
+          2: FixedColumnWidth(100),
+          3: FixedColumnWidth(100),
+          4: FixedColumnWidth(100),
         },
         children: [
           // Header row
@@ -50,7 +50,7 @@ class ScheduleDisplayWidget extends StatelessWidget {
           // Data rows
           ...schedules.map((schedule) {
             return TableRow(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
                     color: Colors.white12,

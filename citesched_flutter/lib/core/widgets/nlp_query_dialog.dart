@@ -406,6 +406,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
       _ResizeEdge(
         alignment: Alignment.centerLeft,
         cursor: SystemMouseCursors.resizeLeftRight,
+        sensitivity: 1,
         onDrag: (delta) {
           setState(() {
             _dialogWidth = (bounds.width - delta.dx).clamp(
@@ -420,6 +421,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
       _ResizeEdge(
         alignment: Alignment.centerRight,
         cursor: SystemMouseCursors.resizeLeftRight,
+        sensitivity: 1,
         onDrag: (delta) {
           setState(() {
             _dialogWidth = (bounds.width + delta.dx).clamp(
@@ -434,6 +436,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
       _ResizeEdge(
         alignment: Alignment.topCenter,
         cursor: SystemMouseCursors.resizeUpDown,
+        sensitivity: 1,
         onDrag: (delta) {
           setState(() {
             _dialogHeight = (bounds.height - delta.dy).clamp(
@@ -448,6 +451,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
       _ResizeEdge(
         alignment: Alignment.bottomCenter,
         cursor: SystemMouseCursors.resizeUpDown,
+        sensitivity: 1,
         onDrag: (delta) {
           setState(() {
             _dialogHeight = (bounds.height + delta.dy).clamp(
@@ -462,6 +466,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
       _ResizeCorner(
         alignment: Alignment.topLeft,
         cursor: SystemMouseCursors.resizeUpLeftDownRight,
+        sensitivity: 1,
         onDrag: (delta) {
           setState(() {
             _dialogWidth = (bounds.width - delta.dx).clamp(
@@ -479,6 +484,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
       _ResizeCorner(
         alignment: Alignment.topRight,
         cursor: SystemMouseCursors.resizeUpRightDownLeft,
+        sensitivity: 1,
         onDrag: (delta) {
           setState(() {
             _dialogWidth = (bounds.width + delta.dx).clamp(
@@ -496,6 +502,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
       _ResizeCorner(
         alignment: Alignment.bottomLeft,
         cursor: SystemMouseCursors.resizeUpRightDownLeft,
+        sensitivity: 1,
         onDrag: (delta) {
           setState(() {
             _dialogWidth = (bounds.width - delta.dx).clamp(
@@ -513,6 +520,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
       _ResizeCorner(
         alignment: Alignment.bottomRight,
         cursor: SystemMouseCursors.resizeUpLeftDownRight,
+        sensitivity: 1,
         onDrag: (delta) {
           setState(() {
             _dialogWidth = (bounds.width + delta.dx).clamp(
@@ -658,7 +666,8 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
             child: ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: suggestions.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final text = suggestions[index];
                 return ListTile(
@@ -834,7 +843,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
     return ListView.separated(
       padding: const EdgeInsets.all(20),
       itemCount: sessions.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (context, index) => _buildSessionTile(sessions[index]),
     );
   }
@@ -949,7 +958,7 @@ class _ResizeEdge extends StatelessWidget {
     required this.onDrag,
     required this.vertical,
     required this.color,
-    this.sensitivity = 10.0,
+    required this.sensitivity,
   });
 
   @override
@@ -999,7 +1008,7 @@ class _ResizeCorner extends StatelessWidget {
     required this.cursor,
     required this.onDrag,
     required this.color,
-    this.sensitivity = 10.0,
+    required this.sensitivity,
   });
 
   @override
@@ -1019,7 +1028,7 @@ class _ResizeCorner extends StatelessWidget {
                 color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.drag_handle,
                 size: 12,
                 color: Colors.black54,

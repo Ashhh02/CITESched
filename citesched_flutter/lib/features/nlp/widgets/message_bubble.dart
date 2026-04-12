@@ -15,7 +15,7 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUserMessage = message.sender == MessageSender.user;
-    final maroonColor = const Color(0xFF720045);
+    const maroonColor = Color(0xFF720045);
 
     if (isUserMessage) {
       return _buildUserBubble(context, maroonColor);
@@ -49,7 +49,7 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildAssistantBubble(BuildContext context, Color maroonColor) {
-    final bubbleColor = const Color(0xFF2a2a3e);
+    const bubbleColor = Color(0xFF2a2a3e);
 
     // If we have a response type (and optional schedules), use the ResponseDisplay widget
     if (message.responseType != null &&

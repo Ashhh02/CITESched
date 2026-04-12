@@ -488,99 +488,6 @@ _TimeslotOptionsResult _buildTimeslotOptionsFromAvailability({
   return _TimeslotOptionsResult(options: options, missing: missing);
 }
 
-bool _timeslotWithinAvailability(Timeslot slot, FacultyAvailability avail) {
-  if (slot.day != avail.dayOfWeek) return false;
-  final slotStart = _timeToMinutes(slot.startTime);
-  final slotEnd = _timeToMinutes(slot.endTime);
-  final availStart = _timeToMinutes(avail.startTime);
-  final availEnd = _timeToMinutes(avail.endTime);
-  if (slotEnd <= slotStart || availEnd <= availStart) return false;
-  // Strict match: only show timeslots that exactly match availability windows.
-  return slotStart == availStart && slotEnd == availEnd;
-}
-
-bool _timeslotMatchesAvailabilityWindow(
-  Timeslot slot,
-  FacultyAvailability avail,
-) {
-  if (slot.day != avail.dayOfWeek) return false;
-  return _timeToMinutes(slot.startTime) == _timeToMinutes(avail.startTime) &&
-      _timeToMinutes(slot.endTime) == _timeToMinutes(avail.endTime);
-}
-
-List<Timeslot> _dedupeTimeslotsByWindow(List<Timeslot> timeslots) {
-  final byWindow = <String, Timeslot>{};
-  for (final slot in timeslots) {
-    final key = '${slot.day.name}|${slot.startTime}|${slot.endTime}';
-    final existing = byWindow[key];
-    if (existing == null) {
-      byWindow[key] = slot;
-      continue;
-    }
-    final existingId = existing.id ?? 1 << 30;
-    final slotId = slot.id ?? 1 << 30;
-    if (slotId < existingId) {
-      byWindow[key] = slot;
-    }
-  }
-  return byWindow.values.toList();
-}
-
-Future<void> _createTimeslotsFromAvailability({
-  required WidgetRef ref,
-  required BuildContext context,
-  required List<FacultyAvailability> availabilityList,
-}) async {
-  if (availabilityList.isEmpty) {
-    AppErrorDialog.show(context, 'No availability data provided.');
-    return;
-  }
-
-  try {
-    final existing = await client.admin.getAllTimeslots();
-    final existingKeys = existing
-        .map((t) => '${t.day.name}|${t.startTime}|${t.endTime}')
-        .toSet();
-
-    var createdCount = 0;
-    for (final avail in availabilityList) {
-      final key = '${avail.dayOfWeek.name}|${avail.startTime}|${avail.endTime}';
-      if (existingKeys.contains(key)) continue;
-      final label =
-          '${_getDayAbbr(avail.dayOfWeek)} ${avail.startTime}-${avail.endTime}';
-      await client.admin.createTimeslot(
-        Timeslot(
-          day: avail.dayOfWeek,
-          startTime: avail.startTime,
-          endTime: avail.endTime,
-          label: label,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-      );
-      createdCount += 1;
-    }
-
-    ref.invalidate(timeslotsProvider);
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            createdCount > 0
-                ? 'Created $createdCount timeslot(s).'
-                : 'All matching timeslots already exist.',
-          ),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
-  } catch (e) {
-    if (context.mounted) {
-      AppErrorDialog.show(context, e);
-    }
-  }
-}
-
 Future<void> _createTimeslotsFromWindows({
   required WidgetRef ref,
   required BuildContext context,
@@ -2283,36 +2190,36 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                             maroonColor,
                                                       ),
                                                     ),
-                                                    DataColumn(
+                                                    const DataColumn(
                                                       label: Text('FACULTY'),
                                                     ),
-                                                    DataColumn(
+                                                    const DataColumn(
                                                       label: Text('SUBJECT'),
                                                     ),
-                                                    DataColumn(
+                                                    const DataColumn(
                                                       label: Text('SECTION'),
                                                     ),
-                                                    DataColumn(
+                                                    const DataColumn(
                                                       label: Text('YEAR'),
                                                     ),
-                                                    DataColumn(
+                                                    const DataColumn(
                                                       label: Text('LOAD'),
                                                     ),
-                                                    DataColumn(
+                                                    const DataColumn(
                                                       label: Text('UNITS'),
                                                     ),
-                                                    DataColumn(
+                                                    const DataColumn(
                                                       label: Text('HOURS'),
                                                     ),
-                                                    DataColumn(
+                                                    const DataColumn(
                                                       label: Text(
                                                         'ROOM & SCHEDULE',
                                                       ),
                                                     ),
-                                                    DataColumn(
+                                                    const DataColumn(
                                                       label: Text('STATUS'),
                                                     ),
-                                                    DataColumn(
+                                                    const DataColumn(
                                                       label: Text('ACTIONS'),
                                                     ),
                                                   ],
@@ -3153,7 +3060,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                                         ),
                                                                       ),
                                                                       child:
-                                                                          Icon(
+                                                                          const Icon(
                                                                         Icons
                                                                             .delete_forever_rounded,
                                                                         color:
@@ -3204,7 +3111,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
     AsyncValue<List<Timeslot>> timeslotsAsync,
     bool isDark,
   ) {
-    final maroonColor = const Color(0xFF4f003b);
+    const maroonColor = Color(0xFF4f003b);
     final headerBg = isDark
         ? maroonColor.withValues(alpha: 0.22)
         : maroonColor.withValues(alpha: 0.08);
@@ -3704,9 +3611,9 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
               if (hasConflicts && _showConflictDetails)
                 Container(
                   padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.white,
-                    borderRadius: const BorderRadius.only(
+                    borderRadius: BorderRadius.only(
                       bottomLeft: Radius.circular(12),
                       bottomRight: Radius.circular(12),
                     ),

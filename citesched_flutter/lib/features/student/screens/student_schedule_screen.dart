@@ -19,8 +19,8 @@ class StudentScheduleScreen extends ConsumerWidget {
     final profileAsync = ref.watch(studentProfileProvider);
     final user = ref.watch(authProvider);
 
-    final maroonDark = const Color(0xFF4f003b);
-    final bgColor = const Color(0xFFF4F7F9);
+    const maroonDark = Color(0xFF4f003b);
+    const bgColor = Color(0xFFF4F7F9);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -210,9 +210,9 @@ class StudentScheduleScreen extends ConsumerWidget {
           // Header
           pw.Container(
             padding: const pw.EdgeInsets.all(20),
-            decoration: pw.BoxDecoration(
-              color: const PdfColor.fromInt(0xFF4f003b),
-              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+            decoration: const pw.BoxDecoration(
+              color: PdfColor.fromInt(0xFF4f003b),
+              borderRadius: pw.BorderRadius.all(pw.Radius.circular(12)),
             ),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -338,14 +338,14 @@ class StudentScheduleScreen extends ConsumerWidget {
   }
 
   Widget _buildBanner(Student? profile, String? userName) {
-    final maroonDark = const Color(0xFF4f003b);
-    final maroonLight = const Color(0xFF720045);
+    const maroonDark = Color(0xFF4f003b);
+    const maroonLight = Color(0xFF720045);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [maroonDark, maroonLight],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
