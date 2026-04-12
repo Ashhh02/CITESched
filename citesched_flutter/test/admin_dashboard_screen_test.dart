@@ -65,9 +65,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('SCHEDULED CLASSES'), findsOneWidget);
-    expect(find.text('ACTIVE USERS'), findsOneWidget);
-    expect(find.text('TOTAL SUBJECTS'), findsOneWidget);
-    expect(find.text('TOTAL ROOMS'), findsOneWidget);
+    expect(find.text('FACULTY'), findsOneWidget);
+    expect(find.text('STUDENTS'), findsOneWidget);
+    expect(find.text('SCHEDULES'), findsOneWidget);
+    expect(find.text('CONFLICTS'), findsOneWidget);
   });
 }
