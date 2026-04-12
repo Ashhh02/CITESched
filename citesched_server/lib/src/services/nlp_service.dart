@@ -23,6 +23,81 @@ class NLPService {
     'alter',
   ];
 
+  static String normalizeQueryForTest(String query) {
+    final cleaned = query
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
+    return cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  static bool containsForbiddenKeywordsForTest(String query) {
+    final lowerQuery = query.toLowerCase();
+    return forbiddenKeywords.any((keyword) => lowerQuery.contains(keyword));
+  }
+
+  static int? parseTimeTokenForTest(String? token) {
+    if (token == null) return null;
+    final match = RegExp(
+      r'(\d{1,2})(?::(\d{2}))?\s?(am|pm)?',
+    ).firstMatch(token.trim());
+    if (match == null) return null;
+    final hour = int.tryParse(match.group(1) ?? '') ?? 0;
+    final minute = int.tryParse(match.group(2) ?? '0') ?? 0;
+    var h = hour;
+    final ampm = match.group(3);
+    if (ampm != null) {
+      if (ampm.toLowerCase() == 'pm' && h < 12) h += 12;
+      if (ampm.toLowerCase() == 'am' && h == 12) h = 0;
+    }
+    return h * 60 + minute;
+  }
+
+  static ({int start, int end})? extractTimeRangeForTest(String query) {
+    final between = RegExp(
+      r'(between|from)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)\s+(and|to)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)',
+    ).firstMatch(query);
+    if (between != null) {
+      final start = parseTimeTokenForTest(between.group(2));
+      final end = parseTimeTokenForTest(between.group(5));
+      if (start != null && end != null) return (start: start, end: end);
+    }
+
+    final after = RegExp(
+      r'(after)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)',
+    ).firstMatch(query);
+    if (after != null) {
+      final start = parseTimeTokenForTest(after.group(2));
+      if (start != null) return (start: start, end: 24 * 60);
+    }
+
+    final before = RegExp(
+      r'(before)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)',
+    ).firstMatch(query);
+    if (before != null) {
+      final end = parseTimeTokenForTest(before.group(2));
+      if (end != null) return (start: 0, end: end);
+    }
+
+    if (query.contains('morning')) {
+      return (start: 7 * 60, end: 12 * 60);
+    }
+    if (query.contains('afternoon')) {
+      return (start: 12 * 60, end: 17 * 60);
+    }
+    if (query.contains('evening')) {
+      return (start: 17 * 60, end: 21 * 60);
+    }
+
+    final match = RegExp(
+      r'(\d{1,2})(?::(\d{2}))?\s?(am|pm)?',
+    ).allMatches(query).toList();
+    if (match.isEmpty) return null;
+    final token = match.first.group(0);
+    final start = parseTimeTokenForTest(token);
+    if (start == null) return null;
+    return (start: start, end: start + 60);
+  }
+
   Future<Student?> _findCurrentStudent(
     Session session,
     String userIdentifier,
