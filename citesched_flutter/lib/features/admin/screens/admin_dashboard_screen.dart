@@ -41,6 +41,10 @@ final pendingFacultyRequestsProvider = FutureProvider<List<Faculty>>((
   return pending;
 });
 
+const _adminDashboardTitle = 'CITESched • Admin Dashboard';
+const _yearLevelDistributionTitle = 'Year Level Distribution';
+const _sectionDistributionTitle = 'Section Distribution';
+
 class _StatCardConfig {
   final String label;
   final String value;
@@ -288,7 +292,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         ),
         const SizedBox(height: 12),
         Text(
-          'CITESched • Admin Dashboard',
+          _adminDashboardTitle,
           textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
@@ -338,7 +342,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'CITESched • Admin Dashboard',
+                _adminDashboardTitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
@@ -535,7 +539,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   ) {
     final programCard = _buildDistributionPanel(
       context,
-      'Year Level Distribution',
+      _yearLevelDistributionTitle,
       yearLevelDistribution,
       cardBg,
       primaryPurple,
@@ -543,7 +547,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
     final sectionCard = _buildDistributionPanel(
       context,
-      'Section Distribution',
+      _sectionDistributionTitle,
       sectionDistribution,
       cardBg,
       primaryPurple,
@@ -800,39 +804,53 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final statsAsync = ref.watch(dashboardStatsProvider);
     final pendingFacultyAsync = ref.watch(pendingFacultyRequestsProvider);
 
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: _buildDashboardState(
+        context: context,
+        statsAsync: statsAsync,
+        pendingFacultyAsync: pendingFacultyAsync,
+        userInfo: userInfo,
+      ),
+    );
+  }
+
+  Widget _buildDashboardState({
+    required BuildContext context,
+    required AsyncValue<DashboardStats> statsAsync,
+    required AsyncValue<List<Faculty>> pendingFacultyAsync,
+    required UserInfo? userInfo,
+  }) {
     final isDesktop = ResponsiveHelper.isDesktop(context);
     final isMobile = ResponsiveHelper.isMobile(context);
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: statsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Error: $err'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _showDebugSessionInfo,
-                child: const Text('Debug Session'),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () => ref.refresh(dashboardStatsProvider),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
+    return statsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error: $err'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _showDebugSessionInfo,
+              child: const Text('Debug Session'),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () => ref.refresh(dashboardStatsProvider),
+              child: const Text('Retry'),
+            ),
+          ],
         ),
-        data: (stats) => _buildDashboardContent(
-          context: context,
-          stats: stats,
-          pendingFacultyAsync: pendingFacultyAsync,
-          userInfo: userInfo,
-          isMobile: isMobile,
-          isDesktop: isDesktop,
-        ),
+      ),
+      data: (stats) => _buildDashboardContent(
+        context: context,
+        stats: stats,
+        pendingFacultyAsync: pendingFacultyAsync,
+        userInfo: userInfo,
+        isMobile: isMobile,
+        isDesktop: isDesktop,
       ),
     );
   }

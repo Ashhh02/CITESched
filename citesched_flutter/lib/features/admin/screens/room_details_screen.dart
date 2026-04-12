@@ -299,86 +299,10 @@ class RoomDetailsScreen extends ConsumerWidget {
                   ),
 
                   // Stats Row
-                  LayoutBuilder(
-                    builder: (context, c) {
-                      final compactStats = c.maxWidth < 860;
-                      if (compactStats) {
-                        return Column(
-                          children: [
-                            _buildSimpleStatCard(
-                              'Capacity',
-                              '${room.capacity} students',
-                              Icons.groups_rounded,
-                              Colors.blue,
-                              cardBg,
-                              compact: true,
-                            ),
-                            const SizedBox(height: 12),
-                            scheduleAsync.when(
-                              loading: () => _buildSimpleStatCard(
-                                'Occupancy',
-                                '...',
-                                Icons.pie_chart_rounded,
-                                Colors.orange,
-                                cardBg,
-                                compact: true,
-                              ),
-                              error: (e, s) => _buildSimpleStatCard(
-                                'Occupancy',
-                                'Error',
-                                Icons.pie_chart_rounded,
-                                Colors.orange,
-                                cardBg,
-                                compact: true,
-                              ),
-                              data: (schedules) => _buildSimpleStatCard(
-                                'Schedules',
-                                '${schedules.length} periods',
-                                Icons.calendar_view_week_rounded,
-                                Colors.orange,
-                                cardBg,
-                                compact: true,
-                              ),
-                            ),
-                          ],
-                        );
-                      }
-                      return Row(
-                        children: [
-                          _buildSimpleStatCard(
-                            'Capacity',
-                            '${room.capacity} students',
-                            Icons.groups_rounded,
-                            Colors.blue,
-                            cardBg,
-                          ),
-                          const SizedBox(width: 16),
-                          scheduleAsync.when(
-                            loading: () => _buildSimpleStatCard(
-                              'Occupancy',
-                              '...',
-                              Icons.pie_chart_rounded,
-                              Colors.orange,
-                              cardBg,
-                            ),
-                            error: (e, s) => _buildSimpleStatCard(
-                              'Occupancy',
-                              'Error',
-                              Icons.pie_chart_rounded,
-                              Colors.orange,
-                              cardBg,
-                            ),
-                            data: (schedules) => _buildSimpleStatCard(
-                              'Schedules',
-                              '${schedules.length} periods',
-                              Icons.calendar_view_week_rounded,
-                              Colors.orange,
-                              cardBg,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                  _buildRoomStatsSection(
+                    room: room,
+                    scheduleAsync: scheduleAsync,
+                    cardBg: cardBg,
                   ),
 
                   const SizedBox(height: 32),
@@ -404,70 +328,11 @@ class RoomDetailsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  scheduleAsync.when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (err, stack) =>
-                        Center(child: Text('Error loading schedule: $err')),
-                    data: (schedules) {
-                      if (schedules.isEmpty) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 40),
-                            child: Text(
-                              'No classes scheduled for this room.',
-                              style: GoogleFonts.poppins(color: Colors.grey),
-                            ),
-                          ),
-                        );
-                      }
-
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark
-                                ? Colors.white10
-                                : Colors.black.withValues(alpha: 0.05),
-                          ),
-                        ),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: schedules.length,
-                          separatorBuilder: (context, index) =>
-                              const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final s = schedules[index];
-                            return ListTiles(
-                              leading: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: maroonColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(
-                                  Icons.access_time_filled_rounded,
-                                  color: maroonColor,
-                                  size: 20,
-                                ),
-                              ),
-                              title: Text(
-                                s.subject?.name ?? 'Unknown Subject',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              subtitle: Text(
-                                _scheduleSummary(s),
-                                style: GoogleFonts.poppins(fontSize: 12),
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
+                  _buildRoomScheduleSection(
+                    scheduleAsync: scheduleAsync,
+                    cardBg: cardBg,
+                    isDark: isDark,
+                    maroonColor: maroonColor,
                   ),
                 ],
               ),
@@ -501,6 +366,143 @@ class RoomDetailsScreen extends ConsumerWidget {
           color: color,
         ),
       ),
+    );
+  }
+
+  Widget _buildRoomStatsSection({
+    required Room room,
+    required AsyncValue<List<Schedule>> scheduleAsync,
+    required Color cardBg,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compactStats = constraints.maxWidth < 860;
+        final stats = <Widget>[
+          _buildSimpleStatCard(
+            'Capacity',
+            '${room.capacity} students',
+            Icons.groups_rounded,
+            Colors.blue,
+            cardBg,
+            compact: compactStats,
+          ),
+          const SizedBox(width: 16, height: 12),
+          scheduleAsync.when(
+            loading: () => _buildSimpleStatCard(
+              'Occupancy',
+              '...',
+              Icons.pie_chart_rounded,
+              Colors.orange,
+              cardBg,
+              compact: compactStats,
+            ),
+            error: (e, s) => _buildSimpleStatCard(
+              'Occupancy',
+              'Error',
+              Icons.pie_chart_rounded,
+              Colors.orange,
+              cardBg,
+              compact: compactStats,
+            ),
+            data: (schedules) => _buildSimpleStatCard(
+              'Schedules',
+              '${schedules.length} periods',
+              Icons.calendar_view_week_rounded,
+              Colors.orange,
+              cardBg,
+              compact: compactStats,
+            ),
+          ),
+        ];
+
+        if (compactStats) {
+          return Column(
+            children: [
+              stats[0],
+              const SizedBox(height: 12),
+              stats[2],
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            stats[0],
+            const SizedBox(width: 16),
+            stats[2],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildRoomScheduleSection({
+    required AsyncValue<List<Schedule>> scheduleAsync,
+    required Color cardBg,
+    required bool isDark,
+    required Color maroonColor,
+  }) {
+    return scheduleAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Error loading schedule: $err')),
+      data: (schedules) {
+        if (schedules.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Text(
+                'No classes scheduled for this room.',
+                style: GoogleFonts.poppins(color: Colors.grey),
+              ),
+            ),
+          );
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white10
+                  : Colors.black.withValues(alpha: 0.05),
+            ),
+          ),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: schedules.length,
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final s = schedules[index];
+              return ListTiles(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: maroonColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.access_time_filled_rounded,
+                    color: maroonColor,
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  s.subject?.name ?? 'Unknown Subject',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: Text(
+                  _scheduleSummary(s),
+                  style: GoogleFonts.poppins(fontSize: 12),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 

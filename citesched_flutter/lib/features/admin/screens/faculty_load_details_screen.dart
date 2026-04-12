@@ -69,10 +69,10 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
     final scheduleInfos = _toScheduleInfos(facultySchedules, facultyConflicts);
 
     // Calculate stats
-    double totalUnits = 0;
-    for (var s in facultySchedules) {
-      totalUnits += s.units ?? 0;
-    }
+    final totalUnits = facultySchedules.fold<double>(
+      0,
+      (sum, schedule) => sum + (schedule.units ?? 0),
+    );
 
     return Scaffold(
       backgroundColor: isDark
@@ -300,121 +300,23 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Stats Row
-                  LayoutBuilder(
-                    builder: (context, c) {
-                      final compactStats = c.maxWidth < 860;
-                      if (compactStats) {
-                        return Column(
-                          children: [
-                            _buildStatCard(
-                              'Total Units',
-                              '$totalUnits / ${faculty.maxLoad ?? 0}',
-                              Icons.menu_book_rounded,
-                              maroonColor,
-                              isDark,
-                              compact: true,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildStatCard(
-                              'Assigned Subjects',
-                              '${facultySchedules.length}',
-                              Icons.subject_rounded,
-                              Colors.blue,
-                              isDark,
-                              compact: true,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildStatCard(
-                              'Remaining Load',
-                              '${(faculty.maxLoad ?? 0) - totalUnits}',
-                              Icons.trending_down_rounded,
-                              Colors.green,
-                              isDark,
-                              compact: true,
-                            ),
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        children: [
-                          _buildStatCard(
-                            'Total Units',
-                            '$totalUnits / ${faculty.maxLoad ?? 0}',
-                            Icons.menu_book_rounded,
-                            maroonColor,
-                            isDark,
-                          ),
-                          const SizedBox(width: 16),
-                          _buildStatCard(
-                            'Assigned Subjects',
-                            '${facultySchedules.length}',
-                            Icons.subject_rounded,
-                            Colors.blue,
-                            isDark,
-                          ),
-                          const SizedBox(width: 16),
-                          _buildStatCard(
-                            'Remaining Load',
-                            '${(faculty.maxLoad ?? 0) - totalUnits}',
-                            Icons.trending_down_rounded,
-                            Colors.green,
-                            isDark,
-                          ),
-                        ],
-                      );
-                    },
+                  _buildLoadStatsSection(
+                    context: context,
+                    facultySchedules: facultySchedules,
+                    totalUnits: totalUnits,
+                    isDark: isDark,
+                    maroonColor: maroonColor,
+                    maxLoad: faculty.maxLoad ?? 0,
                   ),
                   const SizedBox(height: 32),
 
-                  // Mini Timetable Section
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.calendar_view_week_rounded,
-                        color: Color(0xFF720045),
-                      ),
-                      Text(
-                        'Weekly Schedule Analysis',
-                        style: GoogleFonts.poppins(
-                          fontSize: isMobile ? 18 : 20,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => FullScreenCalendarScaffold(
-                              title: 'Weekly Schedule Analysis',
-                              backgroundColor: isDark
-                                  ? const Color(0xFF0F172A)
-                                  : const Color(0xFFF8F9FA),
-                              child: WeeklyCalendarView(
-                                maroonColor: maroonColor,
-                                availabilities:
-                                    availabilityAsync.maybeWhen(
-                                      data: (d) => d,
-                                      orElse: () => null,
-                                    ),
-                                schedules: scheduleInfos,
-                              ),
-                            ),
-                          ),
-                        ),
-                        icon: const Icon(Icons.fullscreen_rounded),
-                        label: Text(
-                          'Full Screen',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
+                  _buildWeeklyScheduleSection(
+                    context: context,
+                    isDark: isDark,
+                    isMobile: isMobile,
+                    maroonColor: maroonColor,
+                    availabilityAsync: availabilityAsync,
+                    scheduleInfos: scheduleInfos,
                   ),
                   const SizedBox(height: 16),
                   Container(
@@ -453,26 +355,7 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 32),
 
-                  // Detailed List
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.list_alt_rounded,
-                        color: Color(0xFF720045),
-                      ),
-                      Text(
-                        'Detailed Assignments & Conflicts',
-                        style: GoogleFonts.poppins(
-                          fontSize: isMobile ? 18 : 20,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
+                  _buildAssignmentsSectionTitle(isDark: isDark, isMobile: isMobile),
                   const SizedBox(height: 16),
                   _buildAssignmentsTable(
                     facultySchedules,
@@ -485,6 +368,153 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLoadStatsSection({
+    required BuildContext context,
+    required List<Schedule> facultySchedules,
+    required double totalUnits,
+    required bool isDark,
+    required Color maroonColor,
+    required int maxLoad,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compactStats = constraints.maxWidth < 860;
+        final totalUnitsText = '$totalUnits / $maxLoad';
+        final remainingLoadText = '${maxLoad - totalUnits}';
+
+        final cards = [
+          _buildStatCard(
+            'Total Units',
+            totalUnitsText,
+            Icons.menu_book_rounded,
+            maroonColor,
+            isDark,
+            compact: compactStats,
+          ),
+          _buildStatCard(
+            'Assigned Subjects',
+            '${facultySchedules.length}',
+            Icons.subject_rounded,
+            Colors.blue,
+            isDark,
+            compact: compactStats,
+          ),
+          _buildStatCard(
+            'Remaining Load',
+            remainingLoadText,
+            Icons.trending_down_rounded,
+            Colors.green,
+            isDark,
+            compact: compactStats,
+          ),
+        ];
+
+        if (compactStats) {
+          return Column(
+            children: [
+              cards[0],
+              const SizedBox(height: 12),
+              cards[1],
+              const SizedBox(height: 12),
+              cards[2],
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            cards[0],
+            const SizedBox(width: 16),
+            cards[1],
+            const SizedBox(width: 16),
+            cards[2],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildWeeklyScheduleSection({
+    required BuildContext context,
+    required bool isDark,
+    required bool isMobile,
+    required Color maroonColor,
+    required AsyncValue<List<FacultyAvailability>> availabilityAsync,
+    required List<ScheduleInfo> scheduleInfos,
+  }) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        const Icon(
+          Icons.calendar_view_week_rounded,
+          color: Color(0xFF720045),
+        ),
+        Text(
+          'Weekly Schedule Analysis',
+          style: GoogleFonts.poppins(
+            fontSize: isMobile ? 18 : 20,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        TextButton.icon(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => FullScreenCalendarScaffold(
+                title: 'Weekly Schedule Analysis',
+                backgroundColor: isDark
+                    ? const Color(0xFF0F172A)
+                    : const Color(0xFFF8F9FA),
+                child: WeeklyCalendarView(
+                  maroonColor: maroonColor,
+                  availabilities: availabilityAsync.maybeWhen(
+                    data: (d) => d,
+                    orElse: () => null,
+                  ),
+                  schedules: scheduleInfos,
+                ),
+              ),
+            ),
+          ),
+          icon: const Icon(Icons.fullscreen_rounded),
+          label: Text(
+            'Full Screen',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAssignmentsSectionTitle({
+    required bool isDark,
+    required bool isMobile,
+  }) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        const Icon(
+          Icons.list_alt_rounded,
+          color: Color(0xFF720045),
+        ),
+        Text(
+          'Detailed Assignments & Conflicts',
+          style: GoogleFonts.poppins(
+            fontSize: isMobile ? 18 : 20,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+      ],
     );
   }
 

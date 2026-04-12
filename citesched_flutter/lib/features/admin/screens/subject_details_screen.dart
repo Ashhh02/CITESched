@@ -364,69 +364,9 @@ class SubjectDetailsScreen extends ConsumerWidget {
                   ),
 
                   // Stats Row
-                  LayoutBuilder(
-                    builder: (context, c) {
-                      final compactStats = c.maxWidth < 860;
-                      if (compactStats) {
-                        return Column(
-                          children: [
-                            _buildSimpleStatCard(
-                              'Units',
-                              '${subject.units}',
-                              Icons.format_list_numbered_rtl_rounded,
-                              Colors.blue,
-                              cardBg,
-                              compact: true,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildSimpleStatCard(
-                              'Year Level',
-                              _yearLabel(subject.yearLevel),
-                              Icons.grade_rounded,
-                              Colors.green,
-                              cardBg,
-                              compact: true,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildSimpleStatCard(
-                              'Students',
-                              '${subject.studentsCount}',
-                              Icons.people_alt_rounded,
-                              Colors.orange,
-                              cardBg,
-                              compact: true,
-                            ),
-                          ],
-                        );
-                      }
-                      return Row(
-                        children: [
-                          _buildSimpleStatCard(
-                            'Units',
-                            '${subject.units}',
-                            Icons.format_list_numbered_rtl_rounded,
-                            Colors.blue,
-                            cardBg,
-                          ),
-                          const SizedBox(width: 16),
-                          _buildSimpleStatCard(
-                            'Year Level',
-                            _yearLabel(subject.yearLevel),
-                            Icons.grade_rounded,
-                            Colors.green,
-                            cardBg,
-                          ),
-                          const SizedBox(width: 16),
-                          _buildSimpleStatCard(
-                            'Students',
-                            '${subject.studentsCount}',
-                            Icons.people_alt_rounded,
-                            Colors.orange,
-                            cardBg,
-                          ),
-                        ],
-                      );
-                    },
+                  _buildSubjectStatsSection(
+                    subject: subject,
+                    cardBg: cardBg,
                   ),
 
                   const SizedBox(height: 32),
@@ -449,70 +389,11 @@ class SubjectDetailsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  scheduleAsync.when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (err, stack) =>
-                        Center(child: Text('Error loading schedule: $err')),
-                    data: (schedules) {
-                      if (schedules.isEmpty) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 40),
-                            child: Text(
-                              'No classes scheduled for this subject.',
-                              style: GoogleFonts.poppins(color: Colors.grey),
-                            ),
-                          ),
-                        );
-                      }
-
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark
-                                ? Colors.white10
-                                : Colors.black.withValues(alpha: 0.05),
-                          ),
-                        ),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: schedules.length,
-                          separatorBuilder: (context, index) =>
-                              const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final s = schedules[index];
-                            return ListTiles(
-                              leading: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: maroonColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(
-                                  Icons.calendar_today,
-                                  color: maroonColor,
-                                  size: 20,
-                                ),
-                              ),
-                              title: Text(
-                                'Section: ${s.section}',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              subtitle: Text(
-                                _scheduleSummary(s),
-                                style: GoogleFonts.poppins(fontSize: 12),
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
+                  _buildSubjectScheduleSection(
+                    scheduleAsync: scheduleAsync,
+                    cardBg: cardBg,
+                    isDark: isDark,
+                    maroonColor: maroonColor,
                   ),
                 ],
               ),
@@ -589,6 +470,133 @@ class SubjectDetailsScreen extends ConsumerWidget {
     if (compact) return card;
     return Expanded(
       child: card,
+    );
+  }
+
+  Widget _buildSubjectStatsSection({
+    required Subject subject,
+    required Color cardBg,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compactStats = constraints.maxWidth < 860;
+        final unitsCard = _buildSimpleStatCard(
+          'Units',
+          '${subject.units}',
+          Icons.format_list_numbered_rtl_rounded,
+          Colors.blue,
+          cardBg,
+          compact: compactStats,
+        );
+        final yearCard = _buildSimpleStatCard(
+          'Year Level',
+          _yearLabel(subject.yearLevel),
+          Icons.grade_rounded,
+          Colors.green,
+          cardBg,
+          compact: compactStats,
+        );
+        final studentsCard = _buildSimpleStatCard(
+          'Students',
+          '${subject.studentsCount}',
+          Icons.people_alt_rounded,
+          Colors.orange,
+          cardBg,
+          compact: compactStats,
+        );
+
+        if (compactStats) {
+          return Column(
+            children: [
+              unitsCard,
+              const SizedBox(height: 12),
+              yearCard,
+              const SizedBox(height: 12),
+              studentsCard,
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            unitsCard,
+            const SizedBox(width: 16),
+            yearCard,
+            const SizedBox(width: 16),
+            studentsCard,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSubjectScheduleSection({
+    required AsyncValue<List<Schedule>> scheduleAsync,
+    required Color cardBg,
+    required bool isDark,
+    required Color maroonColor,
+  }) {
+    return scheduleAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Error loading schedule: $err')),
+      data: (schedules) {
+        if (schedules.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Text(
+                'No classes scheduled for this subject.',
+                style: GoogleFonts.poppins(color: Colors.grey),
+              ),
+            ),
+          );
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white10
+                  : Colors.black.withValues(alpha: 0.05),
+            ),
+          ),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: schedules.length,
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final s = schedules[index];
+              return ListTiles(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: maroonColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.calendar_today,
+                    color: maroonColor,
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  'Section: ${s.section}',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: Text(
+                  _scheduleSummary(s),
+                  style: GoogleFonts.poppins(fontSize: 12),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
