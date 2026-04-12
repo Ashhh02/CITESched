@@ -52,6 +52,7 @@ const Set<String> _labRoomNames = {'IT LAB', 'EMC LAB'};
 const String _lectureRoomName = 'ROOM 1';
 const String _noPreferredTimeslotsMessage =
     'No preferred timeslots for this faculty';
+const String _waitingForAiLabel = 'Waiting for AI...';
 
 String _normalizedRoomName(String value) => value.trim().toUpperCase();
 
@@ -1080,12 +1081,12 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
               ),
               _detailRow('Hours', schedule.hours?.toString() ?? '-'),
               const SizedBox(height: 8),
-              _detailRow('Room', room?.name ?? 'Waiting for AI...'),
+              _detailRow('Room', room?.name ?? _waitingForAiLabel),
               _detailRow(
                 'Timeslot',
                 timeslot != null
                     ? '${_getDayAbbr(timeslot.day)} ${timeslot.startTime}-${timeslot.endTime}'
-                    : 'Waiting for AI...',
+                    : _waitingForAiLabel,
               ),
               const SizedBox(height: 8),
               _detailRow(
@@ -2597,7 +2598,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                                   ),
                                                                   Text(
                                                                     room?.name ??
-                                                                        'Waiting for AI...',
+                                                                        _waitingForAiLabel,
                                                                     style: GoogleFonts.poppins(
                                                                       fontSize:
                                                                           12,
@@ -2639,7 +2640,7 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                                                                     timeslot !=
                                                                             null
                                                                         ? '${_getDayAbbr(timeslot.day)} ${timeslot.startTime}-${timeslot.endTime}'
-                                                                        : 'Waiting for AI...',
+                                                                        : _waitingForAiLabel,
                                                                     style: GoogleFonts.poppins(
                                                                       fontSize:
                                                                           11,

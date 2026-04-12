@@ -23,6 +23,20 @@ class NLPService {
     'alter',
   ];
 
+  static const String _timeTokenPattern =
+      r'(\d{1,2})(?::(\d{2}))?\s?(am|pm)?';
+  static const String _betweenTimeRangePattern =
+      r'(between|from)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)\s+(and|to)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)';
+  static const String _afterTimeRangePattern =
+      r'(after)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)';
+  static const String _beforeTimeRangePattern =
+      r'(before)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)';
+
+  static final RegExp _timeTokenRegex = RegExp(_timeTokenPattern);
+  static final RegExp _betweenTimeRangeRegex = RegExp(_betweenTimeRangePattern);
+  static final RegExp _afterTimeRangeRegex = RegExp(_afterTimeRangePattern);
+  static final RegExp _beforeTimeRangeRegex = RegExp(_beforeTimeRangePattern);
+
   static String normalizeQueryForTest(String query) {
     final cleaned = query
         .toLowerCase()
@@ -36,10 +50,20 @@ class NLPService {
   }
 
   static int? parseTimeTokenForTest(String? token) {
+    return _parseTimeTokenValue(token);
+  }
+
+  static ({int start, int end})? extractTimeRangeForTest(String query) {
+    final result = _extractTimeRangeBounds(
+      query,
+      keywordMatcher: _containsPlainKeyword,
+    );
+    return result;
+  }
+
+  static int? _parseTimeTokenValue(String? token) {
     if (token == null) return null;
-    final match = RegExp(
-      r'(\d{1,2})(?::(\d{2}))?\s?(am|pm)?',
-    ).firstMatch(token.trim());
+    final match = _timeTokenRegex.firstMatch(token.trim());
     if (match == null) return null;
     final hour = int.tryParse(match.group(1) ?? '') ?? 0;
     final minute = int.tryParse(match.group(2) ?? '0') ?? 0;
@@ -52,50 +76,94 @@ class NLPService {
     return h * 60 + minute;
   }
 
-  static ({int start, int end})? extractTimeRangeForTest(String query) {
-    final between = RegExp(
-      r'(between|from)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)\s+(and|to)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)',
-    ).firstMatch(query);
-    if (between != null) {
-      final start = parseTimeTokenForTest(between.group(2));
-      final end = parseTimeTokenForTest(between.group(5));
-      if (start != null && end != null) return (start: start, end: end);
-    }
+  static ({int start, int end})? _extractTimeRangeBounds(
+    String query, {
+    required bool Function(String query, List<String> keywords) keywordMatcher,
+  }) {
+    final between = _matchBetweenTimeRange(query);
+    if (between != null) return between;
 
-    final after = RegExp(
-      r'(after)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)',
-    ).firstMatch(query);
-    if (after != null) {
-      final start = parseTimeTokenForTest(after.group(2));
-      if (start != null) return (start: start, end: 24 * 60);
-    }
+    final after = _matchSingleEndedTimeRange(
+      query,
+      regex: _afterTimeRangeRegex,
+      groupIndex: 2,
+      isAfter: true,
+    );
+    if (after != null) return after;
 
-    final before = RegExp(
-      r'(before)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)',
-    ).firstMatch(query);
-    if (before != null) {
-      final end = parseTimeTokenForTest(before.group(2));
-      if (end != null) return (start: 0, end: end);
-    }
+    final before = _matchSingleEndedTimeRange(
+      query,
+      regex: _beforeTimeRangeRegex,
+      groupIndex: 2,
+      isAfter: false,
+    );
+    if (before != null) return before;
 
-    if (query.contains('morning')) {
+    final namedRange = _matchNamedTimeRange(query, keywordMatcher);
+    if (namedRange != null) return namedRange;
+
+    return _matchSingleTokenRange(query);
+  }
+
+  static ({int start, int end})? _matchBetweenTimeRange(String query) {
+    final between = _betweenTimeRangeRegex.firstMatch(query);
+    if (between == null) return null;
+
+    final start = _parseTimeTokenValue(between.group(2));
+    final end = _parseTimeTokenValue(between.group(5));
+    if (start == null || end == null) return null;
+
+    return (start: start, end: end);
+  }
+
+  static ({int start, int end})? _matchSingleEndedTimeRange(
+    String query, {
+    required RegExp regex,
+    required int groupIndex,
+    required bool isAfter,
+  }) {
+    final match = regex.firstMatch(query);
+    if (match == null) return null;
+
+    final minutes = _parseTimeTokenValue(match.group(groupIndex));
+    if (minutes == null) return null;
+
+    if (isAfter) {
+      return (start: minutes, end: 24 * 60);
+    }
+    return (start: 0, end: minutes);
+  }
+
+  static ({int start, int end})? _matchNamedTimeRange(
+    String query,
+    bool Function(String query, List<String> keywords) keywordMatcher,
+  ) {
+    if (keywordMatcher(query, const ['morning'])) {
       return (start: 7 * 60, end: 12 * 60);
     }
-    if (query.contains('afternoon')) {
+    if (keywordMatcher(query, const ['afternoon'])) {
       return (start: 12 * 60, end: 17 * 60);
     }
-    if (query.contains('evening')) {
+    if (keywordMatcher(query, const ['evening'])) {
       return (start: 17 * 60, end: 21 * 60);
     }
+    return null;
+  }
 
-    final match = RegExp(
-      r'(\d{1,2})(?::(\d{2}))?\s?(am|pm)?',
-    ).allMatches(query).toList();
-    if (match.isEmpty) return null;
-    final token = match.first.group(0);
-    final start = parseTimeTokenForTest(token);
+  static ({int start, int end})? _matchSingleTokenRange(String query) {
+    final matches = _timeTokenRegex.allMatches(query).toList();
+    if (matches.isEmpty) return null;
+
+    final token = matches.first.group(0);
+    final start = _parseTimeTokenValue(token);
     if (start == null) return null;
+
     return (start: start, end: start + 60);
+  }
+
+  static bool _containsPlainKeyword(String query, List<String> keywords) {
+    final loweredQuery = query.toLowerCase();
+    return keywords.any(loweredQuery.contains);
   }
 
   Future<Student?> _findCurrentStudent(
@@ -2086,70 +2154,16 @@ class NLPService {
   }
 
   _TimeRange? _extractTimeRange(String query) {
-    // Between/From X to Y
-    final between = RegExp(
-      r'(between|from)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)\s+(and|to)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)',
-    ).firstMatch(query);
-    if (between != null) {
-      final start = _parseTimeToken(between.group(2));
-      final end = _parseTimeToken(between.group(5));
-      if (start != null && end != null) return _TimeRange(start, end);
-    }
-
-    // After X
-    final after = RegExp(
-      r'(after)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)',
-    ).firstMatch(query);
-    if (after != null) {
-      final start = _parseTimeToken(after.group(2));
-      if (start != null) return _TimeRange(start, 24 * 60);
-    }
-
-    // Before X
-    final before = RegExp(
-      r'(before)\s+([0-9]{1,2}(?::[0-9]{2})?\s?(am|pm)?)',
-    ).firstMatch(query);
-    if (before != null) {
-      final end = _parseTimeToken(before.group(2));
-      if (end != null) return _TimeRange(0, end);
-    }
-
-    if (_containsKeywordFuzzy(query, ['morning'])) {
-      return const _TimeRange(7 * 60, 12 * 60);
-    }
-    if (_containsKeywordFuzzy(query, ['afternoon'])) {
-      return const _TimeRange(12 * 60, 17 * 60);
-    }
-    if (_containsKeywordFuzzy(query, ['evening'])) {
-      return const _TimeRange(17 * 60, 21 * 60);
-    }
-
-    final match = RegExp(
-      r'(\d{1,2})(?::(\d{2}))?\s?(am|pm)?',
-    ).allMatches(query).toList();
-    if (match.isEmpty) return null;
-    final first = match.first;
-    final token = first.group(0);
-    final start = _parseTimeToken(token);
-    if (start == null) return null;
-    return _TimeRange(start, start + 60);
+    final bounds = _extractTimeRangeBounds(
+      query,
+      keywordMatcher: _containsKeywordFuzzy,
+    );
+    if (bounds == null) return null;
+    return _TimeRange(bounds.start, bounds.end);
   }
 
   int? _parseTimeToken(String? token) {
-    if (token == null) return null;
-    final match = RegExp(
-      r'(\d{1,2})(?::(\d{2}))?\s?(am|pm)?',
-    ).firstMatch(token.trim());
-    if (match == null) return null;
-    final hour = int.tryParse(match.group(1) ?? '') ?? 0;
-    final minute = int.tryParse(match.group(2) ?? '0') ?? 0;
-    var h = hour;
-    final ampm = match.group(3);
-    if (ampm != null) {
-      if (ampm.toLowerCase() == 'pm' && h < 12) h += 12;
-      if (ampm.toLowerCase() == 'am' && h == 12) h = 0;
-    }
-    return h * 60 + minute;
+    return _parseTimeTokenValue(token);
   }
 
   int _parseTimeToMinutes(String hhmm) {

@@ -2,6 +2,9 @@ import 'package:serverpod/serverpod.dart';
 import '../generated/protocol.dart';
 
 class ChatHistoryEndpoint extends Endpoint {
+  static const String _authenticationRequiredMessage =
+      'Authentication required.';
+
   @override
   bool get requireLogin => true;
 
@@ -11,7 +14,7 @@ class ChatHistoryEndpoint extends Endpoint {
   }) async {
     final authInfo = session.authenticated;
     if (authInfo == null) {
-      throw Exception('Authentication required.');
+      throw Exception(_authenticationRequiredMessage);
     }
 
     final userId = authInfo.userIdentifier.toString();
@@ -31,7 +34,7 @@ class ChatHistoryEndpoint extends Endpoint {
   }) async {
     final authInfo = session.authenticated;
     if (authInfo == null) {
-      throw Exception('Authentication required.');
+      throw Exception(_authenticationRequiredMessage);
     }
 
     final userId = authInfo.userIdentifier.toString();
@@ -74,7 +77,7 @@ class ChatHistoryEndpoint extends Endpoint {
   }) async {
     final authInfo = session.authenticated;
     if (authInfo == null) {
-      throw Exception('Authentication required.');
+      throw Exception(_authenticationRequiredMessage);
     }
 
     final userId = authInfo.userIdentifier.toString();
@@ -107,7 +110,7 @@ class ChatHistoryEndpoint extends Endpoint {
   }) async {
     final authInfo = session.authenticated;
     if (authInfo == null) {
-      throw Exception('Authentication required.');
+      throw Exception(_authenticationRequiredMessage);
     }
 
     final userId = authInfo.userIdentifier.toString();

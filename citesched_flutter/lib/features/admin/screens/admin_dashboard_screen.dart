@@ -1262,6 +1262,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final headerBorder = isDark
         ? Colors.white12
         : Colors.black.withValues(alpha: 1.0);
+    final maxCount = _maxDistributionCount(data);
 
     return Container(
       decoration: BoxDecoration(
@@ -1346,14 +1347,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                     ),
                                   ),
                                   FractionallySizedBox(
-                                    widthFactor:
-                                        (item.count /
-                                                data
-                                                    .map((e) => e.count)
-                                                    .reduce(
-                                                      (a, b) => a > b ? a : b,
-                                                    ))
-                                            .clamp(0.0, 1.0),
+                                    widthFactor: (item.count / maxCount).clamp(
+                                      0.0,
+                                      1.0,
+                                    ),
                                     child: Container(
                                       height: 8,
                                       decoration: BoxDecoration(
@@ -1383,6 +1380,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       ),
     );
   }
-}
 
-// Triggering green status with new code period
+  int _maxDistributionCount(List<DistributionData> data) {
+    return data.map((e) => e.count).reduce((a, b) {
+      if (a > b) return a;
+      return b;
+    });
+  }
+}

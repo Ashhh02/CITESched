@@ -50,12 +50,22 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
     final media = MediaQuery.of(context);
     final maxWidth = media.size.width * 0.95;
     final maxHeight = media.size.height * 0.9;
-    const minWidth = 360.0;
-    const minHeight = 420.0;
-    final width = (_dialogWidth ?? (media.size.width * 0.85))
-        .clamp(minWidth, maxWidth);
-    final height = (_dialogHeight ?? (media.size.height * 0.7))
-        .clamp(minHeight, maxHeight);
+    const preferredMinWidth = 360.0;
+    const preferredMinHeight = 420.0;
+    final minWidth = maxWidth < preferredMinWidth
+        ? maxWidth
+        : preferredMinWidth;
+    final minHeight = maxHeight < preferredMinHeight
+        ? maxHeight
+        : preferredMinHeight;
+    final width = (_dialogWidth ?? (media.size.width * 0.85)).clamp(
+      minWidth,
+      maxWidth,
+    );
+    final height = (_dialogHeight ?? (media.size.height * 0.7)).clamp(
+      minHeight,
+      maxHeight,
+    );
 
     return Dialog(
       backgroundColor: const Color(0xFF1e1e2e),
@@ -72,110 +82,108 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
           children: [
             Column(
               children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: maroonColor,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(16),
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: maroonColor,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.smart_toy,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'CITESched Assistant',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          TextButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _showHistory = !_showHistory;
+                                _selectedSessionId = null;
+                              });
+                            },
+                            icon: Icon(
+                              _showHistory ? Icons.chat_bubble : Icons.history,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            label: Text(
+                              _showHistory ? 'Chat' : _historyLabel(auth),
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton.icon(
+                            onPressed: _showSuggestions,
+                            icon: const Icon(
+                              Icons.lightbulb_outline,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            label: Text(
+                              'Suggest',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton.icon(
+                            onPressed: () {
+                              ref.read(nlpChatProvider.notifier).clearChat();
+                              setState(() {
+                                _showHistory = false;
+                                _selectedSessionId = null;
+                              });
+                            },
+                            icon: const Icon(
+                              Icons.add_comment,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            label: Text(
+                              'New Chat',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.smart_toy,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'CITESched Assistant',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      TextButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            _showHistory = !_showHistory;
-                            _selectedSessionId = null;
-                          });
-                        },
-                        icon: Icon(
-                          _showHistory ? Icons.chat_bubble : Icons.history,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                        label: Text(
-                          _showHistory
-                              ? 'Chat'
-                              : _historyLabel(auth),
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      TextButton.icon(
-                        onPressed: _showSuggestions,
-                        icon: const Icon(
-                          Icons.lightbulb_outline,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                        label: Text(
-                          'Suggest',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      TextButton.icon(
-                        onPressed: () {
-                          ref.read(nlpChatProvider.notifier).clearChat();
-                          setState(() {
-                            _showHistory = false;
-                            _selectedSessionId = null;
-                          });
-                        },
-                        icon: const Icon(
-                          Icons.add_comment,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                        label: Text(
-                          'New Chat',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
                 // Chat Messages Area
                 Expanded(
                   child: Stack(
@@ -221,116 +229,118 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
                   ),
                 ),
 
-            // Loading Indicator
-            if (!_showHistory && chatState.isLoading)
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          maroonColor.withValues(alpha: 0.7),
+                // Loading Indicator
+                if (!_showHistory && chatState.isLoading)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              maroonColor.withValues(alpha: 0.7),
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Processing your request...',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Processing your request...',
+                  ),
+
+                // Error Message
+                if (!_showHistory && chatState.error != null)
+                  Container(
+                    margin: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      border: Border.all(
+                        color: Colors.red.withValues(alpha: 0.3),
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Error: ${chatState.error}',
                       style: GoogleFonts.poppins(
-                        color: Colors.white70,
+                        color: Colors.red.shade300,
                         fontSize: 12,
                       ),
                     ),
-                  ],
-                ),
-              ),
+                  ),
 
-            // Error Message
-            if (!_showHistory && chatState.error != null)
-              Container(
-                margin: const EdgeInsets.all(12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
-                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Error: ${chatState.error}',
-                  style: GoogleFonts.poppins(
-                    color: Colors.red.shade300,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-
-            // Input Field
-              Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: maroonColor.withValues(alpha: 0.2),
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _queryController,
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 14,
+                // Input Field
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                        color: maroonColor.withValues(alpha: 0.2),
                       ),
-                      decoration: InputDecoration(
-                        hintText: 'Ask me anything...',
-                        hintStyle: GoogleFonts.poppins(
-                          color: Colors.white54,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: maroonColor.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _queryController,
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 14,
                           ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: maroonColor,
-                            width: 2,
+                          decoration: InputDecoration(
+                            hintText: 'Ask me anything...',
+                            hintStyle: GoogleFonts.poppins(
+                              color: Colors.white54,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: maroonColor.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(
+                                color: maroonColor,
+                                width: 2,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            enabled: !chatState.isLoading,
                           ),
+                          enabled: !chatState.isLoading,
+                          maxLines: 1,
+                          onSubmitted: (_) => _sendQuery(),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        enabled: !chatState.isLoading,
                       ),
-                      enabled: !chatState.isLoading,
-                      maxLines: 1,
-                      onSubmitted: (_) => _sendQuery(),
-                    ),
+                      const SizedBox(width: 12),
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: maroonColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.send, color: Colors.white),
+                          onPressed: chatState.isLoading ? null : _sendQuery,
+                          tooltip: 'Send',
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: maroonColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white),
-                      onPressed: chatState.isLoading ? null : _sendQuery,
-                      tooltip: 'Send',
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
               ],
             ),
             _ResizeEdge(
@@ -363,7 +373,10 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
               sensitivity: 1,
               onDrag: (delta) {
                 setState(() {
-                  _dialogHeight = (height - delta.dy).clamp(minHeight, maxHeight);
+                  _dialogHeight = (height - delta.dy).clamp(
+                    minHeight,
+                    maxHeight,
+                  );
                 });
               },
               vertical: false,
@@ -375,7 +388,10 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
               sensitivity: 1,
               onDrag: (delta) {
                 setState(() {
-                  _dialogHeight = (height + delta.dy).clamp(minHeight, maxHeight);
+                  _dialogHeight = (height + delta.dy).clamp(
+                    minHeight,
+                    maxHeight,
+                  );
                 });
               },
               vertical: false,
@@ -388,7 +404,10 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
               onDrag: (delta) {
                 setState(() {
                   _dialogWidth = (width - delta.dx).clamp(minWidth, maxWidth);
-                  _dialogHeight = (height - delta.dy).clamp(minHeight, maxHeight);
+                  _dialogHeight = (height - delta.dy).clamp(
+                    minHeight,
+                    maxHeight,
+                  );
                 });
               },
               color: maroonColor,
@@ -400,7 +419,10 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
               onDrag: (delta) {
                 setState(() {
                   _dialogWidth = (width + delta.dx).clamp(minWidth, maxWidth);
-                  _dialogHeight = (height - delta.dy).clamp(minHeight, maxHeight);
+                  _dialogHeight = (height - delta.dy).clamp(
+                    minHeight,
+                    maxHeight,
+                  );
                 });
               },
               color: maroonColor,
@@ -412,7 +434,10 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
               onDrag: (delta) {
                 setState(() {
                   _dialogWidth = (width - delta.dx).clamp(minWidth, maxWidth);
-                  _dialogHeight = (height + delta.dy).clamp(minHeight, maxHeight);
+                  _dialogHeight = (height + delta.dy).clamp(
+                    minHeight,
+                    maxHeight,
+                  );
                 });
               },
               color: maroonColor,
@@ -424,7 +449,10 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
               onDrag: (delta) {
                 setState(() {
                   _dialogWidth = (width + delta.dx).clamp(minWidth, maxWidth);
-                  _dialogHeight = (height + delta.dy).clamp(minHeight, maxHeight);
+                  _dialogHeight = (height + delta.dy).clamp(
+                    minHeight,
+                    maxHeight,
+                  );
                 });
               },
               color: maroonColor,
@@ -549,8 +577,10 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
                   child: Row(
                     children: [
                       IconButton(
-                        icon:
-                            const Icon(Icons.arrow_back, color: Colors.white70),
+                        icon: const Icon(
+                          Icons.arrow_back,
+                          color: Colors.white70,
+                        ),
                         onPressed: () {
                           setState(() => _selectedSessionId = null);
                         },
@@ -609,8 +639,9 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
                               child: Container(
                                 margin: const EdgeInsets.only(bottom: 10),
                                 padding: const EdgeInsets.all(12),
-                                constraints:
-                                    const BoxConstraints(maxWidth: 240),
+                                constraints: const BoxConstraints(
+                                  maxWidth: 240,
+                                ),
                                 decoration: BoxDecoration(
                                   color: isUser
                                       ? const Color(0xFF720045)
@@ -723,10 +754,12 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
                     ],
                   ),
                   onTap: () {
-                    ref.read(nlpChatProvider.notifier).setActiveSession(
-                      entry.sessionId,
-                      entry.title,
-                    );
+                    ref
+                        .read(nlpChatProvider.notifier)
+                        .setActiveSession(
+                          entry.sessionId,
+                          entry.title,
+                        );
                     setState(() => _selectedSessionId = entry.sessionId);
                   },
                 ),
@@ -765,8 +798,7 @@ class _ResizeEdge extends StatelessWidget {
           cursor: cursor,
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onPanUpdate: (details) =>
-                onDrag(details.delta * sensitivity),
+            onPanUpdate: (details) => onDrag(details.delta * sensitivity),
             child: Container(
               width: vertical ? 12 : 80,
               height: vertical ? 80 : 12,
@@ -816,8 +848,7 @@ class _ResizeCorner extends StatelessWidget {
           cursor: cursor,
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onPanUpdate: (details) =>
-                onDrag(details.delta * sensitivity),
+            onPanUpdate: (details) => onDrag(details.delta * sensitivity),
             child: Container(
               width: 18,
               height: 18,

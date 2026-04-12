@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/core/utils/date_utils.dart';
@@ -160,10 +161,12 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
 
   _DialogBounds _dialogBounds(BuildContext context) {
     final media = MediaQuery.of(context);
-    const minWidth = 360.0;
-    const minHeight = 420.0;
+    const preferredMinWidth = 360.0;
+    const preferredMinHeight = 420.0;
     final maxWidth = media.size.width * 0.95;
     final maxHeight = media.size.height * 0.9;
+    final minWidth = math.min(preferredMinWidth, maxWidth);
+    final minHeight = math.min(preferredMinHeight, maxHeight);
     final width = (_dialogWidth ?? (media.size.width * 0.75)).clamp(
       minWidth,
       maxWidth,
@@ -666,8 +669,7 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
             child: ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: suggestions.length,
-              separatorBuilder: (context, index) =>
-                  const SizedBox(height: 8),
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final text = suggestions[index];
                 return ListTile(

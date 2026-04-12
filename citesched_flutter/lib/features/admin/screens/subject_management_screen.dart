@@ -14,6 +14,22 @@ import 'package:citesched_flutter/core/utils/error_handler.dart';
 
 // Local provider removed in favor of shared subjectsProvider
 
+const kDeletePermanentlyLabel = 'Delete Permanently';
+const kRestoreSubjectLabel = 'Restore Subject';
+const kAddNewSubjectLabel = 'Add New Subject';
+const kYearLevelLabel = 'Year Level';
+const kSubjectCodeLabel = 'Subject Code';
+const kSubjectCodeHint = 'e.g., ITEC 101';
+const kSubjectTypesLabel = 'Subject Types';
+const kStudentCountLabel = 'Student Count';
+const kFirstSemesterLabel = '1st Semester';
+const kSecondSemesterLabel = '2nd Semester';
+const kSavingLabel = 'Saving...';
+
+String _semesterLabel(int term) {
+  return term == 1 ? kFirstSemesterLabel : kSecondSemesterLabel;
+}
+
 class SubjectManagementScreen extends ConsumerStatefulWidget {
   const SubjectManagementScreen({super.key});
 
@@ -174,7 +190,7 @@ class _SubjectManagementScreenState
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text('Delete Permanently', style: GoogleFonts.poppins()),
+            child: Text(kDeletePermanentlyLabel, style: GoogleFonts.poppins()),
           ),
         ],
       ),
@@ -287,7 +303,7 @@ class _SubjectManagementScreenState
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          'Restore Subject',
+          kRestoreSubjectLabel,
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
         content: Text(
@@ -366,7 +382,7 @@ class _SubjectManagementScreenState
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text('Delete Permanently', style: GoogleFonts.poppins()),
+            child: Text(kDeletePermanentlyLabel, style: GoogleFonts.poppins()),
           ),
         ],
       ),
@@ -539,7 +555,7 @@ class _SubjectManagementScreenState
                             onPressed: _showAddSubjectModal,
                             icon: const Icon(Icons.add_rounded, size: 20),
                             label: Text(
-                              'Add New Subject',
+                              kAddNewSubjectLabel,
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -613,7 +629,7 @@ class _SubjectManagementScreenState
                           onPressed: _showAddSubjectModal,
                           icon: const Icon(Icons.add_rounded, size: 24),
                           label: Text(
-                            'Add New Subject',
+                            kAddNewSubjectLabel,
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
@@ -1044,7 +1060,7 @@ class _SubjectManagementScreenState
                                                             ),
                                                         child: Tooltip(
                                                           message:
-                                                              'Restore Subject',
+                                                              kRestoreSubjectLabel,
                                                           child: Container(
                                                             padding:
                                                                 const EdgeInsets.all(
@@ -1087,7 +1103,7 @@ class _SubjectManagementScreenState
                                                             ),
                                                         child: Tooltip(
                                                           message:
-                                                              'Delete Permanently',
+                                                              kDeletePermanentlyLabel,
                                                           child: Container(
                                                             padding:
                                                                 const EdgeInsets.all(
@@ -1294,7 +1310,7 @@ class _SubjectManagementScreenState
                                 color: maroonColor,
                                 size: 20,
                               ),
-                              tooltip: 'Restore Subject',
+                              tooltip: kRestoreSubjectLabel,
                               onPressed: () => _restoreSubject(subject),
                             ),
                             IconButton(
@@ -1303,7 +1319,7 @@ class _SubjectManagementScreenState
                                 color: Colors.red,
                                 size: 20,
                               ),
-                              tooltip: 'Delete Permanently',
+                              tooltip: kDeletePermanentlyLabel,
                               onPressed: () =>
                                   _permanentDeleteSubject(subject),
                             ),
@@ -1400,7 +1416,7 @@ class _SubjectManagementScreenState
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  ResponsiveHelper.isMobile(context) ? 'Year' : 'Year Level',
+                  ResponsiveHelper.isMobile(context) ? 'Year' : kYearLevelLabel,
                   style: GoogleFonts.poppins(
                     color: Colors.grey[600],
                     fontSize: 14,
@@ -1679,7 +1695,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Add New Subject',
+                              kAddNewSubjectLabel,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.poppins(
@@ -1733,10 +1749,10 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                           ? Column(
                               children: [
                                 _buildTextField(
-                                  'Subject Code',
+                                  kSubjectCodeLabel,
                                   _codeController,
                                   isDark,
-                                  hint: 'e.g., ITEC 101',
+                                  hint: kSubjectCodeHint,
                                 ),
                                 const SizedBox(height: 16),
                                 _buildTextField(
@@ -1751,10 +1767,10 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                               children: [
                                 Expanded(
                                   child: _buildTextField(
-                                    'Subject Code',
+                                    kSubjectCodeLabel,
                                     _codeController,
                                     isDark,
-                                    hint: 'e.g., ITEC 101',
+                                    hint: kSubjectCodeHint,
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -1869,7 +1885,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Subject Types',
+                                  kSubjectTypesLabel,
                                   style: GoogleFonts.poppins(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
@@ -1973,7 +1989,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                                 ),
                                 const SizedBox(height: 16),
                                 _buildTextField(
-                                  'Student Count',
+                                  kStudentCountLabel,
                                   _studentsCountController,
                                   isDark,
                                   isNumber: true,
@@ -1988,7 +2004,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Subject Types',
+                                        kSubjectTypesLabel,
                                         style: GoogleFonts.poppins(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w500,
@@ -2103,7 +2119,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: _buildTextField(
-                                    'Student Count',
+                                    kStudentCountLabel,
                                     _studentsCountController,
                                     isDark,
                                     isNumber: true,
@@ -2153,7 +2169,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                                     DropdownButtonFormField<int>(
                                       initialValue: safeYearLevel,
                                       decoration: _inputDecoration(
-                                        'Year Level',
+                                        kYearLevelLabel,
                                         isDark,
                                       ),
                                       dropdownColor: cardBg,
@@ -2186,9 +2202,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                                             (i) => DropdownMenuItem(
                                               value: i,
                                               child: Text(
-                                                i == 1
-                                                    ? '1st Semester'
-                                                    : '2nd Semester',
+                                                _semesterLabel(i),
                                                 style: GoogleFonts.poppins(
                                                   color: textPrimary,
                                                 ),
@@ -2207,7 +2221,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                                       child: DropdownButtonFormField<int>(
                                         initialValue: safeYearLevel,
                                         decoration: _inputDecoration(
-                                          'Year Level',
+                                          kYearLevelLabel,
                                           isDark,
                                         ),
                                         dropdownColor: cardBg,
@@ -2242,9 +2256,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                                               (i) => DropdownMenuItem(
                                                 value: i,
                                                 child: Text(
-                                                  i == 1
-                                                      ? '1st Semester'
-                                                      : '2nd Semester',
+                                                  _semesterLabel(i),
                                                   style: GoogleFonts.poppins(
                                                     color: textPrimary,
                                                   ),
@@ -2290,7 +2302,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                                   )
                                 : const Icon(Icons.check_rounded, size: 20),
                             label: Text(
-                              _isLoading ? 'Saving...' : 'Create Subject',
+                              _isLoading ? kSavingLabel : 'Create Subject',
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.w600,
@@ -2359,7 +2371,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
                                 )
                               : const Icon(Icons.check_rounded, size: 20),
                           label: Text(
-                            _isLoading ? 'Saving...' : 'Create Subject',
+                            _isLoading ? kSavingLabel : 'Create Subject',
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w600,
                             ),
@@ -2803,10 +2815,10 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                           ? Column(
                               children: [
                                 _buildTextField(
-                                  'Subject Code',
+                                  kSubjectCodeLabel,
                                   _codeController,
                                   isDark,
-                                  hint: 'e.g., ITEC 101',
+                                  hint: kSubjectCodeHint,
                                 ),
                                 const SizedBox(height: 12),
                                 _buildTextField(
@@ -2821,10 +2833,10 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                               children: [
                                 Expanded(
                                   child: _buildTextField(
-                                    'Subject Code',
+                                    kSubjectCodeLabel,
                                     _codeController,
                                     isDark,
-                                    hint: 'e.g., ITEC 101',
+                                    hint: kSubjectCodeHint,
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -2936,7 +2948,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                       const SizedBox(height: 24),
 
                       Text(
-                        'Subject Types',
+                        kSubjectTypesLabel,
                         style: GoogleFonts.poppins(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
@@ -3024,7 +3036,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
 
                       const SizedBox(height: 16),
                       _buildTextField(
-                        'Student Count',
+                        kStudentCountLabel,
                         _studentsCountController,
                         isDark,
                         isNumber: true,
@@ -3071,7 +3083,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                                     DropdownButtonFormField<int>(
                                       initialValue: safeYearLevel,
                                       decoration: _inputDecoration(
-                                        'Year Level',
+                                        kYearLevelLabel,
                                         isDark,
                                       ),
                                       dropdownColor: cardBg,
@@ -3104,9 +3116,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                                             (i) => DropdownMenuItem(
                                               value: i,
                                               child: Text(
-                                                i == 1
-                                                    ? '1st Semester'
-                                                    : '2nd Semester',
+                                                _semesterLabel(i),
                                                 style: GoogleFonts.poppins(
                                                   color: textPrimary,
                                                 ),
@@ -3125,7 +3135,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                                       child: DropdownButtonFormField<int>(
                                         initialValue: safeYearLevel,
                                         decoration: _inputDecoration(
-                                          'Year Level',
+                                          kYearLevelLabel,
                                           isDark,
                                         ),
                                         dropdownColor: cardBg,
@@ -3160,9 +3170,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                                               (i) => DropdownMenuItem(
                                                 value: i,
                                                 child: Text(
-                                                  i == 1
-                                                      ? '1st Semester'
-                                                      : '2nd Semester',
+                                                  _semesterLabel(i),
                                                   style: GoogleFonts.poppins(
                                                     color: textPrimary,
                                                   ),
@@ -3222,7 +3230,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                                 )
                               : const Icon(Icons.check_rounded, size: 20),
                           label: Text(
-                            _isLoading ? 'Saving...' : 'Save Changes',
+                            _isLoading ? kSavingLabel : 'Save Changes',
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w600,
                             ),
@@ -3272,7 +3280,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
                                 )
                               : const Icon(Icons.check_rounded, size: 20),
                           label: Text(
-                            _isLoading ? 'Saving...' : 'Save Changes',
+                            _isLoading ? kSavingLabel : 'Save Changes',
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w600,
                             ),

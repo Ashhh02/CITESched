@@ -2650,132 +2650,136 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
           }),
         ),
         const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: () async {
-                  final p = await showTimePicker(
-                    context: context,
-                    initialTime: _startTime,
-                    helpText: 'Select Start Time',
-                  );
-                  if (p != null) {
-                    setState(() {
-                      _startTime = p;
-                      _shiftPreference = FacultyShiftPreference.custom;
-                    });
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bgBody,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.schedule_rounded,
-                        size: 16,
-                        color: primaryPurple,
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Start',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              color: textMuted,
-                            ),
-                          ),
-                          Text(
-                            _startTime.format(context),
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final useVerticalLayout = constraints.maxWidth < 320;
+            final arrow = Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: useVerticalLayout ? 0 : 10,
+                vertical: useVerticalLayout ? 8 : 0,
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10),
               child: Text(
-                '->',
-                style: TextStyle(fontSize: 18, color: Colors.black45),
+                useVerticalLayout ? '↓' : '→',
+                style: const TextStyle(fontSize: 18, color: Colors.black45),
               ),
-            ),
-            Expanded(
-              child: GestureDetector(
-                onTap: () async {
-                  final p = await showTimePicker(
-                    context: context,
-                    initialTime: _endTime,
-                    helpText: 'Select End Time',
-                  );
-                  if (p != null) {
-                    setState(() {
-                      _endTime = p;
-                      _shiftPreference = FacultyShiftPreference.custom;
-                    });
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bgBody,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.schedule_rounded,
-                        size: 16,
-                        color: primaryPurple,
+            );
+
+            Widget buildTimeField({
+              required String label,
+              required TimeOfDay time,
+              required Future<void> Function() onTap,
+            }) {
+              return Expanded(
+                child: GestureDetector(
+                  onTap: onTap,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: bgBody,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.black.withValues(alpha: 0.08),
                       ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'End',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              color: textMuted,
-                            ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.schedule_rounded,
+                          size: 16,
+                          color: primaryPurple,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: textMuted,
+                                ),
+                              ),
+                              Text(
+                                time.format(context),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: textPrimary,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            _endTime.format(context),
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ],
+              );
+            }
+
+            final startField = buildTimeField(
+              label: 'Start',
+              time: _startTime,
+              onTap: () async {
+                final p = await showTimePicker(
+                  context: context,
+                  initialTime: _startTime,
+                  helpText: 'Select Start Time',
+                );
+                if (p != null) {
+                  setState(() {
+                    _startTime = p;
+                    _shiftPreference = FacultyShiftPreference.custom;
+                  });
+                }
+              },
+            );
+            final endField = buildTimeField(
+              label: 'End',
+              time: _endTime,
+              onTap: () async {
+                final p = await showTimePicker(
+                  context: context,
+                  initialTime: _endTime,
+                  helpText: 'Select End Time',
+                );
+                if (p != null) {
+                  setState(() {
+                    _endTime = p;
+                    _shiftPreference = FacultyShiftPreference.custom;
+                  });
+                }
+              },
+            );
+
+            if (useVerticalLayout) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(children: [startField]),
+                  arrow,
+                  Row(children: [endField]),
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                startField,
+                arrow,
+                endField,
+              ],
+            );
+          },
         ),
         const SizedBox(height: 12),
         SizedBox(
@@ -3731,132 +3735,136 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
         ),
         const SizedBox(height: 14),
         // Start / End time row
-        Row(
-          children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: () async {
-                  final picked = await showTimePicker(
-                    context: context,
-                    initialTime: _startTime,
-                    helpText: 'Select Start Time',
-                  );
-                  if (picked != null) {
-                    setState(() {
-                      _startTime = picked;
-                      _shiftPreference = FacultyShiftPreference.custom;
-                    });
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bgBody,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.schedule_rounded,
-                        size: 16,
-                        color: primaryPurple,
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Start',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              color: textMuted,
-                            ),
-                          ),
-                          Text(
-                            _startTime.format(context),
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final useVerticalLayout = constraints.maxWidth < 320;
+            final arrow = Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: useVerticalLayout ? 0 : 10,
+                vertical: useVerticalLayout ? 8 : 0,
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10),
               child: Text(
-                '->',
-                style: TextStyle(fontSize: 18, color: Colors.black45),
+                useVerticalLayout ? '↓' : '→',
+                style: const TextStyle(fontSize: 18, color: Colors.black45),
               ),
-            ),
-            Expanded(
-              child: GestureDetector(
-                onTap: () async {
-                  final picked = await showTimePicker(
-                    context: context,
-                    initialTime: _endTime,
-                    helpText: 'Select End Time',
-                  );
-                  if (picked != null) {
-                    setState(() {
-                      _endTime = picked;
-                      _shiftPreference = FacultyShiftPreference.custom;
-                    });
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bgBody,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.schedule_rounded,
-                        size: 16,
-                        color: primaryPurple,
+            );
+
+            Widget buildTimeField({
+              required String label,
+              required TimeOfDay time,
+              required Future<void> Function() onTap,
+            }) {
+              return Expanded(
+                child: GestureDetector(
+                  onTap: onTap,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: bgBody,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.black.withValues(alpha: 0.08),
                       ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'End',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              color: textMuted,
-                            ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.schedule_rounded,
+                          size: 16,
+                          color: primaryPurple,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: textMuted,
+                                ),
+                              ),
+                              Text(
+                                time.format(context),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: textPrimary,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            _endTime.format(context),
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ],
+              );
+            }
+
+            final startField = buildTimeField(
+              label: 'Start',
+              time: _startTime,
+              onTap: () async {
+                final picked = await showTimePicker(
+                  context: context,
+                  initialTime: _startTime,
+                  helpText: 'Select Start Time',
+                );
+                if (picked != null) {
+                  setState(() {
+                    _startTime = picked;
+                    _shiftPreference = FacultyShiftPreference.custom;
+                  });
+                }
+              },
+            );
+            final endField = buildTimeField(
+              label: 'End',
+              time: _endTime,
+              onTap: () async {
+                final picked = await showTimePicker(
+                  context: context,
+                  initialTime: _endTime,
+                  helpText: 'Select End Time',
+                );
+                if (picked != null) {
+                  setState(() {
+                    _endTime = picked;
+                    _shiftPreference = FacultyShiftPreference.custom;
+                  });
+                }
+              },
+            );
+
+            if (useVerticalLayout) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(children: [startField]),
+                  arrow,
+                  Row(children: [endField]),
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                startField,
+                arrow,
+                endField,
+              ],
+            );
+          },
         ),
         const SizedBox(height: 12),
         // Add button

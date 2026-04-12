@@ -9,6 +9,9 @@ import '../services/report_service.dart';
 /// Admin-only endpoint for managing scheduling data and user roles.
 /// Only users with the 'admin' scope can access these methods.
 class AdminEndpoint extends Endpoint {
+  static const String _itLabName = 'IT LAB';
+  static const String _emcLabName = 'EMC LAB';
+
   @override
   @override
   bool get requireLogin => false;
@@ -1314,8 +1317,8 @@ class AdminEndpoint extends Endpoint {
   }
 
   static const Set<String> _allowedRoomNames = {
-    'IT LAB',
-    'EMC LAB',
+    _itLabName,
+    _emcLabName,
     'ROOM 1',
   };
 
@@ -1330,7 +1333,7 @@ class AdminEndpoint extends Endpoint {
       );
     }
 
-    if ((roomName == 'IT LAB' || roomName == 'EMC LAB') &&
+    if ((roomName == _itLabName || roomName == _emcLabName) &&
         room.type != RoomType.laboratory) {
       throw Exception('$roomName must be a laboratory room.');
     }
@@ -1339,12 +1342,12 @@ class AdminEndpoint extends Endpoint {
       throw Exception('ROOM 1 must be a lecture room.');
     }
 
-    if (roomName == 'IT LAB' && room.program != Program.it) {
-      throw Exception('IT LAB must be assigned to IT program.');
+    if (roomName == _itLabName && room.program != Program.it) {
+      throw Exception('$_itLabName must be assigned to IT program.');
     }
 
-    if (roomName == 'EMC LAB' && room.program != Program.emc) {
-      throw Exception('EMC LAB must be assigned to EMC program.');
+    if (roomName == _emcLabName && room.program != Program.emc) {
+      throw Exception('$_emcLabName must be assigned to EMC program.');
     }
   }
 
