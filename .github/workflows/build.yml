@@ -28,6 +28,9 @@ jobs:
       - name: Generate Reports
         run: |
           # Generate analysis report for SonarCloud
+          rm -f analysis_report.txt
+          rm -rf citesched_flutter/coverage citesched_server/coverage
+
           pushd citesched_flutter
           flutter analyze --write=../analysis_report.txt || true
           # Generate coverage file for Flutter
