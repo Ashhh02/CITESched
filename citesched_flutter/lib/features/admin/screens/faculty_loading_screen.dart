@@ -1316,325 +1316,22 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Container(
-                padding: EdgeInsets.all(isMobile ? 20 : 32),
-                decoration: BoxDecoration(
-                  color: maroonColor,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: maroonColor.withValues(alpha: 0.35),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: isMobile
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Faculty Loading',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.poppins(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Manage faculty schedule assignments and workload',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.85),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _showNewAssignmentModal,
-                              icon: const Icon(Icons.add_rounded, size: 20),
-                              label: Text(
-                                'Assign Subject',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: maroonColor,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 14,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                elevation: 0,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Faculty Loading',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Manage faculty schedule assignments and workload',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  color: Colors.white.withValues(alpha: 0.85),
-                                ),
-                              ),
-                            ],
-                          ),
-                          ElevatedButton.icon(
-                            onPressed: _showNewAssignmentModal,
-                            icon: const Icon(Icons.add_rounded, size: 20),
-                            label: Text(
-                              'Assign Subject',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: maroonColor,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 18,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 0,
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
+              _buildHeaderSection(isMobile),
               const SizedBox(height: 24),
-
-              // Conflict Warning Banner
               _buildConflictBanner(
                 schedulesAsync,
                 facultyAsync,
                 allConflicts,
               ),
               const SizedBox(height: 20),
-
-              // Search and Filter Row
-              if (isMobile) ...[
-                _buildViewToggle(isDark),
-                const SizedBox(height: 16),
-              ],
-              Row(
-                children: [
-                  // Search Bar
-                  Expanded(
-                    flex: 3,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark
-                              ? Colors.transparent
-                              : Colors.grey[300]!,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xFF1E293B,
-                            ).withValues(alpha: 0.03),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.search_rounded,
-                            color: maroonColor,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              controller: _searchController,
-                              onChanged: (value) {
-                                setState(() {
-                                  _searchQuery = value.toLowerCase();
-                                });
-                              },
-                              cursorColor: maroonColor,
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
-                              decoration: InputDecoration(
-                                border: InputBorder.none,
-                                hintText:
-                                    'Search by faculty, subject, or section...',
-                                hintStyle: GoogleFonts.poppins(
-                                  color: Colors.grey[500],
-                                  fontSize: 14,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (_searchQuery.isNotEmpty)
-                            IconButton(
-                              icon: Icon(
-                                Icons.clear,
-                                color: Colors.grey[600],
-                              ),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {
-                                  _searchQuery = '';
-                                });
-                              },
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-
-                  // Faculty Filter
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark
-                              ? Colors.transparent
-                              : Colors.grey[300]!,
-                        ),
-                      ),
-                      child: facultyAsync.when(
-                        loading: () => const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                        error: (error, stack) => const Text('Error'),
-                        data: (faculty) => DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _selectedFaculty,
-                            hint: Text(
-                              'Filter by Faculty',
-                              style: GoogleFonts.poppins(fontSize: 14),
-                            ),
-                            isExpanded: true,
-                            items: [
-                              DropdownMenuItem<String>(
-                                value: null,
-                                child: Text(
-                                  'All Faculty',
-                                  style: GoogleFonts.poppins(fontSize: 14),
-                                ),
-                              ),
-                              ...faculty.map(
-                                (f) => DropdownMenuItem<String>(
-                                  value: f.id.toString(),
-                                  child: Text(
-                                    f.name,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedFaculty = value;
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (!isMobile) ...[
-                    const SizedBox(width: 16),
-                    _buildViewToggle(isDark),
-                  ],
-                ],
+              _buildSearchAndFilterRow(
+                isDark: isDark,
+                isMobile: isMobile,
+                facultyAsync: facultyAsync,
               ),
               const SizedBox(height: 24),
-
-              // Tab Bar
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: TabBar(
-                  isScrollable: isMobile,
-                  indicator: BoxDecoration(
-                    color: maroonColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: maroonColor.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  indicatorColor: maroonColor,
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: maroonColor,
-                  unselectedLabelColor: Colors.grey[600],
-                  labelStyle: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                  unselectedLabelStyle: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 13,
-                  ),
-                  tabs: const [
-                    Tab(text: 'Faculty Loading Summary'),
-                    Tab(text: 'Subject Assignments'),
-                  ],
-                ),
-              ),
+              _buildTabBar(isDark, isMobile),
               const SizedBox(height: 24),
-
-              // Main Content Area
               Expanded(
                 child: TabBarView(
                   children: [
@@ -1661,6 +1358,303 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderSection(bool isMobile) {
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 20 : 32),
+      decoration: BoxDecoration(
+        color: maroonColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: maroonColor.withValues(alpha: 0.35),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Faculty Loading',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Manage faculty schedule assignments and workload',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _showNewAssignmentModal,
+                    icon: const Icon(Icons.add_rounded, size: 20),
+                    label: Text(
+                      'Assign Subject',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: maroonColor,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Faculty Loading',
+                      style: GoogleFonts.poppins(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Manage faculty schedule assignments and workload',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ],
+                ),
+                ElevatedButton.icon(
+                  onPressed: _showNewAssignmentModal,
+                  icon: const Icon(Icons.add_rounded, size: 20),
+                  label: Text(
+                    'Assign Subject',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: maroonColor,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 18,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildSearchAndFilterRow({
+    required bool isDark,
+    required bool isMobile,
+    required AsyncValue<List<Faculty>> facultyAsync,
+  }) {
+    final searchBar = Expanded(
+      flex: 3,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? Colors.transparent : Colors.grey[300]!,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1E293B).withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.search_rounded, color: maroonColor, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.toLowerCase();
+                  });
+                },
+                cursorColor: maroonColor,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  hintText: 'Search by faculty, subject, or section...',
+                  hintStyle: GoogleFonts.poppins(
+                    color: Colors.grey[500],
+                    fontSize: 14,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+            if (_searchQuery.isNotEmpty)
+              IconButton(
+                icon: Icon(Icons.clear, color: Colors.grey[600]),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() {
+                    _searchQuery = '';
+                  });
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+
+    final facultyFilter = Expanded(
+      flex: 2,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? Colors.transparent : Colors.grey[300]!,
+          ),
+        ),
+        child: facultyAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => const Text('Error'),
+          data: (faculty) => DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedFaculty,
+              hint: Text(
+                'Filter by Faculty',
+                style: GoogleFonts.poppins(fontSize: 14),
+              ),
+              isExpanded: true,
+              items: [
+                DropdownMenuItem<String>(
+                  value: null,
+                  child: Text(
+                    'All Faculty',
+                    style: GoogleFonts.poppins(fontSize: 14),
+                  ),
+                ),
+                ...faculty.map(
+                  (f) => DropdownMenuItem<String>(
+                    value: f.id.toString(),
+                    child: Text(
+                      f.name,
+                      style: GoogleFonts.poppins(fontSize: 14),
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedFaculty = value;
+                });
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return Column(
+      children: [
+        if (isMobile) ...[
+          _buildViewToggle(isDark),
+          const SizedBox(height: 16),
+        ],
+        Row(
+          children: [
+            searchBar,
+            const SizedBox(width: 16),
+            facultyFilter,
+            if (!isMobile) ...[
+              const SizedBox(width: 16),
+              _buildViewToggle(isDark),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabBar(bool isDark, bool isMobile) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TabBar(
+        isScrollable: isMobile,
+        indicator: BoxDecoration(
+          color: maroonColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: maroonColor.withValues(alpha: 0.2)),
+        ),
+        indicatorColor: maroonColor,
+        indicatorSize: TabBarIndicatorSize.tab,
+        labelColor: maroonColor,
+        unselectedLabelColor: Colors.grey[600],
+        labelStyle: GoogleFonts.poppins(
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+        ),
+        unselectedLabelStyle: GoogleFonts.poppins(
+          fontWeight: FontWeight.w500,
+          fontSize: 13,
+        ),
+        tabs: const [
+          Tab(text: 'Faculty Loading Summary'),
+          Tab(text: 'Subject Assignments'),
+        ],
       ),
     );
   }

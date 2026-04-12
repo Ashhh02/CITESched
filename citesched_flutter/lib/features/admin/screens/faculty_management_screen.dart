@@ -44,6 +44,40 @@ String _dayLabelOrUnknown(int dayIndex, List<String> labels) {
   return labels[dayIndex];
 }
 
+String? _requiredValidator(String? value) {
+  if (value?.isEmpty ?? true) {
+    return 'Required';
+  }
+  return null;
+}
+
+String? _emailValidator(String? value) {
+  if (value?.isEmpty ?? true) return 'Required';
+  if (!value!.contains('@')) return 'Invalid email';
+  return null;
+}
+
+String? _passwordValidator(String? value) {
+  if (value?.isEmpty ?? true) return 'Required';
+  if (value!.length < 8) return 'Min 8 chars';
+  return null;
+}
+
+String _shiftPreferenceLabel(FacultyShiftPreference pref) {
+  switch (pref) {
+    case FacultyShiftPreference.any:
+      return 'Any Time (Flexible)';
+    case FacultyShiftPreference.morning:
+      return 'Morning (7:00 AM to 12:00 PM)';
+    case FacultyShiftPreference.afternoon:
+      return 'Afternoon (1:00 PM to 6:00 PM)';
+    case FacultyShiftPreference.evening:
+      return 'Evening (6:00 PM to 9:00 PM)';
+    case FacultyShiftPreference.custom:
+      return 'Custom';
+  }
+}
+
 // Helper extension for conflicts (already in core/providers/conflict_provider.dart)
 
 class FacultyManagementScreen extends ConsumerStatefulWidget {
@@ -2203,7 +2237,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
               textMuted,
             ),
             style: GoogleFonts.poppins(fontSize: 15, color: textPrimary),
-            validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+            validator: _requiredValidator,
           ),
           const SizedBox(height: 20),
           _buildLabel('Email Address', Icons.email_outlined, textPrimary),
@@ -2217,11 +2251,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
             ),
             keyboardType: TextInputType.emailAddress,
             style: GoogleFonts.poppins(fontSize: 15, color: textPrimary),
-            validator: (value) {
-              if (value?.isEmpty ?? true) return 'Required';
-              if (!value!.contains('@')) return 'Invalid email';
-              return null;
-            },
+            validator: _emailValidator,
           ),
           const SizedBox(height: 20),
           _buildLabel('Faculty ID', Icons.badge_rounded, textPrimary),
@@ -2234,7 +2264,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
               textMuted,
             ),
             style: GoogleFonts.poppins(fontSize: 15, color: textPrimary),
-            validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+            validator: _requiredValidator,
           ),
           const SizedBox(height: 20),
           _buildLabel('Password', Icons.lock_outline_rounded, textPrimary),
@@ -2248,11 +2278,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
             ),
             obscureText: true,
             style: GoogleFonts.poppins(fontSize: 15, color: textPrimary),
-            validator: (value) {
-              if (value?.isEmpty ?? true) return 'Required';
-              if (value!.length < 8) return 'Min 8 chars';
-              return null;
-            },
+            validator: _passwordValidator,
           ),
           const SizedBox(height: 16),
           _buildLabel(
@@ -2330,20 +2356,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
             primaryPurple: primaryPurple,
             items: FacultyShiftPreference.values,
             onChanged: (value) => setState(() => _shiftPreference = value),
-            itemLabel: (pref) {
-              switch (pref) {
-                case FacultyShiftPreference.any:
-                  return 'Any Time (Flexible)';
-                case FacultyShiftPreference.morning:
-                  return 'Morning (7:00 AM to 12:00 PM)';
-                case FacultyShiftPreference.afternoon:
-                  return 'Afternoon (1:00 PM to 6:00 PM)';
-                case FacultyShiftPreference.evening:
-                  return 'Evening (6:00 PM to 9:00 PM)';
-                case FacultyShiftPreference.custom:
-                  return 'Custom';
-              }
-            },
+            itemLabel: _shiftPreferenceLabel,
             hint: 'Select Shift',
           ),
 
@@ -3287,7 +3300,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
               textMuted,
             ),
             style: GoogleFonts.poppins(fontSize: 15, color: textPrimary),
-            validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+            validator: _requiredValidator,
           ),
           const SizedBox(height: 20),
           _buildLabel('Email Address', Icons.email_outlined, textPrimary),
@@ -3318,7 +3331,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
               textMuted,
             ),
             style: GoogleFonts.poppins(fontSize: 15, color: textPrimary),
-            validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+            validator: _requiredValidator,
           ),
           const SizedBox(height: 20),
           _buildLabel(
@@ -3369,20 +3382,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
             primaryPurple: primaryPurple,
             items: FacultyShiftPreference.values,
             onChanged: (value) => setState(() => _shiftPreference = value),
-            itemLabel: (pref) {
-              switch (pref) {
-                case FacultyShiftPreference.any:
-                  return 'Any Time (Flexible)';
-                case FacultyShiftPreference.morning:
-                  return 'Morning (7:00 AM to 12:00 PM)';
-                case FacultyShiftPreference.afternoon:
-                  return 'Afternoon (1:00 PM to 6:00 PM)';
-                case FacultyShiftPreference.evening:
-                  return 'Evening (6:00 PM to 9:00 PM)';
-                case FacultyShiftPreference.custom:
-                  return 'Custom';
-              }
-            },
+            itemLabel: _shiftPreferenceLabel,
           ),
 
           const SizedBox(height: 24),
