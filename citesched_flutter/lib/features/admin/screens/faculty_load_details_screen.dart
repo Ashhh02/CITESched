@@ -19,6 +19,20 @@ final facultyDetailsSchedulesProvider =
       return await client.admin.getFacultySchedule(facultyId);
     });
 
+List<ScheduleInfo> _toScheduleInfos(
+  List<Schedule> schedules,
+  List<ScheduleConflict> conflicts,
+) {
+  return schedules.map((s) {
+    final sConflicts = conflicts
+        .where(
+          (c) => c.scheduleId == s.id || c.conflictingScheduleId == s.id,
+        )
+        .toList();
+    return ScheduleInfo(schedule: s, conflicts: sConflicts);
+  }).toList();
+}
+
 class FacultyLoadDetailsScreen extends ConsumerWidget {
   final Faculty faculty;
   final List<Schedule> initialSchedules;
@@ -43,16 +57,16 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
     final availabilityAsync = ref.watch(
       facultyAvailabilityProvider(faculty.id!),
     );
+    // Use live schedules when available, otherwise fall back to the initial snapshot.
+    final facultySchedules = facultySchedulesAsync.maybeWhen(
+      data: (all) => all,
+      orElse: () => initialSchedules,
+    );
     final allConflicts = allConflictsAsync.value ?? <ScheduleConflict>[];
     final facultyConflicts = allConflicts
         .where((c) => c.facultyId == faculty.id)
         .toList();
-
-    // Filter schedules for this faculty (live from schedules table)
-    final facultySchedules = facultySchedulesAsync.maybeWhen(
-      data: (all) => all,
-      orElse: () => <Schedule>[],
-    );
+    final scheduleInfos = _toScheduleInfos(facultySchedules, facultyConflicts);
 
     // Calculate stats
     double totalUnits = 0;
@@ -387,19 +401,7 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
                                       data: (d) => d,
                                       orElse: () => null,
                                     ),
-                                schedules: facultySchedules.map((s) {
-                                  final sConflicts = facultyConflicts
-                                      .where(
-                                        (c) =>
-                                            c.scheduleId == s.id ||
-                                            c.conflictingScheduleId == s.id,
-                                      )
-                                      .toList();
-                                  return ScheduleInfo(
-                                    schedule: s,
-                                    conflicts: sConflicts,
-                                  );
-                                }).toList(),
+                                schedules: scheduleInfos,
                               ),
                             ),
                           ),
@@ -438,38 +440,14 @@ class FacultyLoadDetailsScreen extends ConsumerWidget {
                       data: (availabilities) => WeeklyCalendarView(
                         maroonColor: maroonColor,
                         availabilities: availabilities,
-                        schedules: facultySchedules.map((s) {
-                          final sConflicts = facultyConflicts
-                              .where(
-                                (c) =>
-                                    c.scheduleId == s.id ||
-                                    c.conflictingScheduleId == s.id,
-                              )
-                              .toList();
-                          return ScheduleInfo(
-                            schedule: s,
-                            conflicts: sConflicts,
-                          );
-                        }).toList(),
+                        schedules: scheduleInfos,
                       ),
                       loading: () => const Center(
                         child: CircularProgressIndicator(),
                       ),
                       error: (err, _) => WeeklyCalendarView(
                         maroonColor: maroonColor,
-                        schedules: facultySchedules.map((s) {
-                          final sConflicts = facultyConflicts
-                              .where(
-                                (c) =>
-                                    c.scheduleId == s.id ||
-                                    c.conflictingScheduleId == s.id,
-                              )
-                              .toList();
-                          return ScheduleInfo(
-                            schedule: s,
-                            conflicts: sConflicts,
-                          );
-                        }).toList(),
+                        schedules: scheduleInfos,
                       ),
                     ),
                   ),

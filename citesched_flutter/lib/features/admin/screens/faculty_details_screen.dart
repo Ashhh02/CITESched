@@ -15,6 +15,23 @@ final facultyScheduleProvider = FutureProvider.family<List<Schedule>, int>((
   return await client.admin.getFacultySchedule(facultyId);
 });
 
+String _facultyInitial(String name) {
+  if (name.isEmpty) {
+    return '?';
+  }
+  return name[0].toUpperCase();
+}
+
+Color _facultyStatusColor(EmploymentStatus? status, bool inverted) {
+  if (status == null) {
+    return Colors.grey;
+  }
+  if (status == EmploymentStatus.fullTime) {
+    return inverted ? Colors.white : Colors.green;
+  }
+  return inverted ? Colors.white70 : Colors.blue;
+}
+
 class FacultyDetailsScreen extends ConsumerWidget {
   final Faculty faculty;
 
@@ -69,7 +86,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
                       radius: 36,
                       backgroundColor: Colors.white.withValues(alpha: 0.2),
                       child: Text(
-                        faculty.name[0].toUpperCase(),
+                        _facultyInitial(faculty.name),
                         style: GoogleFonts.poppins(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -435,9 +452,7 @@ class FacultyDetailsScreen extends ConsumerWidget {
 
   Widget _buildStatusChip(EmploymentStatus? status, {bool inverted = false}) {
     if (status == null) return const Text('—');
-    Color color = status == EmploymentStatus.fullTime
-        ? (inverted ? Colors.white : Colors.green)
-        : (inverted ? Colors.white70 : Colors.blue);
+    final color = _facultyStatusColor(status, inverted);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

@@ -12,6 +12,20 @@ final roomScheduleProvider = FutureProvider.family<List<Schedule>, int>((
   return await client.admin.getRoomSchedule(roomId);
 });
 
+IconData _roomTypeIcon(RoomType type) {
+  if (type == RoomType.laboratory) {
+    return Icons.computer_rounded;
+  }
+  return Icons.meeting_room_rounded;
+}
+
+Color _roomStatusColor(bool isActive, bool inverted) {
+  if (isActive) {
+    return inverted ? Colors.white : Colors.green;
+  }
+  return inverted ? Colors.white70 : Colors.red;
+}
+
 class RoomDetailsScreen extends ConsumerWidget {
   final Room room;
 
@@ -73,9 +87,7 @@ class RoomDetailsScreen extends ConsumerWidget {
                             ),
                             child: Center(
                               child: Icon(
-                                room.type == RoomType.laboratory
-                                    ? Icons.computer_rounded
-                                    : Icons.meeting_room_rounded,
+                                _roomTypeIcon(room.type),
                                 color: Colors.white,
                                 size: 24,
                               ),
@@ -167,9 +179,7 @@ class RoomDetailsScreen extends ConsumerWidget {
                             ),
                             child: Center(
                               child: Icon(
-                                room.type == RoomType.laboratory
-                                    ? Icons.computer_rounded
-                                    : Icons.meeting_room_rounded,
+                                _roomTypeIcon(room.type),
                                 color: Colors.white,
                                 size: 32,
                               ),
@@ -459,9 +469,7 @@ class RoomDetailsScreen extends ConsumerWidget {
   }
 
   Widget _buildStatusChip(bool isActive, {bool inverted = false}) {
-    Color color = isActive
-        ? (inverted ? Colors.white : Colors.green)
-        : (inverted ? Colors.white70 : Colors.red);
+    final color = _roomStatusColor(isActive, inverted);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(

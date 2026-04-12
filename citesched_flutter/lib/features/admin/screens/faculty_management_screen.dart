@@ -1158,7 +1158,7 @@ class _FacultyManagementScreenState
         DataCell(
           conflictsAsync.when(
             loading: () => _facultyNameCell(faculty),
-            error: (_, __) => _facultyNameCell(faculty),
+            error: (error, _) => _facultyNameCell(faculty),
             data: (conflicts) {
               final hasNameConflict =
                   conflicts.hasConflictForFaculty(faculty.id!);
@@ -1233,7 +1233,7 @@ class _FacultyManagementScreenState
         DataCell(
           conflictsAsync.when(
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (error, _) => const SizedBox.shrink(),
             data: (conflicts) {
               final hasConflict =
                   conflicts.hasConflictForFaculty(faculty.id!);

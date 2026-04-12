@@ -14,6 +14,7 @@ import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:serverpod_auth_client/serverpod_auth_client.dart';
 
 final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
   return await client.admin.getDashboardStats();
@@ -190,6 +191,383 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   void dispose() {
     _refreshTimer?.cancel();
     super.dispose();
+  }
+
+  Widget _buildPendingFacultyButton(
+    AsyncValue<List<Faculty>> pendingFacultyAsync,
+    BuildContext context,
+  ) {
+    return pendingFacultyAsync.when(
+      data: (pending) {
+        final count = pending.length;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              tooltip: 'Faculty approvals',
+              onPressed: () => _openPendingFacultyDialog(pending),
+              icon: const Icon(
+                Icons.notifications_active_rounded,
+                color: Colors.white,
+              ),
+            ),
+            if (count > 0)
+              Positioned(
+                right: 2,
+                top: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (error, stackTrace) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildAdminHeader({
+    required BuildContext context,
+    required AsyncValue<List<Faculty>> pendingFacultyAsync,
+    required UserInfo? userInfo,
+    required bool isMobile,
+    required Color primaryPurple,
+  }) {
+    return AdminHeaderContainer(
+      primaryColor: primaryPurple,
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _buildPendingFacultyButton(pendingFacultyAsync, context),
+              const SizedBox(width: 8),
+              const ThemeModeToggle(compact: true),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (isMobile) _buildMobileHeader(userInfo) else _buildDesktopHeader(userInfo),
+          const SizedBox(height: 32),
+          _buildHeaderActions(context, primaryPurple, isMobile),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileHeader(UserInfo? userInfo) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+          ),
+          child: const Icon(
+            Icons.dashboard_rounded,
+            color: Colors.white,
+            size: 34,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'CITESched • Admin Dashboard',
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.poppins(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Welcome back, ${userInfo?.userName ?? "Administrator"}',
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: Colors.white.withValues(alpha: 0.85),
+            letterSpacing: 0.2,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopHeader(UserInfo? userInfo) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+          ),
+          child: const Icon(
+            Icons.dashboard_rounded,
+            color: Colors.white,
+            size: 40,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'CITESched • Admin Dashboard',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: -1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Welcome back, ${userInfo?.userName ?? "Administrator"}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  color: Colors.white.withValues(alpha: 0.8),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeaderActions(
+    BuildContext context,
+    Color primaryPurple,
+    bool isMobile,
+  ) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      runAlignment: WrapAlignment.center,
+      spacing: 16,
+      runSpacing: 12,
+      children: [
+        ElevatedButton.icon(
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (_) => const ReportModal(),
+            );
+          },
+          icon: const Icon(Icons.analytics_rounded, size: 24),
+          label: const Text('View Detailed Reports'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: primaryPurple,
+            textStyle: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 0,
+          ),
+        ),
+        if (!isMobile)
+          OutlinedButton.icon(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (_) => const UserListModal(),
+              );
+            },
+            icon: const Icon(Icons.people_rounded, size: 24),
+            label: const Text('Manage Users'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              textStyle: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+              side: const BorderSide(color: Colors.white, width: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildStatCardsSection(
+    BuildContext context,
+    DashboardStats stats,
+    bool isDesktop,
+    List<ScheduleConflict> recentConflicts,
+  ) {
+    final cards = [
+      _StatCardConfig(
+        label: 'Faculty',
+        value: stats.totalFaculty.toString(),
+        icon: Icons.people_rounded,
+        borderColor: const Color(0xFF8b5cf6),
+        iconColor: const Color(0xFF8b5cf6),
+        valueColor: const Color(0xFF8b5cf6),
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (_) => const UserListModal(),
+          );
+        },
+      ),
+      _StatCardConfig(
+        label: 'Students',
+        value: stats.totalStudents.toString(),
+        icon: Icons.school_rounded,
+        borderColor: const Color(0xFF06b6d4),
+        iconColor: const Color(0xFF06b6d4),
+        valueColor: const Color(0xFF06b6d4),
+      ),
+      _StatCardConfig(
+        label: 'Schedules',
+        value: stats.totalSchedules.toString(),
+        icon: Icons.calendar_month_rounded,
+        borderColor: const Color(0xFFf59e0b),
+        iconColor: const Color(0xFFf59e0b),
+        valueColor: const Color(0xFFf59e0b),
+      ),
+      _StatCardConfig(
+        label: 'Conflicts',
+        value: stats.totalConflicts.toString(),
+        icon: Icons.warning_rounded,
+        borderColor: const Color(0xFFef4444),
+        iconColor: const Color(0xFFef4444),
+        valueColor: const Color(0xFFef4444),
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (_) => ConflictListModal(conflicts: recentConflicts),
+          );
+        },
+      ),
+    ];
+
+    return _buildStatCards(cards, isDesktop);
+  }
+
+  Widget _buildChartAndConflictSection(
+    BuildContext context,
+    Color cardBg,
+    Color primaryPurple,
+    List<FacultyLoadData> facultyLoadData,
+    List<ScheduleConflict> recentConflicts,
+    double width,
+  ) {
+    final chartCard = _buildChartCard(
+      context,
+      cardBg,
+      primaryPurple,
+      facultyLoadData,
+    );
+    final conflictCard = _buildConflictCard(
+      context,
+      cardBg,
+      primaryPurple,
+      recentConflicts,
+      primaryPurple,
+    );
+
+    if (width > 1200) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(flex: 3, child: chartCard),
+          const SizedBox(width: 24),
+          Expanded(flex: 2, child: conflictCard),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        chartCard,
+        const SizedBox(height: 24),
+        conflictCard,
+      ],
+    );
+  }
+
+  Widget _buildDistributionSection(
+    BuildContext context,
+    Color cardBg,
+    Color primaryPurple,
+    List<DistributionData> yearLevelDistribution,
+    List<DistributionData> sectionDistribution,
+    double width,
+  ) {
+    final programCard = _buildDistributionPanel(
+      context,
+      'Year Level Distribution',
+      yearLevelDistribution,
+      cardBg,
+      primaryPurple,
+      Icons.layers_rounded,
+    );
+    final sectionCard = _buildDistributionPanel(
+      context,
+      'Section Distribution',
+      sectionDistribution,
+      cardBg,
+      primaryPurple,
+      Icons.groups_rounded,
+    );
+
+    if (width > 900) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: programCard),
+          const SizedBox(width: 24),
+          Expanded(child: sectionCard),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        programCard,
+        const SizedBox(height: 24),
+        sectionCard,
+      ],
+    );
   }
 
   Future<void> _approvePendingFaculty(Faculty faculty) async {

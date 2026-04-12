@@ -1602,41 +1602,6 @@ class _AddRoomModal extends StatefulWidget {
 }
 
 class _AddRoomModalState extends State<_AddRoomModal> {
-  void _showErrorDialog(BuildContext context, String message) {
-    if (!context.mounted) return;
-    String cleanMessage = message.replaceAll('Exception: ', '').trim();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 28),
-            const SizedBox(width: 12),
-            Text(
-              'Action Failed',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Colors.red,
-              ),
-            ),
-          ],
-        ),
-        content: Text(cleanMessage, style: GoogleFonts.poppins(fontSize: 14)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'OK',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _capacityController = TextEditingController(text: '40');
@@ -2134,41 +2099,6 @@ class _EditRoomModal extends StatefulWidget {
 }
 
 class _EditRoomModalState extends State<_EditRoomModal> {
-  void _showErrorDialog(BuildContext context, String message) {
-    if (!context.mounted) return;
-    String cleanMessage = message.replaceAll('Exception: ', '').trim();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 28),
-            const SizedBox(width: 12),
-            Text(
-              'Action Failed',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Colors.red,
-              ),
-            ),
-          ],
-        ),
-        content: Text(cleanMessage, style: GoogleFonts.poppins(fontSize: 14)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'OK',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _capacityController;

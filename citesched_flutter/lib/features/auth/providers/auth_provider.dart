@@ -1,5 +1,6 @@
 import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/core/utils/session_context.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:serverpod_auth_client/serverpod_auth_client.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
@@ -69,7 +70,7 @@ class AuthNotifier extends Notifier<UserInfo?> {
       _needsRoleOnboarding = false;
       state = userInfo;
     } catch (e) {
-      print('Failed to fetch user info: $e');
+      debugPrint('Failed to fetch user info: $e');
       // Fail-safe: don't destroy existing auth state on transient backend
       // errors (for example /debug temporary 500).
       if (state != null) return;

@@ -1,5 +1,6 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/main.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final nlpServiceProvider = Provider((ref) => NLPService());
@@ -21,7 +22,7 @@ class NLPService {
       );
       return response;
     } catch (e) {
-      print('NLP Query Error: $e');
+      debugPrint('NLP Query Error: $e');
       rethrow;
     }
   }
@@ -38,7 +39,7 @@ class NLPService {
       // Serverpod automatically manages tokens
       return null; // Not needed as Serverpod handles it
     } catch (e) {
-      print('Failed to get auth token: $e');
+      debugPrint('Failed to get auth token: $e');
     }
     return null;
   }

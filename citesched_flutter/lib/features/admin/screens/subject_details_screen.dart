@@ -12,6 +12,21 @@ final subjectScheduleProvider = FutureProvider.family<List<Schedule>, int>((
   return await client.admin.getSubjectSchedule(subjectId);
 });
 
+String _subjectInitial(String code) {
+  if (code.isEmpty) {
+    return '?';
+  }
+  return code[0].toUpperCase();
+}
+
+String _yearLabel(dynamic yearLevel) {
+  return 'YR ${yearLevel ?? "N/A"}';
+}
+
+String _scheduleSummary(Schedule schedule) {
+  return '${schedule.timeslot?.day ?? "N/A"} | ${schedule.timeslot?.startTime} - ${schedule.timeslot?.endTime} | Room ${schedule.room?.name ?? "N/A"} | Faculty: ${schedule.faculty?.name ?? "N/A"}';
+}
+
 class SubjectDetailsScreen extends ConsumerWidget {
   final Subject subject;
 
@@ -71,7 +86,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                             ),
                             child: Center(
                               child: Text(
-                                subject.code[0].toUpperCase(),
+                                _subjectInitial(subject.code),
                                 style: GoogleFonts.poppins(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
@@ -121,7 +136,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                                         ),
                                       ),
                                       child: Text(
-                                        'YR ${subject.yearLevel ?? "N/A"}',
+                                        _yearLabel(subject.yearLevel),
                                         style: GoogleFonts.poppins(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
@@ -198,7 +213,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                             ),
                             child: Center(
                               child: Text(
-                                subject.code[0].toUpperCase(),
+                                _subjectInitial(subject.code),
                                 style: GoogleFonts.poppins(
                                   fontSize: 32,
                                   fontWeight: FontWeight.bold,
@@ -248,7 +263,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                                         ),
                                       ),
                                       child: Text(
-                                        'YR ${subject.yearLevel ?? "N/A"}',
+                                        _yearLabel(subject.yearLevel),
                                         style: GoogleFonts.poppins(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
@@ -491,7 +506,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                                 ),
                               ),
                               subtitle: Text(
-                                '${s.timeslot?.day ?? "N/A"} | ${s.timeslot?.startTime} - ${s.timeslot?.endTime} | Room ${s.room?.name ?? "N/A"} | Faculty: ${s.faculty?.name ?? "N/A"}',
+                                _scheduleSummary(s),
                                 style: GoogleFonts.poppins(fontSize: 12),
                               ),
                             );

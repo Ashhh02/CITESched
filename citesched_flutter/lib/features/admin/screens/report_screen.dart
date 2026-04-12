@@ -780,9 +780,7 @@ class _ConflictSummaryTab extends ConsumerWidget {
     final hasConflicts = conflicts.isNotEmpty;
     final statusColor = hasConflicts ? Colors.red : Colors.green;
     final summaryColor = hasConflicts ? Colors.red[700] : Colors.green;
-    final statusIcon = hasConflicts
-        ? Icons.warning_rounded
-        : Icons.verified_rounded;
+    final statusIcon = hasConflicts ? Icons.warning_rounded : Icons.verified_rounded;
 
     return Row(
       children: [
@@ -825,25 +823,7 @@ class _ConflictSummaryTab extends ConsumerWidget {
           Flexible(
             child: Align(
               alignment: Alignment.centerRight,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.end,
-                children: [
-                  _buildCountBadge(conflicts, 'CRITICAL', [
-                    'room_conflict',
-                    'faculty_conflict',
-                    'section_conflict',
-                  ], Colors.red),
-                  _buildCountBadge(conflicts, 'WARNING', [
-                    'max_load_exceeded',
-                    'room_inactive',
-                    'faculty_unavailable',
-                    'program_mismatch',
-                    'capacity_exceeded',
-                  ], Colors.orange),
-                ],
-              ),
+              child: _buildSeverityBadges(conflicts),
             ),
           ),
       ],
@@ -910,91 +890,104 @@ class _ConflictSummaryTab extends ConsumerWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: conflicts.length,
       separatorBuilder: (context, index) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-          final conflict = conflicts[index];
-          final cfg = _cfg(conflict.type);
-          return Container(
-            padding: const EdgeInsets.all(16),
+      itemBuilder: (context, index) =>
+          _buildConflictListItem(conflicts[index], isDark),
+      );
+  }
+
+  Widget _buildSeverityBadges(List<ScheduleConflict> conflicts) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.end,
+      children: [
+        _buildCountBadge(conflicts, 'CRITICAL', [
+          'room_conflict',
+          'faculty_conflict',
+          'section_conflict',
+        ], Colors.red),
+        _buildCountBadge(conflicts, 'WARNING', [
+          'max_load_exceeded',
+          'room_inactive',
+          'faculty_unavailable',
+          'program_mismatch',
+          'capacity_exceeded',
+        ], Colors.orange),
+      ],
+    );
+  }
+
+  Widget _buildConflictListItem(ScheduleConflict conflict, bool isDark) {
+    final cfg = _cfg(conflict.type);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? cfg.color.withValues(alpha: 0.08) : cfg.color.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cfg.color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isDark
-                  ? cfg.color.withValues(alpha: 0.08)
-                  : cfg.color.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: cfg.color.withValues(alpha: 0.25),
-              ),
+              color: cfg.color.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
             ),
-            child: Row(
+            child: Icon(cfg.icon, color: cfg.color, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: cfg.color.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Icon(
-                    cfg.icon,
-                    color: cfg.color,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: cfg.color.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          cfg.label,
-                          style: GoogleFonts.poppins(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: cfg.color,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        conflict.message,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                      if (conflict.details != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          conflict.details!,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: isDark ? Colors.grey[400] : Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ],
+                  child: Text(
+                    cfg.label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: cfg.color,
+                      letterSpacing: 1.0,
+                    ),
                   ),
                 ),
-                Icon(
-                  Icons.warning_amber_rounded,
-                  size: 18,
-                  color: cfg.color.withValues(alpha: 0.7),
+                const SizedBox(height: 5),
+                Text(
+                  conflict.message,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
                 ),
+                if (conflict.details != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    conflict.details!,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
               ],
             ),
-          );
-        },
-      );
+          ),
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 18,
+            color: cfg.color.withValues(alpha: 0.7),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildCountBadge(

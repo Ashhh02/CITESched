@@ -6,6 +6,7 @@ import 'package:citesched_flutter/features/nlp/utils/nlp_constants.dart';
 import 'package:citesched_flutter/features/nlp/utils/nlp_query_parser.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/features/nlp/providers/chat_history_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final nlpChatProvider = NotifierProvider<NLPChatNotifier, NLPChatState>(
@@ -170,7 +171,7 @@ class NLPChatNotifier extends Notifier<NLPChatState> {
         ref.invalidate(chatHistorySessionProvider(_sessionId!));
       }
     } catch (e) {
-      print('NLP Error: $e');
+      debugPrint('NLP Error: $e');
       _addMessage(
         'Sorry, I encountered an error processing your request. Please try again.',
         MessageSender.assistant,
@@ -215,7 +216,7 @@ class NLPChatNotifier extends Notifier<NLPChatState> {
     try {
       return jsonDecode(jsonStr) as Map<String, dynamic>;
     } catch (e) {
-      print('Failed to parse metadata: $e');
+      debugPrint('Failed to parse metadata: $e');
       return null;
     }
   }
