@@ -22,5 +22,21 @@ services:
         sync: false
       - key: SERVERPOD_SHARED_PASSWORD
         sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false
+      - key: SMTP_FROM_NAME
+        sync: false
+      - key: SMTP_SSL
+        sync: false
+      - key: SMTP_IGNORE_BAD_CERT
+        sync: false
       - key: SERVERPOD_GOOGLE_CLIENT_SECRET_JSON
         sync: false

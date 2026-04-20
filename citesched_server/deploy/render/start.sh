@@ -133,6 +133,14 @@ production:
   jwtHmacSha512PrivateKey: "$(first_non_empty "${SERVERPOD_JWT_HMAC_SHA512_PRIVATE_KEY:-}" "${SERVERPOD_PASSWORD_authJwtSecret:-}")"
   jwtRefreshTokenHashPepper: "$(first_non_empty "${SERVERPOD_JWT_REFRESH_TOKEN_HASH_PEPPER:-}")"
   serverSideSessionKeyHashPepper: "$(first_non_empty "${SERVERPOD_SERVER_SIDE_SESSION_KEY_HASH_PEPPER:-}" "${SERVERPOD_PASSWORD_serverSideSessionKeyHashPepper:-}")"
+  smtpHost: "$(first_non_empty "${SMTP_HOST:-}" "${SERVERPOD_PASSWORD_smtpHost:-}")"
+  smtpPort: "$(first_non_empty "${SMTP_PORT:-}" "${SERVERPOD_PASSWORD_smtpPort:-}" "587")"
+  smtpUsername: "$(first_non_empty "${SMTP_USERNAME:-}" "${SERVERPOD_PASSWORD_smtpUsername:-}")"
+  smtpPassword: "$(first_non_empty "${SMTP_PASSWORD:-}" "${SERVERPOD_PASSWORD_smtpPassword:-}")"
+  smtpFromEmail: "$(first_non_empty "${SMTP_FROM_EMAIL:-}" "${SERVERPOD_PASSWORD_smtpFromEmail:-}")"
+  smtpFromName: "$(first_non_empty "${SMTP_FROM_NAME:-}" "${SERVERPOD_PASSWORD_smtpFromName:-}" "CITESched")"
+  smtpSsl: "$(first_non_empty "${SMTP_SSL:-}" "${SERVERPOD_PASSWORD_smtpSsl:-}" "false")"
+  smtpIgnoreBadCert: "$(first_non_empty "${SMTP_IGNORE_BAD_CERT:-}" "${SERVERPOD_PASSWORD_smtpIgnoreBadCert:-}" "false")"
 EOF
 
   google_client_secret="$(first_non_empty "${SERVERPOD_GOOGLE_CLIENT_SECRET_JSON:-}" "${SERVERPOD_PASSWORD_googleClientSecret:-}")"

@@ -5,6 +5,7 @@ import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/core/utils/schedule_export_service.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/features/auth/widgets/logout_confirmation_dialog.dart';
+import 'package:citesched_flutter/features/auth/widgets/password_reset_dialog.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:citesched_flutter/core/widgets/draggable_fab.dart';
 import 'package:citesched_flutter/core/widgets/nlp_query_dialog.dart';
@@ -339,6 +340,37 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
           orElse: () => const SizedBox(),
         ),
         ElevatedButton.icon(
+          onPressed: () => showPasswordResetDialog(
+            context,
+            initialEmail: user?.email,
+            lockEmail: user?.email?.isNotEmpty == true,
+            title: 'Reset Password',
+            subtitle:
+                'Verify your email and choose a new password for your faculty account.',
+          ),
+          icon: const Icon(Icons.lock_reset_rounded, size: 18),
+          label: Text(
+            'Reset Password',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white.withValues(alpha: 0.16),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 14,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: const BorderSide(color: Colors.white30),
+            ),
+            elevation: 0,
+          ),
+        ),
+        ElevatedButton.icon(
           onPressed: () async {
             final confirm = await showDialog<bool>(
               context: context,
@@ -383,6 +415,8 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
             actions[2],
             const SizedBox(width: 12),
             actions[3],
+            const SizedBox(width: 12),
+            actions[4],
           ],
         );
       }
@@ -398,10 +432,9 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
           if (actions[1] is! SizedBox) const SizedBox(height: 10),
           SizedBox(width: double.infinity, child: actions[2]),
           const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerRight,
-            child: actions[3],
-          ),
+          SizedBox(width: double.infinity, child: actions[3]),
+          const SizedBox(height: 10),
+          Align(alignment: Alignment.centerRight, child: actions[4]),
         ],
       );
     }

@@ -1,5 +1,6 @@
 import 'package:citesched_flutter/main.dart'; // Import for client access
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
+import 'package:citesched_flutter/features/auth/widgets/password_reset_dialog.dart';
 import 'package:citesched_flutter/core/utils/session_context.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:citesched_client/citesched_client.dart';
@@ -2343,6 +2344,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 controller: _passwordController,
                                 hintText: '••••••••',
                                 isPassword: true,
+                              ),
+
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: isAuthBusy
+                                      ? null
+                                      : () => showPasswordResetDialog(
+                                          context,
+                                          title: 'Forgot Password?',
+                                          subtitle:
+                                              'Use your email to recover your CITESched access and set a new password.',
+                                        ),
+                                  icon: const Icon(
+                                    Icons.lock_reset_rounded,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    'Forgot Password?',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: activeThemeColor,
+                                    padding: EdgeInsets.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                ),
                               ),
 
                               const SizedBox(height: 24),

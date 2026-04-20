@@ -39,7 +39,7 @@
 
 ## 🚀 Quick Start (5 Minutes)
 
-**Add file (citesched_server/config/passwords.yaml) and configure database password (with your actual password) and google client secret**
+**Add file (citesched_server/config/passwords.yaml) and configure database password, Google client secret, and SMTP email settings**
 ```bash
 shared:
   mySharedPassword: "my password"

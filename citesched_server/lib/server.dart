@@ -223,7 +223,7 @@ Future<_SmtpSendResult> _sendVerificationEmailViaSmtp({
 }) async {
   final host = _smtpConfigValue('SMTP_HOST', 'smtpHost')?.trim();
   final username = _smtpConfigValue('SMTP_USERNAME', 'smtpUsername')?.trim();
-  final password = _smtpConfigValue('SMTP_PASSWORD', 'smtpPassword');
+  final rawPassword = _smtpConfigValue('SMTP_PASSWORD', 'smtpPassword');
   final fromEmail =
       _smtpConfigValue('SMTP_FROM_EMAIL', 'smtpFromEmail')?.trim() ?? username;
   final fromName =
@@ -244,8 +244,8 @@ Future<_SmtpSendResult> _sendVerificationEmailViaSmtp({
       host.isEmpty ||
       username == null ||
       username.isEmpty ||
-      password == null ||
-      password.isEmpty ||
+      rawPassword == null ||
+      rawPassword.isEmpty ||
       fromEmail == null ||
       fromEmail.isEmpty) {
     return const _SmtpSendResult(
@@ -256,14 +256,26 @@ Future<_SmtpSendResult> _sendVerificationEmailViaSmtp({
   }
 
   try {
-    final smtpServer = SmtpServer(
-      host,
-      port: port,
-      username: username,
-      password: password,
-      ssl: ssl,
-      ignoreBadCertificate: ignoreBadCertificate,
+    final normalizedHost = host.toLowerCase();
+    final password = _normalizeSmtpPassword(
+      host: normalizedHost,
+      password: rawPassword,
     );
+    final smtpServer = normalizedHost == 'smtp.gmail.com'
+        ? _buildGmailSmtpServer(
+            username: username,
+            password: password,
+            ssl: ssl,
+            ignoreBadCertificate: ignoreBadCertificate,
+          )
+        : SmtpServer(
+            host,
+            port: port,
+            username: username,
+            password: password,
+            ssl: ssl,
+            ignoreBadCertificate: ignoreBadCertificate,
+          );
 
     final message = mailer.Message()
       ..from = mailer.Address(fromEmail, fromName)
@@ -271,14 +283,29 @@ Future<_SmtpSendResult> _sendVerificationEmailViaSmtp({
       ..subject = subject
       ..text = plainTextBody;
 
-    await mailer.send(message, smtpServer);
+    await mailer
+        .send(message, smtpServer)
+        .timeout(const Duration(seconds: 25));
     return const _SmtpSendResult(sent: true);
   } catch (e) {
     return _SmtpSendResult(
       sent: false,
-      reason: 'SMTP exception: $e',
+      reason: 'SMTP exception for $host:$port as $username: $e',
     );
   }
+}
+
+String _normalizeSmtpPassword({
+  required String host,
+  required String password,
+}) {
+  if (host == 'smtp.gmail.com') {
+    // Google displays app passwords grouped with spaces. The SMTP server
+    // expects the raw 16-character token, so we normalize it here.
+    return password.replaceAll(RegExp(r'\s+'), '');
+  }
+
+  return password.trim();
 }
 
 String? _smtpConfigValue(String envKey, String passwordKey) {
@@ -293,6 +320,23 @@ String? _smtpConfigValue(String envKey, String passwordKey) {
   } catch (_) {}
 
   return null;
+}
+
+SmtpServer _buildGmailSmtpServer({
+  required String username,
+  required String password,
+  required bool ssl,
+  required bool ignoreBadCertificate,
+}) {
+  return SmtpServer(
+    'smtp.gmail.com',
+    port: ssl ? 465 : 587,
+    username: username,
+    password: password,
+    ssl: ssl,
+    allowInsecure: false,
+    ignoreBadCertificate: ignoreBadCertificate,
+  );
 }
 
 class _SmtpSendResult {

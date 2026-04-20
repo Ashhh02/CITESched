@@ -6,6 +6,7 @@ import 'package:citesched_flutter/core/utils/schedule_export_service.dart';
 import 'package:citesched_flutter/core/utils/session_context.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/features/auth/widgets/logout_confirmation_dialog.dart';
+import 'package:citesched_flutter/features/auth/widgets/password_reset_dialog.dart';
 import 'package:citesched_flutter/core/widgets/draggable_fab.dart';
 import 'package:citesched_flutter/core/widgets/nlp_query_dialog.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
@@ -94,10 +95,7 @@ class StudentDashboardScreen extends ConsumerWidget {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: ThemeModeToggle(compact: true),
-          ),
+          _StudentDashboardActions(),
         ],
       ),
       body: LayoutBuilder(
@@ -890,6 +888,36 @@ class StudentDashboardScreen extends ConsumerWidget {
       return profileName[0];
     }
     return user?.userName?[0] ?? 'S';
+  }
+}
+
+class _StudentDashboardActions extends ConsumerWidget {
+  const _StudentDashboardActions();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: 'Reset password',
+          onPressed: () => showPasswordResetDialog(
+            context,
+            initialEmail: user?.email,
+            lockEmail: user?.email?.isNotEmpty == true,
+            title: 'Reset Password',
+            subtitle:
+                'Use the verification code from your email to update your student password.',
+          ),
+          icon: const Icon(Icons.lock_reset_rounded),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(right: 12),
+          child: ThemeModeToggle(compact: true),
+        ),
+      ],
+    );
   }
 }
 

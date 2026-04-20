@@ -37,7 +37,24 @@ Set these Render environment variables on the web service:
 - `SERVERPOD_JWT_REFRESH_TOKEN_HASH_PEPPER`
 - `SERVERPOD_SERVER_SIDE_SESSION_KEY_HASH_PEPPER`
 - `SERVERPOD_SHARED_PASSWORD`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USERNAME`
+- `SMTP_PASSWORD`
+- `SMTP_FROM_EMAIL`
+- `SMTP_FROM_NAME`
+- `SMTP_SSL`
+- `SMTP_IGNORE_BAD_CERT`
 - `SERVERPOD_GOOGLE_CLIENT_SECRET_JSON` if you want Google Sign-In in production
+
+Recommended Gmail SMTP values:
+
+- `SMTP_HOST=smtp.gmail.com`
+- `SMTP_PORT=587`
+- `SMTP_SSL=false`
+- `SMTP_FROM_NAME=CITESched`
+
+Use a Gmail App Password for `SMTP_PASSWORD`, not your normal Gmail password.
 
 If you prefer blueprint-based setup, the repo now includes [`render.yaml`](/c:/Users/ashya/Final%20CITESched%20Flutter/citesched/render.yaml) with the expected Render variables listed.
 

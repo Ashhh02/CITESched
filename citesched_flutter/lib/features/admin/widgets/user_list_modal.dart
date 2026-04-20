@@ -16,11 +16,18 @@ class UserListModal extends ConsumerStatefulWidget {
 
 class _UserListModalState extends ConsumerState<UserListModal>
     with SingleTickerProviderStateMixin {
+  static const Duration _newSignupWindow = Duration(days: 7);
   late TabController _tabController;
   List<Faculty> _faculty = [];
   List<Student> _students = [];
   List<UserRole> _userRoles = [];
   bool _isLoading = true;
+  final TextEditingController _facultySearchController =
+      TextEditingController();
+  final TextEditingController _studentSearchController =
+      TextEditingController();
+  String _facultySearchQuery = '';
+  String _studentSearchQuery = '';
 
   void _archiveFaculty(Faculty faculty) async {
     final confirm = await showDialog<bool>(
@@ -117,19 +124,35 @@ class _UserListModalState extends ConsumerState<UserListModal>
   }
 
   List<Faculty> get _filteredFaculty {
-    if (_facultyFilter == 'all') return _faculty;
-
     return _faculty.where((f) {
       final roleEntry = _userRoles.firstWhere(
         (r) => r.userId == f.userInfoId.toString(),
         orElse: () => UserRole(userId: '', role: 'faculty'),
       );
-      return roleEntry.role == _facultyFilter;
+      final roleMatches =
+          _facultyFilter == 'all' || roleEntry.role == _facultyFilter;
+      final query = _facultySearchQuery.trim().toLowerCase();
+      final matchesSearch =
+          query.isEmpty ||
+          f.name.toLowerCase().contains(query) ||
+          f.email.toLowerCase().contains(query) ||
+          f.facultyId.toLowerCase().contains(query) ||
+          _programNameOrUnknown(f.program).toLowerCase().contains(query) ||
+          roleEntry.role.toLowerCase().contains(query);
+      return roleMatches && matchesSearch;
     }).toList();
   }
 
   List<Student> get _sortedStudents {
-    final sorted = List<Student>.from(_students);
+    final query = _studentSearchQuery.trim().toLowerCase();
+    final sorted = _students.where((student) {
+      if (query.isEmpty) return true;
+      return student.name.toLowerCase().contains(query) ||
+          student.email.toLowerCase().contains(query) ||
+          student.studentNumber.toLowerCase().contains(query) ||
+          student.course.toLowerCase().contains(query) ||
+          (student.section?.toLowerCase().contains(query) ?? false);
+    }).toList();
     sorted.sort((a, b) {
       final comparison = a.name.toLowerCase().compareTo(b.name.toLowerCase());
       return _studentSortOrder == 'asc' ? comparison : -comparison;
@@ -140,6 +163,8 @@ class _UserListModalState extends ConsumerState<UserListModal>
   @override
   void dispose() {
     _tabController.dispose();
+    _facultySearchController.dispose();
+    _studentSearchController.dispose();
     super.dispose();
   }
 
@@ -391,6 +416,10 @@ class _UserListModalState extends ConsumerState<UserListModal>
 
   String _programNameOrUnknown(Program? program) {
     return (program?.name ?? '?').toUpperCase();
+  }
+
+  bool _isNewSignup(DateTime createdAt) {
+    return createdAt.isAfter(DateTime.now().subtract(_newSignupWindow));
   }
 
   // ─── Build ───────────────────────────────────────────────────────────────
@@ -744,48 +773,59 @@ class _UserListModalState extends ConsumerState<UserListModal>
             horizontal: isMobile ? 16 : 28,
             vertical: 16,
           ),
-          child: Row(
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.filter_list_rounded,
-                          color: textMuted,
-                          size: 18,
+              _buildSearchField(
+                controller: _facultySearchController,
+                onChanged: (value) => setState(() {
+                  _facultySearchQuery = value;
+                }),
+                hintText: 'Search faculty or admin users',
+                primaryColor: primaryColor,
+                textMuted: textMuted,
+                bgBody: bgBody,
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.filter_list_rounded,
+                        color: textMuted,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Role:',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: textPrimary,
                         ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Role:',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    _buildFilterChip('All', 'all', primaryColor, textPrimary),
-                    _buildFilterChip(
-                      'Faculty',
-                      'faculty',
-                      primaryColor,
-                      textPrimary,
-                    ),
-                    _buildFilterChip(
-                      'Admin',
-                      'admin',
-                      primaryColor,
-                      textPrimary,
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                  _buildFilterChip('All', 'all', primaryColor, textPrimary),
+                  _buildFilterChip(
+                    'Faculty',
+                    'faculty',
+                    primaryColor,
+                    textPrimary,
+                  ),
+                  _buildFilterChip(
+                    'Admin',
+                    'admin',
+                    primaryColor,
+                    textPrimary,
+                  ),
+                ],
               ),
               _buildArchiveToggle(
                 _isShowingArchivedFaculty,
@@ -795,6 +835,25 @@ class _UserListModalState extends ConsumerState<UserListModal>
                 }),
                 primaryColor,
                 textMuted,
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
+                ),
+                child: Text(
+                  '${_filteredFaculty.length} users',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: primaryColor,
+                  ),
+                ),
               ),
             ],
           ),
@@ -839,6 +898,9 @@ class _UserListModalState extends ConsumerState<UserListModal>
     Color bgBody,
   ) {
     final isMobile = MediaQuery.of(context).size.width < 600;
+    final newStudentCount = _sortedStudents
+        .where((student) => _isNewSignup(student.createdAt))
+        .length;
     return Column(
       children: [
         // Sort + Count bar
@@ -847,66 +909,104 @@ class _UserListModalState extends ConsumerState<UserListModal>
             horizontal: isMobile ? 16 : 28,
             vertical: 16,
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.sort_by_alpha_rounded,
-                          color: textMuted,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Sort:',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    _buildSortChip('A → Z', 'asc', primaryColor, textPrimary),
-                    _buildSortChip('Z → A', 'desc', primaryColor, textPrimary),
-                  ],
-                ),
-              ),
-              _buildArchiveToggle(
-                _isShowingArchivedStudents,
-                (v) => setState(() {
-                  _isShowingArchivedStudents = v;
-                  _fetchData();
+              _buildSearchField(
+                controller: _studentSearchController,
+                onChanged: (value) => setState(() {
+                  _studentSearchQuery = value;
                 }),
-                primaryColor,
-                textMuted,
+                hintText: 'Search students by name, ID, course, or section',
+                primaryColor: primaryColor,
+                textMuted: textMuted,
+                bgBody: bgBody,
               ),
-              const SizedBox(width: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
-                ),
-                child: Text(
-                  '${_sortedStudents.length} students',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: primaryColor,
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.sort_by_alpha_rounded,
+                            color: textMuted,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Sort:',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      _buildSortChip('A → Z', 'asc', primaryColor, textPrimary),
+                      _buildSortChip('Z → A', 'desc', primaryColor, textPrimary),
+                    ],
                   ),
-                ),
+                  _buildArchiveToggle(
+                    _isShowingArchivedStudents,
+                    (v) => setState(() {
+                      _isShowingArchivedStudents = v;
+                      _fetchData();
+                    }),
+                    primaryColor,
+                    textMuted,
+                  ),
+                  if (newStudentCount > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFF2E7D32).withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Text(
+                        '$newStudentCount new',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF2E7D32),
+                        ),
+                      ),
+                    ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
+                    ),
+                    child: Text(
+                      '${_sortedStudents.length} students',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -1185,6 +1285,60 @@ class _UserListModalState extends ConsumerState<UserListModal>
     );
   }
 
+  Widget _buildSearchField({
+    required TextEditingController controller,
+    required ValueChanged<String> onChanged,
+    required String hintText,
+    required Color primaryColor,
+    required Color textMuted,
+    required Color bgBody,
+  }) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 360),
+      decoration: BoxDecoration(
+        color: bgBody,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+      ),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        style: GoogleFonts.poppins(fontSize: 13),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: GoogleFonts.poppins(
+            fontSize: 13,
+            color: textMuted.withValues(alpha: 0.8),
+          ),
+          prefixIcon: Icon(
+            Icons.search_rounded,
+            color: primaryColor,
+            size: 20,
+          ),
+          suffixIcon: controller.text.isEmpty
+              ? null
+              : IconButton(
+                  onPressed: () {
+                    controller.clear();
+                    onChanged('');
+                    FocusScope.of(context).unfocus();
+                  },
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: textMuted,
+                    size: 18,
+                  ),
+                ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildRoleBadge(Faculty f) {
     final roleEntry = _userRoles.firstWhere(
       (r) => r.userId == f.userInfoId.toString(),
@@ -1211,6 +1365,27 @@ class _UserListModalState extends ConsumerState<UserListModal>
           fontSize: 10,
           fontWeight: FontWeight.bold,
           color: isAdmin ? Colors.red : Colors.blue,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNewBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF59E0B).withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.28),
+        ),
+      ),
+      child: Text(
+        'NEW',
+        style: GoogleFonts.poppins(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFFB45309),
         ),
       ),
     );
@@ -1307,6 +1482,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
                                   ),
                                 ),
                               ),
+                              if (_isNewSignup(s.createdAt)) _buildNewBadge(),
                             ],
                           ),
                           if (s.section != null && s.section!.isNotEmpty)
@@ -1453,6 +1629,10 @@ class _UserListModalState extends ConsumerState<UserListModal>
                               ),
                             ),
                           ),
+                          if (_isNewSignup(s.createdAt)) ...[
+                            const SizedBox(width: 8),
+                            _buildNewBadge(),
+                          ],
                         ],
                       ),
                       if (s.section != null && s.section!.isNotEmpty)

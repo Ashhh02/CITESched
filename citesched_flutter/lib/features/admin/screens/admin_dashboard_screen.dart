@@ -9,6 +9,7 @@ import 'package:citesched_flutter/features/admin/widgets/report_modal.dart';
 import 'package:citesched_flutter/features/admin/widgets/stat_card.dart';
 import 'package:citesched_flutter/features/admin/widgets/user_list_modal.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
+import 'package:citesched_flutter/features/auth/widgets/password_reset_dialog.dart';
 import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
@@ -39,6 +40,16 @@ final pendingFacultyRequestsProvider = FutureProvider<List<Faculty>>((
 
   pending.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   return pending;
+});
+
+final recentStudentSignupsProvider = FutureProvider<List<Student>>((ref) async {
+  final activeStudents = await client.admin.getAllStudents(isActive: true);
+  final cutoff = DateTime.now().subtract(const Duration(days: 7));
+  final recent = activeStudents
+      .where((student) => student.createdAt.isAfter(cutoff))
+      .toList();
+  recent.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  return recent;
 });
 
 const _adminDashboardTitle = 'CITESched • Admin Dashboard';
@@ -75,6 +86,96 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Timer? _refreshTimer;
+  final Set<int> _readStudentNotificationIds = <int>{};
+  final Set<int> _readFacultyNotificationIds = <int>{};
+  final Set<String> _selectedNotificationKeys = <String>{};
+
+  String _studentNotificationKey(Student student) => 'student:${student.id ?? 0}';
+
+  String _facultyNotificationKey(Faculty faculty) => 'faculty:${faculty.id ?? 0}';
+
+  bool _isStudentNotificationRead(Student student) {
+    final id = student.id;
+    return id != null && _readStudentNotificationIds.contains(id);
+  }
+
+  bool _isFacultyNotificationRead(Faculty faculty) {
+    final id = faculty.id;
+    return id != null && _readFacultyNotificationIds.contains(id);
+  }
+
+  void _pruneNotificationState({
+    required List<Student> recentStudents,
+    required List<Faculty> pendingFaculty,
+  }) {
+    final studentIds = recentStudents.map((item) => item.id).whereType<int>().toSet();
+    final facultyIds = pendingFaculty.map((item) => item.id).whereType<int>().toSet();
+
+    _readStudentNotificationIds.removeWhere((id) => !studentIds.contains(id));
+    _readFacultyNotificationIds.removeWhere((id) => !facultyIds.contains(id));
+    _selectedNotificationKeys.removeWhere((key) {
+      if (key.startsWith('student:')) {
+        return !recentStudents.any((item) => _studentNotificationKey(item) == key);
+      }
+      if (key.startsWith('faculty:')) {
+        return !pendingFaculty.any((item) => _facultyNotificationKey(item) == key);
+      }
+      return true;
+    });
+  }
+
+  int _unreadStudentCount(List<Student> recentStudents) =>
+      recentStudents.where((item) => !_isStudentNotificationRead(item)).length;
+
+  int _unreadFacultyCount(List<Faculty> pendingFaculty) =>
+      pendingFaculty.where((item) => !_isFacultyNotificationRead(item)).length;
+
+  void _toggleNotificationSelection(String key, bool selected) {
+    setState(() {
+      if (selected) {
+        _selectedNotificationKeys.add(key);
+      } else {
+        _selectedNotificationKeys.remove(key);
+      }
+    });
+  }
+
+  void _markNotificationsAsRead({
+    required List<Student> recentStudents,
+    required List<Faculty> pendingFaculty,
+    bool markAll = false,
+  }) {
+    setState(() {
+      if (markAll) {
+        _readStudentNotificationIds.addAll(
+          recentStudents.map((item) => item.id).whereType<int>(),
+        );
+        _readFacultyNotificationIds.addAll(
+          pendingFaculty.map((item) => item.id).whereType<int>(),
+        );
+        _selectedNotificationKeys.clear();
+        return;
+      }
+
+      for (final student in recentStudents) {
+        final id = student.id;
+        if (id != null &&
+            _selectedNotificationKeys.contains(_studentNotificationKey(student))) {
+          _readStudentNotificationIds.add(id);
+        }
+      }
+
+      for (final faculty in pendingFaculty) {
+        final id = faculty.id;
+        if (id != null &&
+            _selectedNotificationKeys.contains(_facultyNotificationKey(faculty))) {
+          _readFacultyNotificationIds.add(id);
+        }
+      }
+
+      _selectedNotificationKeys.clear();
+    });
+  }
 
   void _showActionSnackBar({
     required String title,
@@ -188,6 +289,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       ref.invalidate(dashboardStatsProvider);
       ref.invalidate(pendingFacultyRequestsProvider);
+      ref.invalidate(recentStudentSignupsProvider);
     });
   }
 
@@ -197,58 +299,67 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     super.dispose();
   }
 
-  Widget _buildPendingFacultyButton(
+  Widget _buildNotificationButton(
     AsyncValue<List<Faculty>> pendingFacultyAsync,
-    BuildContext context,
+    AsyncValue<List<Student>> recentStudentAsync,
   ) {
-    return pendingFacultyAsync.when(
-      data: (pending) {
-        final count = pending.length;
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            IconButton(
-              tooltip: 'Faculty approvals',
-              onPressed: () => _openPendingFacultyDialog(pending),
-              icon: const Icon(
-                Icons.notifications_active_rounded,
-                color: Colors.white,
+    final pending = pendingFacultyAsync.maybeWhen(
+      data: (items) => items,
+      orElse: () => const <Faculty>[],
+    );
+    final recentStudents = recentStudentAsync.maybeWhen(
+      data: (items) => items,
+      orElse: () => const <Student>[],
+    );
+    _pruneNotificationState(
+      recentStudents: recentStudents,
+      pendingFaculty: pending,
+    );
+    final count =
+        _unreadFacultyCount(pending) + _unreadStudentCount(recentStudents);
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          tooltip: 'Admin notifications',
+          onPressed: () => _openAdminNotificationsInbox(
+            pendingFaculty: pending,
+            recentStudents: recentStudents,
+          ),
+          icon: const Icon(
+            Icons.notifications_active_rounded,
+            color: Colors.white,
+          ),
+        ),
+        if (count > 0)
+          Positioned(
+            right: 2,
+            top: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(10),
               ),
-            ),
-            if (count > 0)
-              Positioned(
-                right: 2,
-                top: 2,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '$count',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+              child: Text(
+                '$count',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-          ],
-        );
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (error, stackTrace) => const SizedBox.shrink(),
+            ),
+          ),
+      ],
     );
   }
 
   Widget _buildAdminHeader({
     required BuildContext context,
     required AsyncValue<List<Faculty>> pendingFacultyAsync,
+    required AsyncValue<List<Student>> recentStudentAsync,
     required UserInfo? userInfo,
     required bool isMobile,
     required Color primaryPurple,
@@ -260,7 +371,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              _buildPendingFacultyButton(pendingFacultyAsync, context),
+              _buildNotificationButton(
+                pendingFacultyAsync,
+                recentStudentAsync,
+              ),
               const SizedBox(width: 8),
               const ThemeModeToggle(compact: true),
             ],
@@ -268,7 +382,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           const SizedBox(height: 12),
           _buildDashboardHeader(userInfo, isMobile),
           const SizedBox(height: 32),
-          _buildHeaderActions(context, primaryPurple, isMobile),
+          _buildHeaderActions(context, primaryPurple, isMobile, userInfo),
         ],
       ),
     );
@@ -381,6 +495,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     BuildContext context,
     Color primaryPurple,
     bool isMobile,
+    UserInfo? userInfo,
   ) {
     return Wrap(
       alignment: WrapAlignment.center,
@@ -409,6 +524,30 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
             elevation: 0,
+          ),
+        ),
+        OutlinedButton.icon(
+          onPressed: () => showPasswordResetDialog(
+            context,
+            initialEmail: userInfo?.email,
+            lockEmail: userInfo?.email?.isNotEmpty == true,
+            title: 'Reset Password',
+            subtitle:
+                'Confirm your email, enter the code, and update your admin password.',
+          ),
+          icon: const Icon(Icons.lock_reset_rounded, size: 22),
+          label: const Text('Reset Password'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.white,
+            textStyle: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+            side: const BorderSide(color: Colors.white, width: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
         ),
         if (!isMobile)
@@ -628,7 +767,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     }
   }
 
-  void _openPendingFacultyDialog(List<Faculty> requests) {
+  void _openAdminNotificationsDialog({
+    required List<Faculty> pendingFaculty,
+    required List<Student> recentStudents,
+  }) {
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.45),
@@ -640,7 +782,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           constraints: const BoxConstraints(maxWidth: 760),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x33000000),
@@ -654,21 +796,25 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+                padding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
                 decoration: const BoxDecoration(
-                  color: Color(0xFF5A0033),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF5A0033), Color(0xFFB5179E)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: Row(
                   children: [
                     const Icon(
-                      Icons.verified_user_rounded,
+                      Icons.notifications_active_rounded,
                       color: Colors.white,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Faculty Approval Requests',
+                        'Admin Notifications',
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontSize: 18,
@@ -689,113 +835,203 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               Flexible(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
-                  child: requests.isEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          child: Text(
-                            'No pending faculty requests.',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFF475569),
-                              fontSize: 14,
-                            ),
-                          ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildNotificationSectionTitle(
+                        title: 'New Student Sign-ups',
+                        count: recentStudents.length,
+                        icon: Icons.school_rounded,
+                        color: const Color(0xFF15803D),
+                      ),
+                      const SizedBox(height: 12),
+                      if (recentStudents.isEmpty)
+                        _buildNotificationEmptyState(
+                          'No recent student sign-ups in the last 7 days.',
                         )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: requests.map((item) {
-                            return Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: const Color(0xFFE2E8F0),
-                                ),
+                      else
+                        ...recentStudents.map(
+                          (student) => Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: const Color(0xFFE2E8F0),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.name,
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15,
-                                      color: const Color(0xFF0F172A),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF15803D).withValues(
+                                      alpha: 0.1,
                                     ),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    item.email,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      color: const Color(0xFF475569),
-                                    ),
+                                  child: const Icon(
+                                    Icons.person_add_alt_1_rounded,
+                                    color: Color(0xFF15803D),
                                   ),
-                                  const SizedBox(height: 12),
-                                  Wrap(
-                                    spacing: 10,
-                                    runSpacing: 10,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      SizedBox(
-                                        height: 40,
-                                        child: ElevatedButton.icon(
-                                          onPressed: () async {
-                                            final navigator = Navigator.of(
-                                              dialogContext,
-                                            );
-                                            await _approvePendingFaculty(item);
-                                            if (dialogContext.mounted) {
-                                              navigator.pop();
-                                            }
-                                          },
-                                          icon: const Icon(Icons.check_rounded),
-                                          label: const Text('Accept'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(
-                                              0xFF15803D,
-                                            ),
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 18,
-                                            ),
-                                          ),
+                                      Text(
+                                        student.name,
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15,
+                                          color: const Color(0xFF0F172A),
                                         ),
                                       ),
-                                      SizedBox(
-                                        height: 40,
-                                        child: ElevatedButton.icon(
-                                          onPressed: () async {
-                                            final navigator = Navigator.of(
-                                              dialogContext,
-                                            );
-                                            await _declinePendingFaculty(item);
-                                            if (dialogContext.mounted) {
-                                              navigator.pop();
-                                            }
-                                          },
-                                          icon: const Icon(Icons.close_rounded),
-                                          label: const Text('Decline'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(
-                                              0xFFB91C1C,
-                                            ),
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 18,
-                                            ),
-                                          ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${student.studentNumber} • ${student.email}',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          color: const Color(0xFF475569),
                                         ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          _buildNotificationChip(
+                                            label: student.course,
+                                            color: const Color(0xFF15803D),
+                                          ),
+                                          if ((student.section ?? '').isNotEmpty)
+                                            _buildNotificationChip(
+                                              label: 'Section ${student.section}',
+                                              color: const Color(0xFF720045),
+                                            ),
+                                          _buildNotificationChip(
+                                            label:
+                                                'Signed up ${_relativeDate(student.createdAt)}',
+                                            color: const Color(0xFFF59E0B),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
+                      const SizedBox(height: 8),
+                      _buildNotificationSectionTitle(
+                        title: 'Faculty Approval Requests',
+                        count: pendingFaculty.length,
+                        icon: Icons.verified_user_rounded,
+                        color: const Color(0xFF720045),
+                      ),
+                      const SizedBox(height: 12),
+                      if (pendingFaculty.isEmpty)
+                        _buildNotificationEmptyState(
+                          'No pending faculty requests.',
+                        )
+                      else
+                        ...pendingFaculty.map((item) {
+                          return Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.name,
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  item.email,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: const Color(0xFF475569),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: [
+                                    SizedBox(
+                                      height: 40,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () async {
+                                          final navigator =
+                                              Navigator.of(dialogContext);
+                                          await _approvePendingFaculty(item);
+                                          if (dialogContext.mounted) {
+                                            navigator.pop();
+                                          }
+                                        },
+                                        icon: const Icon(Icons.check_rounded),
+                                        label: const Text('Accept'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(
+                                            0xFF15803D,
+                                          ),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 18,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      height: 40,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () async {
+                                          final navigator =
+                                              Navigator.of(dialogContext);
+                                          await _declinePendingFaculty(item);
+                                          if (dialogContext.mounted) {
+                                            navigator.pop();
+                                          }
+                                        },
+                                        icon: const Icon(Icons.close_rounded),
+                                        label: const Text('Decline'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(
+                                            0xFFB91C1C,
+                                          ),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 18,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -805,11 +1041,579 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
+  void _openAdminNotificationsInbox({
+    required List<Faculty> pendingFaculty,
+    required List<Student> recentStudents,
+  }) {
+    _pruneNotificationState(
+      recentStudents: recentStudents,
+      pendingFaculty: pendingFaculty,
+    );
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final unreadStudents = _unreadStudentCount(recentStudents);
+          final unreadFaculty = _unreadFacultyCount(pendingFaculty);
+          final hasSelection = _selectedNotificationKeys.isNotEmpty;
+          final hasUnread = unreadStudents + unreadFaculty > 0;
+
+          return Dialog(
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 760),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 28,
+                    spreadRadius: 2,
+                    offset: Offset(0, 16),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF5A0033), Color(0xFFB5179E)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.notifications_active_rounded, color: Colors.white),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Admin Notifications',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          icon: const Icon(Icons.close_rounded, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        Text(
+                          hasSelection
+                              ? '${_selectedNotificationKeys.length} selected'
+                              : hasUnread
+                                  ? '${unreadStudents + unreadFaculty} unread notifications'
+                                  : 'All notifications are read',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF475569),
+                          ),
+                        ),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: hasSelection
+                                  ? () {
+                                      _markNotificationsAsRead(
+                                        recentStudents: recentStudents,
+                                        pendingFaculty: pendingFaculty,
+                                      );
+                                      setDialogState(() {});
+                                    }
+                                  : null,
+                              icon: const Icon(Icons.done_rounded, size: 18),
+                              label: const Text('Mark as read'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF720045),
+                                side: const BorderSide(color: Color(0xFF720045)),
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: hasUnread
+                                  ? () {
+                                      _markNotificationsAsRead(
+                                        recentStudents: recentStudents,
+                                        pendingFaculty: pendingFaculty,
+                                        markAll: true,
+                                      );
+                                      setDialogState(() {});
+                                    }
+                                  : null,
+                              icon: const Icon(Icons.done_all_rounded, size: 18),
+                              label: const Text('Mark all as read'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF720045),
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildInboxSectionTitle(
+                            title: 'New Student Sign-ups',
+                            unreadCount: unreadStudents,
+                            totalCount: recentStudents.length,
+                            icon: Icons.school_rounded,
+                            color: const Color(0xFF15803D),
+                          ),
+                          const SizedBox(height: 12),
+                          if (recentStudents.isEmpty)
+                            _buildNotificationEmptyState(
+                              'No recent student sign-ups in the last 7 days.',
+                            )
+                          else
+                            ...recentStudents.map(
+                              (student) => _buildStudentNotificationCard(
+                                student: student,
+                                setDialogState: setDialogState,
+                              ),
+                            ),
+                          const SizedBox(height: 8),
+                          _buildInboxSectionTitle(
+                            title: 'Faculty Approval Requests',
+                            unreadCount: unreadFaculty,
+                            totalCount: pendingFaculty.length,
+                            icon: Icons.verified_user_rounded,
+                            color: const Color(0xFF720045),
+                          ),
+                          const SizedBox(height: 12),
+                          if (pendingFaculty.isEmpty)
+                            _buildNotificationEmptyState('No pending faculty requests.')
+                          else
+                            ...pendingFaculty.map(
+                              (item) => _buildFacultyNotificationCard(
+                                item: item,
+                                dialogContext: dialogContext,
+                                setDialogState: setDialogState,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildNotificationSectionTitle({
+    required String title,
+    required int count,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              color: const Color(0xFF0F172A),
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            '$count',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNotificationEmptyState(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Text(
+        message,
+        style: GoogleFonts.poppins(
+          fontSize: 13,
+          color: const Color(0xFF475569),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInboxSectionTitle({
+    required String title,
+    required int unreadCount,
+    required int totalCount,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              color: const Color(0xFF0F172A),
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            '$unreadCount unread / $totalCount',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNotificationChip({
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationStatusChip({required bool isRead}) {
+    final color = isRead ? const Color(0xFF64748B) : const Color(0xFF15803D);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        isRead ? 'READ' : 'NEW',
+        style: GoogleFonts.poppins(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStudentNotificationCard({
+    required Student student,
+    required void Function(void Function()) setDialogState,
+  }) {
+    final isRead = _isStudentNotificationRead(student);
+    final key = _studentNotificationKey(student);
+    final isSelected = _selectedNotificationKeys.contains(key);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isRead
+            ? const Color(0xFFF8FAFC).withValues(alpha: 0.72)
+            : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isSelected ? const Color(0xFF15803D) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Checkbox(
+            value: isSelected,
+            activeColor: const Color(0xFF15803D),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+            onChanged: (value) {
+              _toggleNotificationSelection(key, value ?? false);
+              setDialogState(() {});
+            },
+          ),
+          const SizedBox(width: 4),
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: const Color(0xFF15803D).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.person_add_alt_1_rounded,
+              color: Color(0xFF15803D),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        student.name,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ),
+                    _buildNotificationStatusChip(isRead: isRead),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${student.studentNumber} • ${student.email}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF475569),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildNotificationChip(
+                      label: student.course,
+                      color: const Color(0xFF15803D),
+                    ),
+                    if ((student.section ?? '').isNotEmpty)
+                      _buildNotificationChip(
+                        label: 'Section ${student.section}',
+                        color: const Color(0xFF720045),
+                      ),
+                    _buildNotificationChip(
+                      label: 'Signed up ${_relativeDate(student.createdAt)}',
+                      color: const Color(0xFFF59E0B),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFacultyNotificationCard({
+    required Faculty item,
+    required BuildContext dialogContext,
+    required void Function(void Function()) setDialogState,
+  }) {
+    final isRead = _isFacultyNotificationRead(item);
+    final key = _facultyNotificationKey(item);
+    final isSelected = _selectedNotificationKeys.contains(key);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isRead
+            ? const Color(0xFFF8FAFC).withValues(alpha: 0.72)
+            : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isSelected ? const Color(0xFF720045) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Checkbox(
+            value: isSelected,
+            activeColor: const Color(0xFF720045),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+            onChanged: (value) {
+              _toggleNotificationSelection(key, value ?? false);
+              setDialogState(() {});
+            },
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.name,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ),
+                    _buildNotificationStatusChip(isRead: isRead),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  item.email,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF475569),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    SizedBox(
+                      height: 40,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final navigator = Navigator.of(dialogContext);
+                          await _approvePendingFaculty(item);
+                          if (dialogContext.mounted) {
+                            navigator.pop();
+                          }
+                        },
+                        icon: const Icon(Icons.check_rounded),
+                        label: const Text('Accept'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF15803D),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 40,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final navigator = Navigator.of(dialogContext);
+                          await _declinePendingFaculty(item);
+                          if (dialogContext.mounted) {
+                            navigator.pop();
+                          }
+                        },
+                        icon: const Icon(Icons.close_rounded),
+                        label: const Text('Decline'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFB91C1C),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _relativeDate(DateTime date) {
+    final difference = DateTime.now().difference(date);
+    if (difference.inDays >= 1) {
+      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
+    }
+    if (difference.inHours >= 1) {
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
+    }
+    if (difference.inMinutes >= 1) {
+      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
+    }
+    return 'just now';
+  }
+
   @override
   Widget build(BuildContext context) {
     final userInfo = ref.watch(authProvider);
     final statsAsync = ref.watch(dashboardStatsProvider);
     final pendingFacultyAsync = ref.watch(pendingFacultyRequestsProvider);
+    final recentStudentAsync = ref.watch(recentStudentSignupsProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -817,6 +1621,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         context: context,
         statsAsync: statsAsync,
         pendingFacultyAsync: pendingFacultyAsync,
+        recentStudentAsync: recentStudentAsync,
         userInfo: userInfo,
       ),
     );
@@ -826,6 +1631,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     required BuildContext context,
     required AsyncValue<DashboardStats> statsAsync,
     required AsyncValue<List<Faculty>> pendingFacultyAsync,
+    required AsyncValue<List<Student>> recentStudentAsync,
     required UserInfo? userInfo,
   }) {
     final isDesktop = ResponsiveHelper.isDesktop(context);
@@ -855,6 +1661,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         context: context,
         stats: stats,
         pendingFacultyAsync: pendingFacultyAsync,
+        recentStudentAsync: recentStudentAsync,
         userInfo: userInfo,
         isMobile: isMobile,
         isDesktop: isDesktop,
@@ -866,6 +1673,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     required BuildContext context,
     required DashboardStats stats,
     required AsyncValue<List<Faculty>> pendingFacultyAsync,
+    required AsyncValue<List<Student>> recentStudentAsync,
     required UserInfo? userInfo,
     required bool isMobile,
     required bool isDesktop,
@@ -883,6 +1691,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           _buildAdminHeader(
             context: context,
             pendingFacultyAsync: pendingFacultyAsync,
+            recentStudentAsync: recentStudentAsync,
             userInfo: userInfo,
             isMobile: isMobile,
             primaryPurple: primaryPurple,
