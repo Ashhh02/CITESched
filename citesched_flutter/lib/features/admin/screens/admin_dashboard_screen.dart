@@ -1,5 +1,6 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
 import 'package:citesched_flutter/features/admin/widgets/conflict_list_modal.dart';
@@ -14,6 +15,7 @@ import 'package:citesched_flutter/core/widgets/theme_mode_toggle.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:serverpod_auth_client/serverpod_auth_client.dart';
 
@@ -86,9 +88,14 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Timer? _refreshTimer;
+  final FlutterSecureStorage _notificationStorage = const FlutterSecureStorage();
   final Set<int> _readStudentNotificationIds = <int>{};
   final Set<int> _readFacultyNotificationIds = <int>{};
   final Set<String> _selectedNotificationKeys = <String>{};
+  String? _notificationStorageOwnerKey;
+
+  String _notificationStorageKey(String ownerKey) =>
+      'admin_notification_reads_v1:$ownerKey';
 
   String _studentNotificationKey(Student student) => 'student:${student.id ?? 0}';
 
@@ -102,6 +109,101 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   bool _isFacultyNotificationRead(Faculty faculty) {
     final id = faculty.id;
     return id != null && _readFacultyNotificationIds.contains(id);
+  }
+
+  Future<void> _loadNotificationStateForAdmin(String? email) async {
+    final ownerKey = email?.trim().toLowerCase();
+    if (!mounted || ownerKey == _notificationStorageOwnerKey) return;
+
+    _notificationStorageOwnerKey = ownerKey;
+    if (ownerKey == null || ownerKey.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _readStudentNotificationIds.clear();
+        _readFacultyNotificationIds.clear();
+        _selectedNotificationKeys.clear();
+      });
+      return;
+    }
+
+    try {
+      final raw = await _notificationStorage.read(
+        key: _notificationStorageKey(ownerKey),
+      );
+      final decoded = raw == null ? null : jsonDecode(raw);
+      final studentItems =
+          (decoded is Map<String, dynamic> ? decoded['students'] : null)
+              as List<dynamic>? ??
+          const <dynamic>[];
+      final facultyItems =
+          (decoded is Map<String, dynamic> ? decoded['faculty'] : null)
+              as List<dynamic>? ??
+          const <dynamic>[];
+
+      if (!mounted || _notificationStorageOwnerKey != ownerKey) return;
+
+      setState(() {
+        _readStudentNotificationIds
+          ..clear()
+          ..addAll(
+            studentItems
+                .map((item) => item is int ? item : int.tryParse('$item'))
+                .whereType<int>(),
+          );
+        _readFacultyNotificationIds
+          ..clear()
+          ..addAll(
+            facultyItems
+                .map((item) => item is int ? item : int.tryParse('$item'))
+                .whereType<int>(),
+          );
+        _selectedNotificationKeys.clear();
+      });
+    } catch (_) {
+      if (!mounted || _notificationStorageOwnerKey != ownerKey) return;
+      setState(() {
+        _readStudentNotificationIds.clear();
+        _readFacultyNotificationIds.clear();
+        _selectedNotificationKeys.clear();
+      });
+    }
+  }
+
+  Future<void> _persistNotificationState() async {
+    final ownerKey = _notificationStorageOwnerKey;
+    if (ownerKey == null || ownerKey.isEmpty) return;
+
+    final payload = jsonEncode({
+      'students': _readStudentNotificationIds.toList()..sort(),
+      'faculty': _readFacultyNotificationIds.toList()..sort(),
+    });
+
+    await _notificationStorage.write(
+      key: _notificationStorageKey(ownerKey),
+      value: payload,
+    );
+  }
+
+  void _markStudentNotificationAsRead(Student student) {
+    final id = student.id;
+    if (id == null || _readStudentNotificationIds.contains(id)) return;
+
+    setState(() {
+      _readStudentNotificationIds.add(id);
+      _selectedNotificationKeys.remove(_studentNotificationKey(student));
+    });
+    unawaited(_persistNotificationState());
+  }
+
+  void _markFacultyNotificationAsRead(Faculty faculty) {
+    final id = faculty.id;
+    if (id == null || _readFacultyNotificationIds.contains(id)) return;
+
+    setState(() {
+      _readFacultyNotificationIds.add(id);
+      _selectedNotificationKeys.remove(_facultyNotificationKey(faculty));
+    });
+    unawaited(_persistNotificationState());
   }
 
   void _pruneNotificationState({
@@ -122,6 +224,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       }
       return true;
     });
+    unawaited(_persistNotificationState());
   }
 
   int _unreadStudentCount(List<Student> recentStudents) =>
@@ -175,6 +278,33 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
       _selectedNotificationKeys.clear();
     });
+    unawaited(_persistNotificationState());
+  }
+
+  void _markNotificationsAsUnread({
+    required List<Student> recentStudents,
+    required List<Faculty> pendingFaculty,
+  }) {
+    setState(() {
+      for (final student in recentStudents) {
+        final id = student.id;
+        if (id != null &&
+            _selectedNotificationKeys.contains(_studentNotificationKey(student))) {
+          _readStudentNotificationIds.remove(id);
+        }
+      }
+
+      for (final faculty in pendingFaculty) {
+        final id = faculty.id;
+        if (id != null &&
+            _selectedNotificationKeys.contains(_facultyNotificationKey(faculty))) {
+          _readFacultyNotificationIds.remove(id);
+        }
+      }
+
+      _selectedNotificationKeys.clear();
+    });
+    unawaited(_persistNotificationState());
   }
 
   void _showActionSnackBar({
@@ -286,6 +416,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    ref.listenManual<UserInfo?>(authProvider, (previous, next) {
+      unawaited(_loadNotificationStateForAdmin(next?.email));
+    });
     _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       ref.invalidate(dashboardStatsProvider);
       ref.invalidate(pendingFacultyRequestsProvider);
@@ -303,6 +436,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     AsyncValue<List<Faculty>> pendingFacultyAsync,
     AsyncValue<List<Student>> recentStudentAsync,
   ) {
+    final adminEmail = ref.read(authProvider)?.email;
+    unawaited(_loadNotificationStateForAdmin(adminEmail));
+
     final pending = pendingFacultyAsync.maybeWhen(
       data: (items) => items,
       orElse: () => const <Faculty>[],
@@ -1049,6 +1185,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       recentStudents: recentStudents,
       pendingFaculty: pendingFaculty,
     );
+    var selectedSection = pendingFaculty.isNotEmpty && recentStudents.isEmpty
+        ? 'faculty'
+        : 'students';
 
     showDialog(
       context: context,
@@ -1138,6 +1277,23 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                             OutlinedButton.icon(
                               onPressed: hasSelection
                                   ? () {
+                                      _markNotificationsAsUnread(
+                                        recentStudents: recentStudents,
+                                        pendingFaculty: pendingFaculty,
+                                      );
+                                      setDialogState(() {});
+                                    }
+                                  : null,
+                              icon: const Icon(Icons.mark_email_unread_rounded, size: 18),
+                              label: const Text('Mark as unread'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF15803D),
+                                side: const BorderSide(color: Color(0xFF15803D)),
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: hasSelection
+                                  ? () {
                                       _markNotificationsAsRead(
                                         recentStudents: recentStudents,
                                         pendingFaculty: pendingFaculty,
@@ -1175,51 +1331,95 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       ],
                     ),
                   ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildNotificationToggleTab(
+                              label: 'New Student Sign-ups',
+                              unreadCount: unreadStudents,
+                              isSelected: selectedSection == 'students',
+                              selectedColor: const Color(0xFF15803D),
+                              onTap: () {
+                                selectedSection = 'students';
+                                setDialogState(() {});
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildNotificationToggleTab(
+                              label: 'Faculty Approval Requests',
+                              unreadCount: unreadFaculty,
+                              isSelected: selectedSection == 'faculty',
+                              selectedColor: const Color(0xFF720045),
+                              onTap: () {
+                                selectedSection = 'faculty';
+                                setDialogState(() {});
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   Flexible(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildInboxSectionTitle(
-                            title: 'New Student Sign-ups',
-                            unreadCount: unreadStudents,
-                            totalCount: recentStudents.length,
-                            icon: Icons.school_rounded,
-                            color: const Color(0xFF15803D),
-                          ),
-                          const SizedBox(height: 12),
-                          if (recentStudents.isEmpty)
-                            _buildNotificationEmptyState(
-                              'No recent student sign-ups in the last 7 days.',
-                            )
-                          else
-                            ...recentStudents.map(
-                              (student) => _buildStudentNotificationCard(
-                                student: student,
-                                setDialogState: setDialogState,
-                              ),
-                            ),
-                          const SizedBox(height: 8),
-                          _buildInboxSectionTitle(
-                            title: 'Faculty Approval Requests',
-                            unreadCount: unreadFaculty,
-                            totalCount: pendingFaculty.length,
-                            icon: Icons.verified_user_rounded,
-                            color: const Color(0xFF720045),
-                          ),
-                          const SizedBox(height: 12),
-                          if (pendingFaculty.isEmpty)
-                            _buildNotificationEmptyState('No pending faculty requests.')
-                          else
-                            ...pendingFaculty.map(
-                              (item) => _buildFacultyNotificationCard(
-                                item: item,
-                                dialogContext: dialogContext,
-                                setDialogState: setDialogState,
-                              ),
-                            ),
-                        ],
+                        children: selectedSection == 'students'
+                            ? [
+                                _buildInboxSectionTitle(
+                                  title: 'New Student Sign-ups',
+                                  unreadCount: unreadStudents,
+                                  totalCount: recentStudents.length,
+                                  icon: Icons.school_rounded,
+                                  color: const Color(0xFF15803D),
+                                ),
+                                const SizedBox(height: 12),
+                                if (recentStudents.isEmpty)
+                                  _buildNotificationEmptyState(
+                                    'No recent student sign-ups in the last 7 days.',
+                                  )
+                                else
+                                  ...recentStudents.map(
+                                    (student) => _buildStudentNotificationCard(
+                                      student: student,
+                                      setDialogState: setDialogState,
+                                    ),
+                                  ),
+                              ]
+                            : [
+                                _buildInboxSectionTitle(
+                                  title: 'Faculty Approval Requests',
+                                  unreadCount: unreadFaculty,
+                                  totalCount: pendingFaculty.length,
+                                  icon: Icons.verified_user_rounded,
+                                  color: const Color(0xFF720045),
+                                ),
+                                const SizedBox(height: 12),
+                                if (pendingFaculty.isEmpty)
+                                  _buildNotificationEmptyState(
+                                    'No pending faculty requests.',
+                                  )
+                                else
+                                  ...pendingFaculty.map(
+                                    (item) => _buildFacultyNotificationCard(
+                                      item: item,
+                                      dialogContext: dialogContext,
+                                      setDialogState: setDialogState,
+                                    ),
+                                  ),
+                              ],
                       ),
                     ),
                   ),
@@ -1330,6 +1530,68 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildNotificationToggleTab({
+    required String label,
+    required int unreadCount,
+    required bool isSelected,
+    required Color selectedColor,
+    required VoidCallback onTap,
+  }) {
+    final foreground = isSelected ? Colors.white : const Color(0xFF475569);
+    final background =
+        isSelected ? selectedColor : Colors.white.withValues(alpha: 0.88);
+
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: foreground,
+                  ),
+                ),
+              ),
+              if (unreadCount > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? Colors.white.withValues(alpha: 0.18)
+                        : selectedColor.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$unreadCount',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? Colors.white : selectedColor,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildNotificationChip({
     required String label,
     required Color color,
@@ -1353,7 +1615,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildNotificationStatusChip({required bool isRead}) {
-    final color = isRead ? const Color(0xFF64748B) : const Color(0xFF15803D);
+    if (isRead) {
+      return const SizedBox.shrink();
+    }
+
+    const color = Color(0xFF15803D);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -1429,12 +1695,22 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        student.name,
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: const Color(0xFF0F172A),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () {
+                          _markStudentNotificationAsRead(student);
+                          setDialogState(() {});
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text(
+                            student.name,
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1521,12 +1797,22 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        item.name,
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: const Color(0xFF0F172A),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () {
+                          _markFacultyNotificationAsRead(item);
+                          setDialogState(() {});
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text(
+                            item.name,
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1548,13 +1834,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   children: [
                     SizedBox(
                       height: 40,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final navigator = Navigator.of(dialogContext);
-                          await _approvePendingFaculty(item);
-                          if (dialogContext.mounted) {
-                            navigator.pop();
-                          }
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            _markFacultyNotificationAsRead(item);
+                            setDialogState(() {});
+                            final navigator = Navigator.of(dialogContext);
+                            await _approvePendingFaculty(item);
+                            if (dialogContext.mounted) {
+                              navigator.pop();
+                            }
                         },
                         icon: const Icon(Icons.check_rounded),
                         label: const Text('Accept'),
@@ -1567,13 +1855,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     ),
                     SizedBox(
                       height: 40,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final navigator = Navigator.of(dialogContext);
-                          await _declinePendingFaculty(item);
-                          if (dialogContext.mounted) {
-                            navigator.pop();
-                          }
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            _markFacultyNotificationAsRead(item);
+                            setDialogState(() {});
+                            final navigator = Navigator.of(dialogContext);
+                            await _declinePendingFaculty(item);
+                            if (dialogContext.mounted) {
+                              navigator.pop();
+                            }
                         },
                         icon: const Icon(Icons.close_rounded),
                         label: const Text('Decline'),
