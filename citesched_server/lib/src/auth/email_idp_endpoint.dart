@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:serverpod/serverpod.dart';
 import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
     as auth_core;
 import 'package:serverpod_auth_idp_server/providers/email.dart';
+import 'package:serverpod_auth_server/serverpod_auth_server.dart';
 
 import '../generated/protocol.dart';
 import 'scopes.dart';
@@ -27,6 +30,40 @@ class EmailIdpEndpoint extends EmailIdpBaseEndpoint {
       );
     }
     return super.startPasswordReset(session, email: normalizedEmail);
+  }
+
+  @override
+  Future<void> finishPasswordReset(
+    Session session, {
+    required String finishPasswordResetToken,
+    required String newPassword,
+  }) async {
+    final resetRequestId = _extractResetRequestId(finishPasswordResetToken);
+    String? emailToSync;
+
+    if (resetRequestId != null) {
+      final resetRequest = await EmailAccountPasswordResetRequest.db.findById(
+        session,
+        resetRequestId,
+      );
+      if (resetRequest != null) {
+        final account = await EmailAccount.db.findById(
+          session,
+          resetRequest.emailAccountId,
+        );
+        emailToSync = account?.email;
+      }
+    }
+
+    await super.finishPasswordReset(
+      session,
+      finishPasswordResetToken: finishPasswordResetToken,
+      newPassword: newPassword,
+    );
+
+    if (emailToSync != null && emailToSync.isNotEmpty) {
+      await _syncLegacyEmailPassword(session, emailToSync, newPassword);
+    }
   }
 
   Future<bool> _ensureIdpEmailAccount(Session session, String email) async {
@@ -137,6 +174,86 @@ class EmailIdpEndpoint extends EmailIdpBaseEndpoint {
       email: email,
       password: defaultPassword,
     );
+  }
+
+  Future<void> _syncLegacyEmailPassword(
+    Session session,
+    String email,
+    String newPassword,
+  ) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    final newHash = await defaultGeneratePasswordHash(newPassword);
+
+    var existingAuth = await EmailAuth.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(normalizedEmail),
+    );
+
+    if (existingAuth != null) {
+      existingAuth
+        ..email = normalizedEmail
+        ..hash = newHash;
+      await EmailAuth.db.updateRow(session, existingAuth);
+      session.log(
+        '[EmailIdp] Synced legacy email auth password for $normalizedEmail',
+      );
+      return;
+    }
+
+    final userInfoId = await _findLegacyUserInfoId(session, normalizedEmail);
+    if (userInfoId == null) {
+      session.log(
+        '[EmailIdp] Skipped legacy password sync for $normalizedEmail because no legacy user was found',
+      );
+      return;
+    }
+
+    await EmailAuth.db.insertRow(
+      session,
+      EmailAuth(
+        userId: userInfoId,
+        email: normalizedEmail,
+        hash: newHash,
+      ),
+    );
+    session.log(
+      '[EmailIdp] Created legacy email auth password for $normalizedEmail',
+    );
+  }
+
+  Future<int?> _findLegacyUserInfoId(Session session, String email) async {
+    final directUserInfo = await UserInfo.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(email),
+    );
+    if (directUserInfo?.id != null) {
+      return directUserInfo!.id;
+    }
+
+    final student = await Student.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(email),
+    );
+    if (student?.userInfoId != null) {
+      return student!.userInfoId;
+    }
+
+    final faculty = await Faculty.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(email),
+    );
+    return faculty?.userInfoId;
+  }
+
+  UuidValue? _extractResetRequestId(String finishPasswordResetToken) {
+    try {
+      final decoded = utf8.decode(base64Decode(finishPasswordResetToken));
+      final parts = decoded.split(':');
+      if (parts.length != 2) return null;
+      return UuidValue.withValidation(parts.first);
+    } catch (_) {
+      return null;
+    }
   }
 
   Scope _scopeForRole(String role) {
