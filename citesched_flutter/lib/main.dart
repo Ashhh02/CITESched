@@ -34,9 +34,6 @@ void main() async {
     try {
       await _startupStorage.deleteAll();
     } catch (_) {}
-    try {
-      await client.auth.signOutDevice();
-    } catch (_) {}
     await client.auth.initialize();
   }
   await client.auth.initializeGoogleSignIn(

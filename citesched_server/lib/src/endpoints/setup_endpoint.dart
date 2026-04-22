@@ -67,22 +67,32 @@ class SetupEndpoint extends Endpoint {
     required String email,
     required String password,
   }) async {
-    var userInfo = await Emails.createUser(
-      session,
-      userName,
-      email,
-      password,
-    );
+    final normalizedEmail = email.trim().toLowerCase();
+    UserInfo? userInfo;
+    try {
+      userInfo = await Emails.createUser(
+        session,
+        userName,
+        normalizedEmail,
+        password,
+      );
+    } catch (e) {
+      session.log(
+        'Emails.createUser failed for $normalizedEmail, trying existing user lookup: $e',
+      );
+    }
     if (userInfo != null) return userInfo;
 
-    session.log('User $email might already exist. Trying to update scopes...');
+    session.log(
+      'User $normalizedEmail might already exist. Trying to reuse it.',
+    );
     userInfo = await UserInfo.db.findFirstRow(
       session,
-      where: (t) => t.email.equals(email),
+      where: (t) => t.email.equals(normalizedEmail),
     );
     if (userInfo == null) {
       session.log(
-        'Failed to find user $email even though createUser returned null.',
+        'Failed to find user $normalizedEmail after createUser did not return a user.',
       );
     }
     return userInfo;

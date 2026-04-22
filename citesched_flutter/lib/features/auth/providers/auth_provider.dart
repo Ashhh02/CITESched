@@ -110,7 +110,9 @@ class AuthNotifier extends Notifier<UserInfo?> {
     try {
       await client.auth.disconnectGoogleAccount();
     } catch (_) {
-      await client.auth.signOutDevice();
+      try {
+        await client.auth.signOutDevice();
+      } catch (_) {}
     }
     _selectedRole = null;
     _needsRoleOnboarding = false;
