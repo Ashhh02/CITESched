@@ -132,6 +132,39 @@ void main() {
         expect(subject.code, 'CS101');
       });
 
+      test('Create subject with duplicate code fails', () async {
+        await endpoints.admin.createSubject(
+          sessionBuilder,
+          Subject(
+            code: 'CS101',
+            name: 'Introduction to Programming',
+            units: 3,
+            types: [SubjectType.lecture],
+            program: Program.it,
+            studentsCount: 30,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        expect(
+          () async => await endpoints.admin.createSubject(
+            sessionBuilder,
+            Subject(
+              code: ' cs101 ',
+              name: 'Another Intro Subject',
+              units: 3,
+              types: [SubjectType.laboratory],
+              program: Program.it,
+              studentsCount: 30,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          ),
+          throwsA(isA<Exception>()),
+        );
+      });
+
       test('Create subject with empty code fails', () async {
         expect(
           () async => await endpoints.admin.createSubject(
@@ -168,6 +201,90 @@ void main() {
           ),
           throwsA(isA<Exception>()),
         );
+      });
+
+      test('Update subject with duplicate code fails', () async {
+        await endpoints.admin.createSubject(
+          sessionBuilder,
+          Subject(
+            code: 'UPD101',
+            name: 'Original Subject',
+            units: 3,
+            types: [SubjectType.lecture],
+            program: Program.it,
+            studentsCount: 30,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        final otherSubject = await endpoints.admin.createSubject(
+          sessionBuilder,
+          Subject(
+            code: 'UPD102',
+            name: 'Second Subject',
+            units: 3,
+            types: [SubjectType.lecture],
+            program: Program.it,
+            studentsCount: 30,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        expect(
+          () async => await endpoints.admin.updateSubject(
+            sessionBuilder,
+            otherSubject.copyWith(code: ' upd101 ', updatedAt: DateTime.now()),
+          ),
+          throwsA(isA<Exception>()),
+        );
+      });
+
+      test('Archive subject keeps inactive assigned faculty', () async {
+        final faculty = await endpoints.admin.createFaculty(
+          sessionBuilder,
+          Faculty(
+            facultyId: 'F-SUB-001',
+            userInfoId: 10,
+            name: 'Prof. Subject Archive',
+            email: 'subject.archive@test.com',
+            program: Program.it,
+            maxLoad: 12,
+            employmentStatus: EmploymentStatus.fullTime,
+            isActive: true,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        final subject = await endpoints.admin.createSubject(
+          sessionBuilder,
+          Subject(
+            code: 'ARCH101',
+            name: 'Archivable Subject',
+            units: 3,
+            facultyId: faculty.id,
+            types: [SubjectType.lecture],
+            program: Program.it,
+            studentsCount: 30,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        await endpoints.admin.updateFaculty(
+          sessionBuilder,
+          faculty.copyWith(isActive: false, updatedAt: DateTime.now()),
+        );
+
+        final archived = await endpoints.admin.updateSubject(
+          sessionBuilder,
+          subject.copyWith(isActive: false, updatedAt: DateTime.now()),
+        );
+
+        expect(archived.isActive, isFalse);
+        expect(archived.facultyId, faculty.id);
       });
     });
 

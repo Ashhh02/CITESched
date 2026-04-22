@@ -39,6 +39,54 @@ class AdminEndpoint extends Endpoint {
     return 1;
   }
 
+  String _normalizeSubjectCode(String code) {
+    return code.trim().replaceAll(RegExp(r'\s+'), ' ').toUpperCase();
+  }
+
+  Future<void> _validateSubjectCodeUniqueness(
+    Session session,
+    Subject subject, {
+    int? excludeId,
+  }) async {
+    final normalizedCode = _normalizeSubjectCode(subject.code);
+    final existingSubjects = excludeId == null
+        ? await Subject.db.find(session)
+        : await Subject.db.find(
+            session,
+            where: (t) => t.id.notEquals(excludeId),
+          );
+
+    for (final existing in existingSubjects) {
+      if (_normalizeSubjectCode(existing.code) == normalizedCode) {
+        throw Exception('Subject code ${subject.code.trim()} already exists');
+      }
+    }
+  }
+
+  Future<void> _validateSubjectFaculty(
+    Session session,
+    Subject subject,
+  ) async {
+    if (subject.facultyId == null) return;
+
+    final faculty = await Faculty.db.findById(session, subject.facultyId!);
+    if (faculty == null) {
+      throw Exception('Selected faculty is invalid');
+    }
+    if (subject.isActive && !faculty.isActive) {
+      throw Exception('Selected faculty is invalid or inactive');
+    }
+    if (faculty.program != null && faculty.program != subject.program) {
+      final isEmcTeachingIt =
+          faculty.program == Program.emc && subject.program == Program.it;
+      if (!isEmcTeachingIt) {
+        throw Exception(
+          'Selected faculty program does not match the subject program.',
+        );
+      }
+    }
+  }
+
   Future<int?> _resolveStudentSectionId(
     Session session,
     Student student,
@@ -765,7 +813,8 @@ class AdminEndpoint extends Endpoint {
   /// Create a new subject with validation.
   Future<Subject> createSubject(Session session, Subject subject) async {
     // Validate subject code format (basic check)
-    if (subject.code.trim().isEmpty) {
+    subject.code = subject.code.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (subject.code.isEmpty) {
       throw Exception('Subject code cannot be empty');
     }
 
@@ -779,25 +828,8 @@ class AdminEndpoint extends Endpoint {
       throw Exception('Student count cannot be negative');
     }
 
-    // Subject code uniqueness is intentionally not enforced
-    // to allow the same subject code for multiple sections.
-
-    // Validate selected faculty (optional)
-    if (subject.facultyId != null) {
-      final faculty = await Faculty.db.findById(session, subject.facultyId!);
-      if (faculty == null || !faculty.isActive) {
-        throw Exception('Selected faculty is invalid or inactive');
-      }
-      if (faculty.program != null && faculty.program != subject.program) {
-        final isEmcTeachingIt =
-            faculty.program == Program.emc && subject.program == Program.it;
-        if (!isEmcTeachingIt) {
-          throw Exception(
-            'Selected faculty program does not match the subject program.',
-          );
-        }
-      }
-    }
+    await _validateSubjectCodeUniqueness(session, subject);
+    await _validateSubjectFaculty(session, subject);
 
     // Set timestamps
     subject.createdAt = DateTime.now();
@@ -826,7 +858,8 @@ class AdminEndpoint extends Endpoint {
     }
 
     // Validate subject code
-    if (subject.code.trim().isEmpty) {
+    subject.code = subject.code.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (subject.code.isEmpty) {
       throw Exception('Subject code cannot be empty');
     }
 
@@ -840,25 +873,8 @@ class AdminEndpoint extends Endpoint {
       throw Exception('Student count cannot be negative');
     }
 
-    // Subject code uniqueness is intentionally not enforced
-    // to allow the same subject code for multiple sections.
-
-    // Validate selected faculty (optional)
-    if (subject.facultyId != null) {
-      final faculty = await Faculty.db.findById(session, subject.facultyId!);
-      if (faculty == null || !faculty.isActive) {
-        throw Exception('Selected faculty is invalid or inactive');
-      }
-      if (faculty.program != null && faculty.program != subject.program) {
-        final isEmcTeachingIt =
-            faculty.program == Program.emc && subject.program == Program.it;
-        if (!isEmcTeachingIt) {
-          throw Exception(
-            'Selected faculty program does not match the subject program.',
-          );
-        }
-      }
-    }
+    await _validateSubjectCodeUniqueness(session, subject, excludeId: subject.id);
+    await _validateSubjectFaculty(session, subject);
 
     // Update timestamp
     subject.updatedAt = DateTime.now();
