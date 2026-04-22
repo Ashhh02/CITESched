@@ -529,5 +529,52 @@ void main() {
         );
       });
     });
+
+    group('Faculty update validation -', () {
+      test('Update faculty with duplicate faculty ID fails', () async {
+        final first = await endpoints.admin.createFaculty(
+          sessionBuilder,
+          Faculty(
+            facultyId: 'FAC-100',
+            userInfoId: 100,
+            name: 'Faculty One',
+            email: 'faculty.one@test.com',
+            program: Program.it,
+            maxLoad: 12,
+            employmentStatus: EmploymentStatus.fullTime,
+            isActive: true,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        final second = await endpoints.admin.createFaculty(
+          sessionBuilder,
+          Faculty(
+            facultyId: 'FAC-200',
+            userInfoId: 101,
+            name: 'Faculty Two',
+            email: 'faculty.two@test.com',
+            program: Program.it,
+            maxLoad: 12,
+            employmentStatus: EmploymentStatus.fullTime,
+            isActive: true,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        expect(
+          () async => await endpoints.admin.updateFaculty(
+            sessionBuilder,
+            second.copyWith(
+              facultyId: first.facultyId,
+              updatedAt: DateTime.now(),
+            ),
+          ),
+          throwsA(isA<Exception>()),
+        );
+      });
+    });
   });
 }

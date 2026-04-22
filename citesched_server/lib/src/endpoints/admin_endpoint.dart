@@ -408,6 +408,17 @@ class AdminEndpoint extends Endpoint {
       throw Exception('Faculty with email ${faculty.email} already exists');
     }
 
+    // Check facultyId uniqueness (excluding current faculty)
+    var facultyIdConflict = await Faculty.db.findFirstRow(
+      session,
+      where: (t) => t.facultyId.equals(faculty.facultyId),
+    );
+    if (facultyIdConflict != null &&
+        facultyIdConflict.id != faculty.id &&
+        facultyIdConflict.userInfoId != faculty.userInfoId) {
+      throw Exception('Faculty with ID ${faculty.facultyId} already exists');
+    }
+
     // Validate maxLoad
     if ((faculty.maxLoad ?? 0) <= 0) {
       throw Exception('Max load must be greater than 0');
