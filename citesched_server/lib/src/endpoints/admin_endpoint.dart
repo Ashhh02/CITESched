@@ -47,8 +47,13 @@ class AdminEndpoint extends Endpoint {
     Session session,
     Subject subject, {
     int? excludeId,
+    String? originalCode,
   }) async {
     final normalizedCode = _normalizeSubjectCode(subject.code);
+    if (originalCode != null &&
+        _normalizeSubjectCode(originalCode) == normalizedCode) {
+      return;
+    }
     final existingSubjects = excludeId == null
         ? await Subject.db.find(session)
         : await Subject.db.find(
@@ -873,7 +878,12 @@ class AdminEndpoint extends Endpoint {
       throw Exception('Student count cannot be negative');
     }
 
-    await _validateSubjectCodeUniqueness(session, subject, excludeId: subject.id);
+    await _validateSubjectCodeUniqueness(
+      session,
+      subject,
+      excludeId: subject.id,
+      originalCode: existing.code,
+    );
     await _validateSubjectFaculty(session, subject);
 
     // Update timestamp

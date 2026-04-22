@@ -286,6 +286,44 @@ void main() {
         expect(archived.isActive, isFalse);
         expect(archived.facultyId, faculty.id);
       });
+
+      test('Archive subject with legacy duplicate code still succeeds', () async {
+        final first = await Subject.db.insertRow(
+          sessionBuilder,
+          Subject(
+            code: 'IT 101',
+            name: 'Legacy Duplicate A',
+            units: 3,
+            types: [SubjectType.lecture],
+            program: Program.it,
+            studentsCount: 30,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        final second = await Subject.db.insertRow(
+          sessionBuilder,
+          Subject(
+            code: 'IT 101',
+            name: 'Legacy Duplicate B',
+            units: 3,
+            types: [SubjectType.laboratory],
+            program: Program.it,
+            studentsCount: 30,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        final archived = await endpoints.admin.updateSubject(
+          sessionBuilder,
+          first.copyWith(isActive: false, updatedAt: DateTime.now()),
+        );
+
+        expect(archived.isActive, isFalse);
+        expect(second.isActive, isTrue);
+      });
     });
 
     group('Timeslot CRUD -', () {
