@@ -324,6 +324,53 @@ void main() {
         expect(archived.isActive, isFalse);
         expect(second.isActive, isTrue);
       });
+
+      test('Archive subject with missing faculty still succeeds', () async {
+        final faculty = await endpoints.admin.createFaculty(
+          sessionBuilder,
+          Faculty(
+            facultyId: 'F-SUB-002',
+            userInfoId: 11,
+            name: 'Prof. Missing Faculty',
+            email: 'missing.faculty@test.com',
+            program: Program.it,
+            maxLoad: 12,
+            employmentStatus: EmploymentStatus.fullTime,
+            isActive: true,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        final subject = await endpoints.admin.createSubject(
+          sessionBuilder,
+          Subject(
+            code: 'MISS101',
+            name: 'Subject With Missing Faculty',
+            units: 3,
+            facultyId: faculty.id,
+            types: [SubjectType.lecture],
+            program: Program.it,
+            studentsCount: 30,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        final deleted = await endpoints.admin.deleteFaculty(
+          sessionBuilder,
+          faculty.id!,
+        );
+        expect(deleted, isTrue);
+
+        final archived = await endpoints.admin.updateSubject(
+          sessionBuilder,
+          subject.copyWith(isActive: false, updatedAt: DateTime.now()),
+        );
+
+        expect(archived.isActive, isFalse);
+        expect(archived.facultyId, faculty.id);
+      });
     });
 
     group('Timeslot CRUD -', () {

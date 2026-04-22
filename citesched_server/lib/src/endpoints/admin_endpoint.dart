@@ -73,6 +73,7 @@ class AdminEndpoint extends Endpoint {
     Subject subject,
   ) async {
     if (subject.facultyId == null) return;
+    if (!subject.isActive) return;
 
     final faculty = await Faculty.db.findById(session, subject.facultyId!);
     if (faculty == null) {
