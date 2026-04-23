@@ -211,6 +211,7 @@ class AdminEndpoint extends Endpoint {
   /// Create a new faculty member with validation.
   Future<Faculty> createFaculty(Session session, Faculty faculty) async {
     try {
+      faculty.email = _normalizeEmail(faculty.email);
       print('--- CREATE FACULTY DEBUG ---');
       print('Name: ${faculty.name}');
       print('Email: ${faculty.email}');
@@ -386,6 +387,7 @@ class AdminEndpoint extends Endpoint {
 
   /// Update a faculty member with validation.
   Future<Faculty> updateFaculty(Session session, Faculty faculty) async {
+    faculty.email = _normalizeEmail(faculty.email);
     // Ensure faculty exists
     var existing = await Faculty.db.findById(session, faculty.id!);
     if (existing == null) {
@@ -728,7 +730,7 @@ class AdminEndpoint extends Endpoint {
 
   /// Create a new room with validation.
   Future<Room> createRoom(Session session, Room room) async {
-    var allRooms = await Room.db.find(session);
+    room.name = room.name.trim();
     _validateRoomCatalogRules(room);
 
     // Validate capacity
@@ -744,12 +746,6 @@ class AdminEndpoint extends Endpoint {
     if (existing != null) {
       throw Exception(
         'Room ${room.name} already exists',
-      );
-    }
-
-    if (allRooms.length >= 3) {
-      throw Exception(
-        'Limit Exceeded: Only 3 rooms are allowed in the system.',
       );
     }
 
@@ -773,6 +769,7 @@ class AdminEndpoint extends Endpoint {
 
   /// Update a room with validation.
   Future<Room> updateRoom(Session session, Room room) async {
+    room.name = room.name.trim();
     // Ensure room exists
     var existing = await Room.db.findById(session, room.id!);
     if (existing == null) {
@@ -1310,6 +1307,9 @@ class AdminEndpoint extends Endpoint {
   // ─── Helper Methods ──────────────────────────────────────────────────
 
   /// Validate email format using a simple regex.
+  String _normalizeEmail(String email) =>
+      email.replaceAll(RegExp(r'\s+'), '').trim().toLowerCase();
+
   bool _isValidEmail(String email) {
     final emailRegex = RegExp(
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
@@ -1354,22 +1354,10 @@ class AdminEndpoint extends Endpoint {
     );
   }
 
-  static const Set<String> _allowedRoomNames = {
-    _itLabName,
-    _emcLabName,
-    'ROOM 1',
-  };
-
   String _normalizedRoomName(String value) => value.trim().toUpperCase();
 
   void _validateRoomCatalogRules(Room room) {
     final roomName = _normalizedRoomName(room.name);
-
-    if (!_allowedRoomNames.contains(roomName)) {
-      throw Exception(
-        'Invalid room name. Only IT LAB, EMC LAB, and ROOM 1 are allowed.',
-      );
-    }
 
     if ((roomName == _itLabName || roomName == _emcLabName) &&
         room.type != RoomType.laboratory) {

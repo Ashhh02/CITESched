@@ -3646,10 +3646,10 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
 
     return schedulesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
+      error: (error, stack) => AppErrorDialog.inline(error),
       data: (schedules) => facultyAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        error: (error, stack) => AppErrorDialog.inline(error),
         data: (facultyList) {
           final subjectList = subjectsAsync.maybeWhen(
             data: (d) => d,

@@ -704,7 +704,7 @@ class _SubjectManagementScreenState
             Expanded(
               child: subjectsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(child: Text('Error: $error')),
+                error: (error, stack) => AppErrorDialog.inline(error),
                 data: (subjects) {
                   final filtered = subjects.where((s) {
                     final matchesSearch =

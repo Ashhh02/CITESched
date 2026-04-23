@@ -1,4 +1,5 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'package:citesched_flutter/core/utils/error_handler.dart';
 import 'package:citesched_flutter/features/admin/widgets/admin_create_user_form.dart';
 import 'package:citesched_flutter/features/admin/widgets/admin_header_container.dart';
 import 'package:citesched_flutter/main.dart';
@@ -2018,7 +2019,7 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(AppErrorDialog.message(e)),
             backgroundColor: Colors.red,
           ),
         );

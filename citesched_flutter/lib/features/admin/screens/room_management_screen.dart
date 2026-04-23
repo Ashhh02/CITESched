@@ -683,7 +683,7 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
             Expanded(
               child: roomsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(child: Text('Error: $error')),
+                error: (error, stack) => AppErrorDialog.inline(error),
                 data: (rooms) {
                   final filtered = rooms.where((r) {
                     final matchesSearch = r.name.toLowerCase().contains(
@@ -2081,7 +2081,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ).showSnackBar(SnackBar(content: Text(AppErrorDialog.message(e))));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -2633,7 +2633,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ).showSnackBar(SnackBar(content: Text(AppErrorDialog.message(e))));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

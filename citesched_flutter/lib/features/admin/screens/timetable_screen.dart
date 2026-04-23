@@ -871,7 +871,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                     },
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (err, stack) => Center(child: Text('Error: $err')),
+                    error: (err, stack) => AppErrorDialog.inline(err),
                   ),
                   const SizedBox(height: 16),
                   summaryAsync.when(
@@ -922,7 +922,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                               child: CircularProgressIndicator(),
                             ),
                             error: (err, stack) =>
-                                Center(child: Text('Error: $err')),
+                                AppErrorDialog.inline(err),
                           ),
                         ),
                       ),

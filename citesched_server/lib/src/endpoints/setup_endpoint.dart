@@ -61,13 +61,16 @@ class SetupEndpoint extends Endpoint {
     return Program.it;
   }
 
+  String _normalizeEmail(String email) =>
+      email.replaceAll(RegExp(r'\s+'), '').trim().toLowerCase();
+
   Future<UserInfo?> _ensureUserInfo(
     Session session, {
     required String userName,
     required String email,
     required String password,
   }) async {
-    final normalizedEmail = email.trim().toLowerCase();
+    final normalizedEmail = _normalizeEmail(email);
     UserInfo? userInfo;
     try {
       userInfo = await Emails.createUser(
@@ -104,7 +107,7 @@ class SetupEndpoint extends Endpoint {
     required String email,
     required String password,
   }) async {
-    final emailLower = email.toLowerCase();
+    final emailLower = _normalizeEmail(email);
     final newHash = await defaultGeneratePasswordHash(password);
     EmailAuth? existingAuth = await EmailAuth.db.findFirstRow(
       session,
@@ -189,9 +192,10 @@ class SetupEndpoint extends Endpoint {
     required String course,
     required String? section,
   }) async {
+    final normalizedEmail = _normalizeEmail(email);
     final existingStudent = await Student.db.findFirstRow(
       session,
-      where: (t) => t.email.equals(email),
+      where: (t) => t.email.equals(normalizedEmail),
     );
     final normalizedCourse = _allowedCourses.contains(course.trim().toUpperCase())
         ? course.trim().toUpperCase()
@@ -215,7 +219,7 @@ class SetupEndpoint extends Endpoint {
     if (existingStudent != null) {
       existingStudent
         ..name = userName
-        ..email = email
+        ..email = normalizedEmail
         ..studentNumber = studentId
         ..course = normalizedCourse
         ..yearLevel = yearLevel
@@ -232,7 +236,7 @@ class SetupEndpoint extends Endpoint {
       session,
       Student(
         name: userName,
-        email: email,
+        email: normalizedEmail,
         studentNumber: studentId,
         course: normalizedCourse,
         yearLevel: yearLevel,
@@ -258,14 +262,15 @@ class SetupEndpoint extends Endpoint {
     required Program program,
     required bool isActive,
   }) async {
+    final normalizedEmail = _normalizeEmail(email);
     final existingFaculty = await Faculty.db.findFirstRow(
       session,
-      where: (t) => t.email.equals(email),
+      where: (t) => t.email.equals(normalizedEmail),
     );
     if (existingFaculty != null) {
       existingFaculty
         ..name = userName
-        ..email = email
+        ..email = normalizedEmail
         ..maxLoad = maxLoad
         ..employmentStatus = employmentStatus
         ..shiftPreference = shiftPreference
@@ -282,7 +287,7 @@ class SetupEndpoint extends Endpoint {
       session,
       Faculty(
         name: userName,
-        email: email,
+        email: normalizedEmail,
         maxLoad: maxLoad,
         employmentStatus: employmentStatus,
         shiftPreference: shiftPreference,
@@ -339,11 +344,12 @@ class SetupEndpoint extends Endpoint {
     try {
       final normalizedRole = role.trim().toLowerCase();
       final needsFacultyApproval = normalizedRole == 'faculty';
+      final normalizedEmail = _normalizeEmail(email);
 
       final userInfo = await _ensureUserInfo(
         session,
         userName: userName,
-        email: email,
+        email: normalizedEmail,
         password: password,
       );
       if (userInfo == null) return false;
@@ -351,7 +357,7 @@ class SetupEndpoint extends Endpoint {
       await _ensureEmailAuth(
         session,
         userInfo,
-        email: email,
+        email: normalizedEmail,
         password: password,
       );
 
@@ -366,7 +372,7 @@ class SetupEndpoint extends Endpoint {
           session,
           userInfo,
           userName: userName,
-          email: email,
+          email: normalizedEmail,
           studentId: studentId,
           course: course ?? 'BSIT',
           section: section,
@@ -377,7 +383,7 @@ class SetupEndpoint extends Endpoint {
           session,
           userInfo,
           userName: userName,
-          email: email,
+          email: normalizedEmail,
           facultyId: facultyId,
           maxLoad: maxLoad ?? 18,
           employmentStatus: _employmentStatusFromString(employmentStatus),
@@ -395,7 +401,7 @@ class SetupEndpoint extends Endpoint {
       );
 
       session.log(
-        'Created user $email with role ${needsFacultyApproval ? "faculty_pending" : normalizedRole} and ID ${studentId ?? facultyId}',
+        'Created user $normalizedEmail with role ${needsFacultyApproval ? "faculty_pending" : normalizedRole} and ID ${studentId ?? facultyId}',
       );
       return true;
     } catch (e) {

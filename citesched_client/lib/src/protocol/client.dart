@@ -62,6 +62,27 @@ class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
   @override
   String get name => 'emailIdp';
 
+  @override
+  _i3.Future<_i2.UuidValue> startPasswordReset({required String email}) =>
+      caller.callServerEndpoint<_i2.UuidValue>(
+        'emailIdp',
+        'startPasswordReset',
+        {'email': email},
+      );
+
+  @override
+  _i3.Future<void> finishPasswordReset({
+    required String finishPasswordResetToken,
+    required String newPassword,
+  }) => caller.callServerEndpoint<void>(
+    'emailIdp',
+    'finishPasswordReset',
+    {
+      'finishPasswordResetToken': finishPasswordResetToken,
+      'newPassword': newPassword,
+    },
+  );
+
   /// Logs in the user and returns a new session.
   ///
   /// Throws an [EmailAccountLoginException] in case of errors, with reason:
@@ -152,27 +173,6 @@ class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
     },
   );
 
-  /// Requests a password reset for [email].
-  ///
-  /// If the email address is registered, an email with reset instructions will
-  /// be send out. If the email is unknown, this method will have no effect.
-  ///
-  /// Always returns a password reset request ID, which can be used to complete
-  /// the reset. If the email is not registered, the returned ID will not be
-  /// valid.
-  ///
-  /// Throws an [EmailAccountPasswordResetException] in case of errors, with reason:
-  /// - [EmailAccountPasswordResetExceptionReason.tooManyAttempts] if the user has
-  ///   made too many attempts trying to request a password reset.
-  ///
-  @override
-  _i3.Future<_i2.UuidValue> startPasswordReset({required String email}) =>
-      caller.callServerEndpoint<_i2.UuidValue>(
-        'emailIdp',
-        'startPasswordReset',
-        {'email': email},
-      );
-
   /// Verifies a password reset code and returns a finishPasswordResetToken
   /// that can be used to finish the password reset.
   ///
@@ -197,33 +197,6 @@ class EndpointEmailIdp extends _i1.EndpointEmailIdpBase {
     {
       'passwordResetRequestId': passwordResetRequestId,
       'verificationCode': verificationCode,
-    },
-  );
-
-  /// Completes a password reset request by setting a new password.
-  ///
-  /// The [verificationCode] returned from [verifyPasswordResetCode] is used to
-  /// validate the password reset request.
-  ///
-  /// Throws an [EmailAccountPasswordResetException] in case of errors, with reason:
-  /// - [EmailAccountPasswordResetExceptionReason.expired] if the password reset
-  ///   request has already expired.
-  /// - [EmailAccountPasswordResetExceptionReason.policyViolation] if the new
-  ///   password does not comply with the password policy.
-  /// - [EmailAccountPasswordResetExceptionReason.invalid] if no request exists
-  ///   for the given [passwordResetRequestId] or [verificationCode] is invalid.
-  ///
-  /// Throws an [AuthUserBlockedException] if the auth user is blocked.
-  @override
-  _i3.Future<void> finishPasswordReset({
-    required String finishPasswordResetToken,
-    required String newPassword,
-  }) => caller.callServerEndpoint<void>(
-    'emailIdp',
-    'finishPasswordReset',
-    {
-      'finishPasswordResetToken': finishPasswordResetToken,
-      'newPassword': newPassword,
     },
   );
 
@@ -693,6 +666,18 @@ class EndpointAdmin extends _i2.EndpointRef {
     },
   );
 
+  _i3.Future<List<_i21.FacultyAvailability>> setFacultyAvailabilityImpl(
+    int facultyId,
+    List<_i21.FacultyAvailability> availabilities,
+  ) => caller.callServerEndpoint<List<_i21.FacultyAvailability>>(
+    'admin',
+    'setFacultyAvailabilityImpl',
+    {
+      'facultyId': facultyId,
+      'availabilities': availabilities,
+    },
+  );
+
   /// Get all availability entries for a specific faculty.
   _i3.Future<List<_i21.FacultyAvailability>> getFacultyAvailability(
     int facultyId,
@@ -933,6 +918,14 @@ class EndpointSetup extends _i2.EndpointRef {
         'getExistingAccountRoleByEmail',
         {'email': email},
       );
+
+  _i3.Future<String?> getExistingAccountRoleByEmailImpl({
+    required String email,
+  }) => caller.callServerEndpoint<String?>(
+    'setup',
+    'getExistingAccountRoleByEmailImpl',
+    {'email': email},
+  );
 
   _i3.Future<String?> adoptExistingAccountByEmail({required String email}) =>
       caller.callServerEndpoint<String?>(

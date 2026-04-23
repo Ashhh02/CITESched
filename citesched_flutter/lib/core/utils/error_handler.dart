@@ -2,6 +2,76 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppErrorDialog {
+  static const String _genericServerErrorMessage =
+      'The server ran into an unexpected error. Please try again. If it keeps happening, check the backend logs for the exact cause.';
+
+  static String message(
+    dynamic error, {
+    String fallback = 'Something went wrong. Please try again.',
+  }) {
+    if (error == null) return fallback;
+
+    var resolved = error.toString().trim();
+    if (resolved.isEmpty) return fallback;
+
+    resolved = resolved.replaceAll(RegExp(r'^Error:\s*'), '').trim();
+    resolved = resolved.replaceAll('Exception: ', '').trim();
+    resolved = resolved.replaceAll('ServerpodClientException: ', '').trim();
+    resolved = resolved.replaceAll('Bad state: ', '').trim();
+
+    if (resolved.contains('statusCode = 401') ||
+        resolved.contains('statusCode=401')) {
+      return 'Your session has expired or you are not authorized. Please log in again.';
+    }
+
+    if (resolved.contains('statusCode = 403') ||
+        resolved.contains('statusCode=403')) {
+      return 'You do not have permission to perform this action.';
+    }
+
+    if (resolved.contains('statusCode = 404') ||
+        resolved.contains('statusCode=404')) {
+      return 'The requested record or endpoint could not be found.';
+    }
+
+    if (resolved.contains('statusCode = 409') ||
+        resolved.contains('statusCode=409')) {
+      return 'This action conflicts with existing data. Please refresh and try again.';
+    }
+
+    if (resolved.contains('XMLHttpRequest error') ||
+        resolved.contains('Connection closed before full header was received') ||
+        resolved.contains('Connection refused')) {
+      return 'Unable to connect to the server. Please make sure the backend is running.';
+    }
+
+    if (resolved.contains('Internal server error') ||
+        resolved.contains('Internal Server Error') ||
+        resolved.contains('statusCode = 500') ||
+        resolved.contains('statusCode=500')) {
+      return _genericServerErrorMessage;
+    }
+
+    return resolved.isEmpty ? fallback : resolved;
+  }
+
+  static Widget inline(
+    dynamic error, {
+    TextStyle? style,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(16),
+  }) {
+    return Center(
+      child: Padding(
+        padding: padding,
+        child: Text(
+          message(error),
+          textAlign: TextAlign.center,
+          style: style,
+        ),
+      ),
+    );
+  }
+
   /// Shows a standardized error dialog for any caught exceptions (including 500 server errors).
   static void show(
     BuildContext context,
@@ -10,14 +80,7 @@ class AppErrorDialog {
   }) {
     if (!context.mounted) return;
 
-    String message = error.toString();
-    // Clean up typical Serverpod or Exception prefixes
-    message = message.replaceAll('Exception: ', '').trim();
-    message = message.replaceAll('ServerpodClientException: ', '').trim();
-    // Sometimes serverpod includes the status code in the string
-    message = message
-        .replaceAll('Internal server error (500)', 'Internal Server Error')
-        .trim();
+    final resolvedMessage = message(error);
 
     showDialog(
       context: context,
@@ -42,7 +105,7 @@ class AppErrorDialog {
           ],
         ),
         content: Text(
-          message,
+          resolvedMessage,
           style: GoogleFonts.poppins(fontSize: 14),
         ),
         actions: [

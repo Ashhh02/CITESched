@@ -1,4 +1,5 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'package:citesched_flutter/core/utils/error_handler.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -194,7 +195,7 @@ class _FacultyLoadTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return AppErrorDialog.inline(snapshot.error);
         }
 
         final data = snapshot.data ?? [];
@@ -334,7 +335,7 @@ class _RoomUtilizationTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return AppErrorDialog.inline(snapshot.error);
         }
 
         final data = snapshot.data ?? [];
@@ -442,7 +443,7 @@ class _ConflictSummaryTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return AppErrorDialog.inline(snapshot.error);
         }
 
         final data = snapshot.data;
@@ -488,7 +489,7 @@ class _ScheduleOverviewTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return AppErrorDialog.inline(snapshot.error);
         }
 
         final data = snapshot.data;

@@ -2,6 +2,7 @@ import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
+import 'package:citesched_flutter/core/utils/error_handler.dart';
 import 'package:citesched_flutter/core/utils/schedule_export_service.dart';
 import 'package:citesched_flutter/core/utils/session_context.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
@@ -616,7 +617,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                     scheduleAsync.when(
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
-                      error: (err, stack) => Center(child: Text('Error: $err')),
+                      error: (err, stack) => AppErrorDialog.inline(err),
                       data: (schedules) {
                         if (schedules.isEmpty) {
                           return Container(

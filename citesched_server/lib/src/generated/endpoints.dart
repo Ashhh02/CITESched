@@ -137,6 +137,51 @@ class Endpoints extends _i1.EndpointDispatch {
       name: 'emailIdp',
       endpoint: endpoints['emailIdp']!,
       methodConnectors: {
+        'startPasswordReset': _i1.MethodConnector(
+          name: 'startPasswordReset',
+          params: {
+            'email': _i1.ParameterDescription(
+              name: 'email',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['emailIdp'] as _i2.EmailIdpEndpoint)
+                  .startPasswordReset(
+                    session,
+                    email: params['email'],
+                  ),
+        ),
+        'finishPasswordReset': _i1.MethodConnector(
+          name: 'finishPasswordReset',
+          params: {
+            'finishPasswordResetToken': _i1.ParameterDescription(
+              name: 'finishPasswordResetToken',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+            'newPassword': _i1.ParameterDescription(
+              name: 'newPassword',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['emailIdp'] as _i2.EmailIdpEndpoint)
+                  .finishPasswordReset(
+                    session,
+                    finishPasswordResetToken:
+                        params['finishPasswordResetToken'],
+                    newPassword: params['newPassword'],
+                  ),
+        ),
         'login': _i1.MethodConnector(
           name: 'login',
           params: {
@@ -230,25 +275,6 @@ class Endpoints extends _i1.EndpointDispatch {
                     password: params['password'],
                   ),
         ),
-        'startPasswordReset': _i1.MethodConnector(
-          name: 'startPasswordReset',
-          params: {
-            'email': _i1.ParameterDescription(
-              name: 'email',
-              type: _i1.getType<String>(),
-              nullable: false,
-            ),
-          },
-          call:
-              (
-                _i1.Session session,
-                Map<String, dynamic> params,
-              ) async => (endpoints['emailIdp'] as _i2.EmailIdpEndpoint)
-                  .startPasswordReset(
-                    session,
-                    email: params['email'],
-                  ),
-        ),
         'verifyPasswordResetCode': _i1.MethodConnector(
           name: 'verifyPasswordResetCode',
           params: {
@@ -272,32 +298,6 @@ class Endpoints extends _i1.EndpointDispatch {
                     session,
                     passwordResetRequestId: params['passwordResetRequestId'],
                     verificationCode: params['verificationCode'],
-                  ),
-        ),
-        'finishPasswordReset': _i1.MethodConnector(
-          name: 'finishPasswordReset',
-          params: {
-            'finishPasswordResetToken': _i1.ParameterDescription(
-              name: 'finishPasswordResetToken',
-              type: _i1.getType<String>(),
-              nullable: false,
-            ),
-            'newPassword': _i1.ParameterDescription(
-              name: 'newPassword',
-              type: _i1.getType<String>(),
-              nullable: false,
-            ),
-          },
-          call:
-              (
-                _i1.Session session,
-                Map<String, dynamic> params,
-              ) async => (endpoints['emailIdp'] as _i2.EmailIdpEndpoint)
-                  .finishPasswordReset(
-                    session,
-                    finishPasswordResetToken:
-                        params['finishPasswordResetToken'],
-                    newPassword: params['newPassword'],
                   ),
         ),
         'hasAccount': _i1.MethodConnector(
@@ -1159,6 +1159,31 @@ class Endpoints extends _i1.EndpointDispatch {
                     params['availabilities'],
                   ),
         ),
+        'setFacultyAvailabilityImpl': _i1.MethodConnector(
+          name: 'setFacultyAvailabilityImpl',
+          params: {
+            'facultyId': _i1.ParameterDescription(
+              name: 'facultyId',
+              type: _i1.getType<int>(),
+              nullable: false,
+            ),
+            'availabilities': _i1.ParameterDescription(
+              name: 'availabilities',
+              type: _i1.getType<List<_i24.FacultyAvailability>>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['admin'] as _i5.AdminEndpoint)
+                  .setFacultyAvailabilityImpl(
+                    session,
+                    params['facultyId'],
+                    params['availabilities'],
+                  ),
+        ),
         'getFacultyAvailability': _i1.MethodConnector(
           name: 'getFacultyAvailability',
           params: {
@@ -1574,6 +1599,25 @@ class Endpoints extends _i1.EndpointDispatch {
                 Map<String, dynamic> params,
               ) async => (endpoints['setup'] as _i11.SetupEndpoint)
                   .getExistingAccountRoleByEmail(
+                    session,
+                    email: params['email'],
+                  ),
+        ),
+        'getExistingAccountRoleByEmailImpl': _i1.MethodConnector(
+          name: 'getExistingAccountRoleByEmailImpl',
+          params: {
+            'email': _i1.ParameterDescription(
+              name: 'email',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['setup'] as _i11.SetupEndpoint)
+                  .getExistingAccountRoleByEmailImpl(
                     session,
                     email: params['email'],
                   ),

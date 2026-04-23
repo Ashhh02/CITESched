@@ -1,5 +1,6 @@
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
+import 'package:citesched_flutter/core/utils/error_handler.dart';
 import 'package:citesched_flutter/features/nlp/providers/chat_history_provider.dart';
 import 'package:citesched_flutter/features/nlp/providers/nlp_chat_provider.dart';
 import 'package:citesched_flutter/features/nlp/utils/nlp_constants.dart';
@@ -270,7 +271,7 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'Error: ${chatState.error}',
+                      AppErrorDialog.message(chatState.error),
                       style: GoogleFonts.poppins(
                         color: Colors.red.shade300,
                         fontSize: 12,

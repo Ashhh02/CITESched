@@ -52,10 +52,18 @@ String? _requiredValidator(String? value) {
 }
 
 String? _emailValidator(String? value) {
-  if (value?.isEmpty ?? true) return 'Required';
-  if (!value!.contains('@')) return 'Invalid email';
+  final email = value?.trim() ?? '';
+  if (email.isEmpty) return 'Required';
+  if (email.contains(RegExp(r'\s'))) return 'Email cannot contain spaces';
+  final emailRegex = RegExp(
+    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+  );
+  if (!emailRegex.hasMatch(email)) return 'Invalid email';
   return null;
 }
+
+String _normalizeEmailInput(String value) =>
+    value.replaceAll(RegExp(r'\s+'), '').trim().toLowerCase();
 
 String? _passwordValidator(String? value) {
   if (value?.isEmpty ?? true) return 'Required';
@@ -1814,7 +1822,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
     setState(() => _isLoading = true);
 
     try {
-      final email = _emailController.text.trim();
+      final email = _normalizeEmailInput(_emailController.text);
       final facultyId = _facultyIdController.text.trim();
 
       final createdAccount = await client.setup.createAccount(
@@ -3029,10 +3037,11 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
     setState(() => _isLoading = true);
 
     try {
+      final email = _normalizeEmailInput(_emailController.text);
       final updatedFaculty = Faculty(
         id: widget.faculty.id,
         name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
+        email: email,
         facultyId: _facultyIdController.text.trim(),
         maxLoad: int.parse(_maxLoadController.text),
         employmentStatus: _employmentStatus,
@@ -3336,11 +3345,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
             ),
             keyboardType: TextInputType.emailAddress,
             style: GoogleFonts.poppins(fontSize: 15, color: textPrimary),
-            validator: (value) {
-              if (value?.isEmpty ?? true) return 'Required';
-              if (!value!.contains('@')) return 'Invalid email';
-              return null;
-            },
+            validator: _emailValidator,
           ),
           const SizedBox(height: 20),
           _buildLabel('Faculty ID', Icons.badge_rounded, textPrimary),

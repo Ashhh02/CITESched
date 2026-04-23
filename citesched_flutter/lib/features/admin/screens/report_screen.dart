@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:citesched_flutter/main.dart';
 import 'package:citesched_flutter/core/utils/responsive_helper.dart';
+import 'package:citesched_flutter/core/utils/error_handler.dart';
 import 'package:citesched_flutter/features/admin/widgets/admin_header_container.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -346,7 +347,7 @@ class _FacultyLoadTab extends ConsumerWidget {
 
     return reportAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
+      error: (error, stack) => AppErrorDialog.inline(error),
       data: (data) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
@@ -556,7 +557,7 @@ class _RoomUtilizationTab extends ConsumerWidget {
 
     return reportAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
+      error: (error, stack) => AppErrorDialog.inline(error),
       data: (data) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final textPrimary = isDark ? Colors.white : Colors.black87;
@@ -741,7 +742,7 @@ class _ConflictSummaryTab extends ConsumerWidget {
 
     return reportAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
+      error: (error, stack) => AppErrorDialog.inline(error),
       data: (conflicts) {
         return SingleChildScrollView(
           child: Card(
@@ -1046,7 +1047,7 @@ class _ScheduleOverviewTab extends ConsumerWidget {
 
     return reportAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
+      error: (error, stack) => AppErrorDialog.inline(error),
       data: (data) {
         final isMobile = ResponsiveHelper.isMobile(context);
         return SingleChildScrollView(

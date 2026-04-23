@@ -1,4 +1,5 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'package:citesched_flutter/core/utils/error_handler.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -167,7 +168,7 @@ class _AdminCreateUserFormState extends State<AdminCreateUserForm> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Error: $e';
+        _errorMessage = AppErrorDialog.message(e);
       });
     } finally {
       if (mounted) {

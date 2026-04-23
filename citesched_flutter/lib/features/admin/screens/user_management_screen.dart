@@ -209,8 +209,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
               ),
               error: (e, _) => Center(
                 child: Text(
-                  'Error: $e',
+                  AppErrorDialog.message(e),
                   style: GoogleFonts.poppins(color: Colors.red),
+                  textAlign: TextAlign.center,
                 ),
               ),
               data: (students) {
