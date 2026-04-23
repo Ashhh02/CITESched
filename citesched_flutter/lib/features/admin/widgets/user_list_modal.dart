@@ -160,6 +160,27 @@ class _UserListModalState extends ConsumerState<UserListModal>
     return sorted;
   }
 
+  List<MapEntry<String, List<Student>>> get _groupedStudents {
+    final grouped = <String, List<Student>>{};
+
+    for (final student in _sortedStudents) {
+      final trimmedName = student.name.trim();
+      final label = trimmedName.isEmpty
+          ? '#'
+          : _nameInitial(trimmedName).toUpperCase();
+      grouped.putIfAbsent(label, () => []).add(student);
+    }
+
+    final entries = grouped.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    if (_studentSortOrder == 'desc') {
+      return entries.reversed.toList();
+    }
+
+    return entries;
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -903,7 +924,6 @@ class _UserListModalState extends ConsumerState<UserListModal>
         .length;
     return Column(
       children: [
-        // Sort + Count bar
         Container(
           padding: EdgeInsets.symmetric(
             horizontal: isMobile ? 16 : 28,
@@ -912,50 +932,58 @@ class _UserListModalState extends ConsumerState<UserListModal>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSearchField(
-                controller: _studentSearchController,
-                onChanged: (value) => setState(() {
-                  _studentSearchQuery = value;
-                }),
-                hintText: 'Search students by name, ID, course, or section',
-                primaryColor: primaryColor,
-                textMuted: textMuted,
-                bgBody: bgBody,
-              ),
+              if (isMobile)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSearchField(
+                      controller: _studentSearchController,
+                      onChanged: (value) => setState(() {
+                        _studentSearchQuery = value;
+                      }),
+                      hintText: 'Search students by name, ID, course, or section',
+                      primaryColor: primaryColor,
+                      textMuted: textMuted,
+                      bgBody: bgBody,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildStudentSortControls(
+                      primaryColor: primaryColor,
+                      textPrimary: textPrimary,
+                      textMuted: textMuted,
+                    ),
+                  ],
+                )
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildSearchField(
+                        controller: _studentSearchController,
+                        onChanged: (value) => setState(() {
+                          _studentSearchQuery = value;
+                        }),
+                        hintText: 'Search students by name, ID, course, or section',
+                        primaryColor: primaryColor,
+                        textMuted: textMuted,
+                        bgBody: bgBody,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    _buildStudentSortControls(
+                      primaryColor: primaryColor,
+                      textPrimary: textPrimary,
+                      textMuted: textMuted,
+                    ),
+                  ],
+                ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.sort_by_alpha_rounded,
-                            color: textMuted,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Sort:',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      _buildSortChip('A → Z', 'asc', primaryColor, textPrimary),
-                      _buildSortChip('Z → A', 'desc', primaryColor, textPrimary),
-                    ],
-                  ),
                   _buildArchiveToggle(
                     _isShowingArchivedStudents,
                     (v) => setState(() {
@@ -1011,8 +1039,6 @@ class _UserListModalState extends ConsumerState<UserListModal>
             ],
           ),
         ),
-
-        // List
         Expanded(
           child: _sortedStudents.isEmpty
               ? _buildEmptyState(
@@ -1020,18 +1046,17 @@ class _UserListModalState extends ConsumerState<UserListModal>
                   Icons.school_outlined,
                   textMuted,
                 )
-              : ListView.separated(
+              : ListView.builder(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 28,
                     vertical: 8,
                   ),
-                  itemCount: _sortedStudents.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 8),
+                  itemCount: _groupedStudents.length,
                   itemBuilder: (context, index) {
-                    final s = _sortedStudents[index];
-                    return _buildStudentCard(
-                      s,
+                    final group = _groupedStudents[index];
+                    return _buildStudentGroupSection(
+                      group.key,
+                      group.value,
                       primaryColor,
                       textPrimary,
                       textMuted,
@@ -1706,6 +1731,83 @@ class _UserListModalState extends ConsumerState<UserListModal>
   }
 
   // --- Helpers ─────────────────────────────────────────────────────────────
+
+  Widget _buildStudentSortControls({
+    required Color primaryColor,
+    required Color textPrimary,
+    required Color textMuted,
+  }) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.sort_by_alpha_rounded,
+              color: textMuted,
+              size: 18,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Sort:',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: textPrimary,
+              ),
+            ),
+          ],
+        ),
+        _buildSortChip('A → Z', 'asc', primaryColor, textPrimary),
+        _buildSortChip('Z → A', 'desc', primaryColor, textPrimary),
+      ],
+    );
+  }
+
+  Widget _buildStudentGroupSection(
+    String label,
+    List<Student> students,
+    Color primaryColor,
+    Color textPrimary,
+    Color textMuted,
+    Color bgBody,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 10),
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: primaryColor,
+              ),
+            ),
+          ),
+          ...students.asMap().entries.map((entry) {
+            final isLast = entry.key == students.length - 1;
+            return Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 8),
+              child: _buildStudentCard(
+                entry.value,
+                primaryColor,
+                textPrimary,
+                textMuted,
+                bgBody,
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
 
   Widget _buildArchiveToggle(
     bool value,

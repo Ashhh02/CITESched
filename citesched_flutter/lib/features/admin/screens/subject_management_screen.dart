@@ -26,6 +26,10 @@ const kFirstSemesterLabel = '1st Semester';
 const kSecondSemesterLabel = '2nd Semester';
 const kSavingLabel = 'Saving...';
 
+String _normalizeSubjectCodeValue(String value) {
+  return value.trim().replaceAll(RegExp(r'\s+'), ' ').toUpperCase();
+}
+
 String _semesterLabel(int term) {
   return term == 1 ? kFirstSemesterLabel : kSecondSemesterLabel;
 }
@@ -1590,6 +1594,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
   final List<SubjectType> _selectedTypes = [];
   Program _program = Program.it;
   List<Faculty> _facultyList = [];
+  final Set<String> _existingSubjectCodes = {};
   int? _selectedFacultyId;
   bool _isLoading = false;
   String? _facultyLoadError;
@@ -1598,6 +1603,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
   void initState() {
     super.initState();
     _loadFaculty();
+    _loadExistingSubjectCodes();
   }
 
   @override
@@ -1623,6 +1629,41 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
         _facultyLoadError = 'Failed to load faculty list: $e';
       });
     }
+  }
+
+  Future<void> _loadExistingSubjectCodes() async {
+    try {
+      final results = await Future.wait([
+        client.admin.getAllSubjects(isActive: true),
+        client.admin.getAllSubjects(isActive: false),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _existingSubjectCodes
+          ..clear()
+          ..addAll(
+            results.expand(
+              (subjects) => subjects.map(
+                (subject) => _normalizeSubjectCodeValue(subject.code),
+              ),
+            ),
+          );
+      });
+    } catch (_) {
+      // Backend validation still prevents duplicate saves if this preload fails.
+    }
+  }
+
+  String? _validateSubjectCode(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Required';
+    }
+
+    if (_existingSubjectCodes.contains(_normalizeSubjectCodeValue(value))) {
+      return 'Subject code already exists';
+    }
+
+    return null;
   }
 
   @override
@@ -2445,8 +2486,9 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
             color: isDark ? Colors.white : Colors.black87,
           ),
           decoration: _inputDecoration(null, isDark, hint: hint),
-          validator: (value) =>
-              value == null || value.isEmpty ? 'Required' : null,
+          validator: label == kSubjectCodeLabel
+              ? _validateSubjectCode
+              : (value) => value == null || value.isEmpty ? 'Required' : null,
         ),
       ],
     );
@@ -2499,11 +2541,17 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
       _showErrorDialog(context, 'Student count must be 0 or greater.');
       return;
     }
+    if (_existingSubjectCodes.contains(
+      _normalizeSubjectCodeValue(_codeController.text),
+    )) {
+      _showErrorDialog(context, 'Subject code already exists.');
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
       final subject = Subject(
-        code: _codeController.text,
+        code: _codeController.text.trim(),
         name: _nameController.text,
         units: parsedUnits,
         studentsCount: parsedStudents,
@@ -2599,6 +2647,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
   late List<SubjectType> _selectedTypes;
   late Program _program;
   List<Faculty> _facultyList = [];
+  final Set<String> _existingSubjectCodes = {};
   int? _selectedFacultyId;
   bool _isLoading = false;
   String? _facultyLoadError;
@@ -2620,6 +2669,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
     _program = widget.subject.program;
     _selectedFacultyId = widget.subject.facultyId;
     _loadFaculty();
+    _loadExistingSubjectCodes();
   }
 
   @override
@@ -2649,6 +2699,41 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
         _facultyLoadError = 'Failed to load faculty list: $e';
       });
     }
+  }
+
+  Future<void> _loadExistingSubjectCodes() async {
+    try {
+      final results = await Future.wait([
+        client.admin.getAllSubjects(isActive: true),
+        client.admin.getAllSubjects(isActive: false),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _existingSubjectCodes
+          ..clear()
+          ..addAll(
+            results.expand(
+              (subjects) => subjects
+                  .where((subject) => subject.id != widget.subject.id)
+                  .map((subject) => _normalizeSubjectCodeValue(subject.code)),
+            ),
+          );
+      });
+    } catch (_) {
+      // Backend validation still prevents duplicate saves if this preload fails.
+    }
+  }
+
+  String? _validateSubjectCode(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Required';
+    }
+
+    if (_existingSubjectCodes.contains(_normalizeSubjectCodeValue(value))) {
+      return 'Subject code already exists';
+    }
+
+    return null;
   }
 
   @override
@@ -3358,8 +3443,9 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
             color: isDark ? Colors.white : Colors.black87,
           ),
           decoration: _inputDecoration(null, isDark, hint: hint),
-          validator: (value) =>
-              value == null || value.isEmpty ? 'Required' : null,
+          validator: label == kSubjectCodeLabel
+              ? _validateSubjectCode
+              : (value) => value == null || value.isEmpty ? 'Required' : null,
         ),
       ],
     );
@@ -3412,11 +3498,17 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
       _showErrorDialog(context, 'Student count must be 0 or greater.');
       return;
     }
+    if (_existingSubjectCodes.contains(
+      _normalizeSubjectCodeValue(_codeController.text),
+    )) {
+      _showErrorDialog(context, 'Subject code already exists.');
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
       final subject = widget.subject.copyWith(
-        code: _codeController.text,
+        code: _codeController.text.trim(),
         name: _nameController.text,
         units: parsedUnits,
         studentsCount: parsedStudents,
