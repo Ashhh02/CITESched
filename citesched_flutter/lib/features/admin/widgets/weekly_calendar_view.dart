@@ -36,7 +36,9 @@ class CalendarViewCard extends StatelessWidget {
           color: cardBg,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+            color: isDark
+                ? Colors.white10
+                : Colors.black.withValues(alpha: 0.05),
           ),
         ),
         child: Column(
@@ -1365,3 +1367,4 @@ class _PreferenceRange {
   final int end;
   _PreferenceRange(this.start, this.end);
 }
+//testing

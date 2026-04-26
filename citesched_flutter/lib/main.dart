@@ -12,17 +12,16 @@ import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
 
 const _defaultServerUrl = 'http://localhost:8083/';
 const _serverUrlDefine = String.fromEnvironment('CITESCHED_SERVER_URL');
+const _googleWebClientIdDefine = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
 const _configAssetPath = 'assets/config.json';
 
 late final Client client;
-
-const _googleWebClientId =
-    '787281029476-efu9h96a0libvk8o0ubhsluh7u09fnen.apps.googleusercontent.com';
 const _startupStorage = FlutterSecureStorage();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final serverUrl = await _resolveServerUrl();
+  final appConfig = await _resolveAppConfig();
+  final serverUrl = appConfig.apiUrl;
   client = Client(
     serverUrl,
     connectionTimeout: const Duration(minutes: 3),
@@ -39,9 +38,12 @@ void main() async {
     } catch (_) {}
     await client.auth.initialize();
   }
-  await client.auth.initializeGoogleSignIn(
-    clientId: _googleWebClientId,
-  );
+  final googleWebClientId = appConfig.googleWebClientId;
+  if (googleWebClientId != null && googleWebClientId.isNotEmpty) {
+    await client.auth.initializeGoogleSignIn(
+      clientId: googleWebClientId,
+    );
+  }
 
   runApp(
     const ProviderScope(
@@ -50,9 +52,15 @@ void main() async {
   );
 }
 
-Future<String> _resolveServerUrl() async {
+Future<_AppConfig> _resolveAppConfig() async {
+  String? configuredApiUrl;
+  String? configuredGoogleWebClientId;
+
   if (_serverUrlDefine.isNotEmpty) {
-    return _normalizeServerUrl(_serverUrlDefine);
+    configuredApiUrl = _normalizeServerUrl(_serverUrlDefine);
+  }
+  if (_googleWebClientIdDefine.isNotEmpty) {
+    configuredGoogleWebClientId = _googleWebClientIdDefine.trim();
   }
 
   try {
@@ -60,21 +68,43 @@ Future<String> _resolveServerUrl() async {
     final decoded = jsonDecode(rawConfig);
     if (decoded is Map<String, dynamic>) {
       final apiUrl = decoded['apiUrl'];
-      if (apiUrl is String && apiUrl.trim().isNotEmpty) {
-        return _normalizeServerUrl(apiUrl);
+      if (configuredApiUrl == null &&
+          apiUrl is String &&
+          apiUrl.trim().isNotEmpty) {
+        configuredApiUrl = _normalizeServerUrl(apiUrl);
+      }
+
+      final googleWebClientId = decoded['googleWebClientId'];
+      if (configuredGoogleWebClientId == null &&
+          googleWebClientId is String &&
+          googleWebClientId.trim().isNotEmpty) {
+        configuredGoogleWebClientId = googleWebClientId.trim();
       }
     }
   } catch (_) {
     // Fall back to the local development server if the asset is missing.
   }
 
-  return _normalizeServerUrl(_defaultServerUrl);
+  return _AppConfig(
+    apiUrl: configuredApiUrl ?? _normalizeServerUrl(_defaultServerUrl),
+    googleWebClientId: configuredGoogleWebClientId,
+  );
 }
 
 String _normalizeServerUrl(String value) {
   final trimmed = value.trim();
   if (trimmed.endsWith('/')) return trimmed;
   return '$trimmed/';
+}
+
+class _AppConfig {
+  final String apiUrl;
+  final String? googleWebClientId;
+
+  const _AppConfig({
+    required this.apiUrl,
+    required this.googleWebClientId,
+  });
 }
 
 class MyApp extends StatelessWidget {
