@@ -137,24 +137,52 @@ class TimetableFilterPanel extends StatelessWidget {
     required String Function(T) itemLabel,
     required Function(T?) onChanged,
   }) {
+    final optionLabels = <T?, String>{
+      null: 'All $label',
+      for (final item in items) item: itemLabel(item),
+    };
+
     return DropdownButtonFormField<T>(
       initialValue: value,
+      isExpanded: true,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: GoogleFonts.poppins(fontSize: 14),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
+      selectedItemBuilder: (context) {
+        return optionLabels.values
+            .map(
+              (text) => Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(fontSize: 14),
+                ),
+              ),
+            )
+            .toList();
+      },
       items: [
         DropdownMenuItem<T>(
           value: null,
-          child: Text('All $label', style: GoogleFonts.poppins(fontSize: 14)),
+          child: Text(
+            'All $label',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(fontSize: 14),
+          ),
         ),
         ...items.map(
           (item) => DropdownMenuItem<T>(
             value: item,
             child: Text(
               itemLabel(item),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.poppins(fontSize: 14),
             ),
           ),

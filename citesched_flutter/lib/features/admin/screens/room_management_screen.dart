@@ -1,6 +1,4 @@
 import 'package:citesched_client/citesched_client.dart';
-import 'dart:async';
-
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +16,44 @@ const String kAddNewRoomLabel = 'Add New Room';
 const String kRoomNameLabel = 'Room Name';
 const String kSavingLabel = 'Saving...';
 
+String _normalizeRoomCatalogName(String value) {
+  return value.trim().replaceAll(RegExp(r'\s+'), ' ').toUpperCase();
+}
+
+bool _roomNameLooksLikeLab(String value) {
+  final normalizedName = _normalizeRoomCatalogName(value);
+  return normalizedName.contains('LAB');
+}
+
+List<RoomType> _allowedRoomTypesForName(String roomName) {
+  if (_roomNameLooksLikeLab(roomName)) {
+    return const [RoomType.laboratory];
+  }
+  return const [RoomType.lecture];
+}
+
+String? _validateRoomCatalogInput({
+  required String roomName,
+  required RoomType roomType,
+  required Program program,
+}) {
+  final normalizedName = _normalizeRoomCatalogName(roomName);
+  if (normalizedName.isEmpty) {
+    return 'Room name is required.';
+  }
+
+  if (_roomNameLooksLikeLab(normalizedName) &&
+      roomType != RoomType.laboratory) {
+    return '$normalizedName must use room type LABORATORY.';
+  }
+
+  if (!_roomNameLooksLikeLab(normalizedName) && roomType != RoomType.lecture) {
+    return '$normalizedName must use room type LECTURE.';
+  }
+
+  return null;
+}
+
 class RoomManagementScreen extends ConsumerStatefulWidget {
   const RoomManagementScreen({super.key});
 
@@ -33,25 +69,13 @@ class _RoomManagementScreenState extends ConsumerState<RoomManagementScreen> {
   bool _isShowingArchived = false;
   final TextEditingController _searchController = TextEditingController();
   final Set<int> _selectedRoomIds = {};
-  Timer? _refreshTimer;
 
   final Color maroonColor = const Color(0xFF720045);
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      ref.invalidate(roomListProvider);
-      ref.invalidate(archivedRoomListProvider);
-      ref.invalidate(allConflictsProvider);
-    });
   }
 
   void _syncSelectedRooms(List<Room> rooms) {
@@ -1614,6 +1638,22 @@ class _AddRoomModalState extends State<_AddRoomModal> {
   bool _isLoading = false;
 
   @override
+  void dispose() {
+    _nameController.dispose();
+    _capacityController.dispose();
+    super.dispose();
+  }
+
+  void _handleRoomNameChanged(String value) {
+    final allowedTypes = _allowedRoomTypesForName(value);
+    if (!allowedTypes.contains(_type)) {
+      setState(() => _type = allowedTypes.first);
+      return;
+    }
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) => _buildAddRoomDialog(context);
 
   Widget _buildAddRoomDialog(BuildContext context) {
@@ -1741,6 +1781,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
                                   _nameController,
                                   isDark,
                                   hint: 'e.g., CL1',
+                                  onChanged: _handleRoomNameChanged,
                                 ),
                                 const SizedBox(height: 16),
                                 _buildTextField(
@@ -1759,6 +1800,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
                                     _nameController,
                                     isDark,
                                     hint: 'e.g., CL1',
+                                    onChanged: _handleRoomNameChanged,
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -1806,7 +1848,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
                         initialValue: _type,
                         decoration: _inputDecoration('Room Type', isDark),
                         dropdownColor: cardBg,
-                        items: RoomType.values
+                        items: _allowedRoomTypesForName(_nameController.text)
                             .map(
                               (t) => DropdownMenuItem(
                                 value: t,
@@ -2003,6 +2045,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
     bool isDark, {
     bool isNumber = false,
     String? hint,
+    ValueChanged<String>? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2019,6 +2062,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
         TextFormField(
           controller: controller,
           keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+          onChanged: onChanged,
           style: GoogleFonts.poppins(
             color: isDark ? Colors.white : Colors.black87,
           ),
@@ -2063,11 +2107,27 @@ class _AddRoomModalState extends State<_AddRoomModal> {
 
   Future<void> _submitAddRoom() async {
     if (!_formKey.currentState!.validate()) return;
+    final normalizedName = _normalizeRoomCatalogName(_nameController.text);
+    final parsedCapacity = int.tryParse(_capacityController.text.trim());
+    final validationMessage = _validateRoomCatalogInput(
+      roomName: normalizedName,
+      roomType: _type,
+      program: _program,
+    );
+    if (validationMessage != null) {
+      AppErrorDialog.show(context, validationMessage);
+      return;
+    }
+    if (parsedCapacity == null || parsedCapacity <= 0) {
+      AppErrorDialog.show(context, 'Room capacity must be greater than 0.');
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       final room = Room(
-        name: _nameController.text,
-        capacity: int.parse(_capacityController.text),
+        name: normalizedName,
+        capacity: parsedCapacity,
         type: _type,
         program: _program,
         isActive: _isActive,
@@ -2079,9 +2139,7 @@ class _AddRoomModalState extends State<_AddRoomModal> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppErrorDialog.show(context, e);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -2124,6 +2182,22 @@ class _EditRoomModalState extends State<_EditRoomModal> {
     _type = widget.room.type;
     _program = widget.room.program;
     _isActive = widget.room.isActive;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _capacityController.dispose();
+    super.dispose();
+  }
+
+  void _handleRoomNameChanged(String value) {
+    final allowedTypes = _allowedRoomTypesForName(value);
+    if (!allowedTypes.contains(_type)) {
+      setState(() => _type = allowedTypes.first);
+      return;
+    }
+    setState(() {});
   }
 
   @override
@@ -2299,6 +2373,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
                                   _nameController,
                                   isDark,
                                   hint: 'e.g., IT LAB 327',
+                                  onChanged: _handleRoomNameChanged,
                                 ),
                                 const SizedBox(height: 12),
                                 _buildTextField(
@@ -2317,6 +2392,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
                                     _nameController,
                                     isDark,
                                     hint: 'e.g., IT LAB 327',
+                                    onChanged: _handleRoomNameChanged,
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -2364,7 +2440,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
                         initialValue: _type,
                         decoration: _inputDecoration('Room Type', isDark),
                         dropdownColor: cardBg,
-                        items: RoomType.values
+                        items: _allowedRoomTypesForName(_nameController.text)
                             .map(
                               (t) => DropdownMenuItem(
                                 value: t,
@@ -2556,6 +2632,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
     bool isDark, {
     bool isNumber = false,
     String? hint,
+    ValueChanged<String>? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2572,6 +2649,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
         TextFormField(
           controller: controller,
           keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+          onChanged: onChanged,
           style: GoogleFonts.poppins(
             color: isDark ? Colors.white : Colors.black87,
           ),
@@ -2616,11 +2694,27 @@ class _EditRoomModalState extends State<_EditRoomModal> {
 
   Future<void> _submitEditRoom() async {
     if (!_formKey.currentState!.validate()) return;
+    final normalizedName = _normalizeRoomCatalogName(_nameController.text);
+    final parsedCapacity = int.tryParse(_capacityController.text.trim());
+    final validationMessage = _validateRoomCatalogInput(
+      roomName: normalizedName,
+      roomType: _type,
+      program: _program,
+    );
+    if (validationMessage != null) {
+      AppErrorDialog.show(context, validationMessage);
+      return;
+    }
+    if (parsedCapacity == null || parsedCapacity <= 0) {
+      AppErrorDialog.show(context, 'Room capacity must be greater than 0.');
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       final room = widget.room.copyWith(
-        name: _nameController.text,
-        capacity: int.parse(_capacityController.text),
+        name: normalizedName,
+        capacity: parsedCapacity,
         type: _type,
         program: _program,
         isActive: _isActive,
@@ -2631,9 +2725,7 @@ class _EditRoomModalState extends State<_EditRoomModal> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppErrorDialog.show(context, e);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

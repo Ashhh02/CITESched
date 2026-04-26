@@ -97,7 +97,6 @@ class _FacultyManagementScreenState
   bool _isShowingArchived = false;
   final TextEditingController _searchController = TextEditingController();
   final Set<int> _selectedFacultyIds = {};
-  Timer? _refreshTimer;
   bool _hasAutoOpenedTargetFaculty = false;
 
   // Color scheme matching admin sidebar
@@ -106,7 +105,6 @@ class _FacultyManagementScreenState
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -114,11 +112,6 @@ class _FacultyManagementScreenState
   @override
   void initState() {
     super.initState();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      ref.invalidate(facultyListProvider);
-      ref.invalidate(archivedFacultyListProvider);
-      ref.invalidate(allConflictsProvider);
-    });
   }
 
   void _syncSelectedFaculty(List<Faculty> facultyList) {

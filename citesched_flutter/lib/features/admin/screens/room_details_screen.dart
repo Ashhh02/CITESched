@@ -1,15 +1,22 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'package:citesched_flutter/core/providers/admin_providers.dart';
+import 'package:citesched_flutter/core/widgets/full_screen_calendar_scaffold.dart';
 import 'package:citesched_flutter/features/admin/widgets/admin_header_container.dart';
+import 'package:citesched_flutter/features/admin/widgets/timetable_summary_panel.dart';
+import 'package:citesched_flutter/features/admin/widgets/weekly_calendar_view.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-final roomScheduleProvider = FutureProvider.family<List<Schedule>, int>((
+final roomScheduleProvider = FutureProvider.family<List<ScheduleInfo>, int>((
   ref,
   roomId,
 ) async {
-  return await client.admin.getRoomSchedule(roomId);
+  ref.watch(schedulesProvider);
+  return await client.timetable.getSchedules(
+    TimetableFilterRequest(roomId: roomId),
+  );
 });
 
 IconData _roomTypeIcon(RoomType type) {
@@ -259,7 +266,7 @@ class RoomDetailsScreen extends ConsumerWidget {
             child: SingleChildScrollView(
               padding: EdgeInsets.all(isMobile ? 16 : 32),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Type Banner
                   Container(
@@ -277,7 +284,7 @@ class RoomDetailsScreen extends ConsumerWidget {
                       runSpacing: 8,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        const Icon(Icons.category_rounded, color: maroonColor),
+                        Icon(Icons.category_rounded, color: maroonColor),
                         Text(
                           'ROOM CATEGORY:',
                           style: GoogleFonts.poppins(
@@ -307,32 +314,13 @@ class RoomDetailsScreen extends ConsumerWidget {
 
                   const SizedBox(height: 32),
 
-                  // Room Schedule Section
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.access_time_filled_rounded,
-                        color: maroonColor,
-                      ),
-                      Text(
-                        'Room Utilization Schedule',
-                        style: GoogleFonts.poppins(
-                          fontSize: isMobile ? 18 : 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
                   _buildRoomScheduleSection(
+                    context: context,
                     scheduleAsync: scheduleAsync,
                     cardBg: cardBg,
                     isDark: isDark,
                     maroonColor: maroonColor,
+                    isMobile: isMobile,
                   ),
                 ],
               ),
@@ -371,7 +359,7 @@ class RoomDetailsScreen extends ConsumerWidget {
 
   Widget _buildRoomStatsSection({
     required Room room,
-    required AsyncValue<List<Schedule>> scheduleAsync,
+    required AsyncValue<List<ScheduleInfo>> scheduleAsync,
     required Color cardBg,
   }) {
     return LayoutBuilder(
@@ -404,11 +392,45 @@ class RoomDetailsScreen extends ConsumerWidget {
               cardBg,
               compact: compactStats,
             ),
+            data: (schedules) {
+              final bookedDays = schedules
+                  .where((s) => s.schedule.timeslot != null)
+                  .map((s) => s.schedule.timeslot!.day)
+                  .toSet()
+                  .length;
+              return _buildSimpleStatCard(
+                'Schedules',
+                '${schedules.length} periods / $bookedDays days',
+                Icons.calendar_view_week_rounded,
+                Colors.orange,
+                cardBg,
+                compact: compactStats,
+              );
+            },
+          ),
+          const SizedBox(width: 16, height: 12),
+          scheduleAsync.when(
+            loading: () => _buildSimpleStatCard(
+              'Weekly Hours',
+              '...',
+              Icons.timer_rounded,
+              Colors.green,
+              cardBg,
+              compact: compactStats,
+            ),
+            error: (e, s) => _buildSimpleStatCard(
+              'Weekly Hours',
+              'Error',
+              Icons.timer_rounded,
+              Colors.green,
+              cardBg,
+              compact: compactStats,
+            ),
             data: (schedules) => _buildSimpleStatCard(
-              'Schedules',
-              '${schedules.length} periods',
-              Icons.calendar_view_week_rounded,
-              Colors.orange,
+              'Weekly Hours',
+              '${_buildRoomSummary(schedules).totalWeeklyHours.toStringAsFixed(1)} hrs',
+              Icons.timer_rounded,
+              Colors.green,
               cardBg,
               compact: compactStats,
             ),
@@ -421,6 +443,8 @@ class RoomDetailsScreen extends ConsumerWidget {
               stats[0],
               const SizedBox(height: 12),
               stats[2],
+              const SizedBox(height: 12),
+              stats[4],
             ],
           );
         }
@@ -430,6 +454,8 @@ class RoomDetailsScreen extends ConsumerWidget {
             stats[0],
             const SizedBox(width: 16),
             stats[2],
+            const SizedBox(width: 16),
+            stats[4],
           ],
         );
       },
@@ -437,16 +463,20 @@ class RoomDetailsScreen extends ConsumerWidget {
   }
 
   Widget _buildRoomScheduleSection({
-    required AsyncValue<List<Schedule>> scheduleAsync,
+    required BuildContext context,
+    required AsyncValue<List<ScheduleInfo>> scheduleAsync,
     required Color cardBg,
     required bool isDark,
     required Color maroonColor,
+    required bool isMobile,
   }) {
     return scheduleAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, stack) => Center(child: Text('Error loading schedule: $err')),
-      data: (schedules) {
-        if (schedules.isEmpty) {
+      data: (scheduleInfos) {
+        final summary = _buildRoomSummary(scheduleInfos);
+
+        if (scheduleInfos.isEmpty) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 40),
@@ -458,7 +488,39 @@ class RoomDetailsScreen extends ConsumerWidget {
           );
         }
 
-        return Container(
+        final calendarCard = CalendarViewCard(
+          title: 'Room Timetable View',
+          maroonColor: maroonColor,
+          cardBg: cardBg,
+          isDark: isDark,
+          calendarHeight: isMobile ? 700 : 980,
+          onFullScreen: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => FullScreenCalendarScaffold(
+                title: '${room.name} Schedule',
+                backgroundColor: isDark
+                    ? const Color(0xFF0F172A)
+                    : const Color(0xFFF8F9FA),
+                maxWidth: 1600,
+                useMaxWidthConstraint: false,
+                child: WeeklyCalendarView(
+                  schedules: scheduleInfos,
+                  maroonColor: maroonColor,
+                  dayWidth: 180,
+                ),
+              ),
+            ),
+          ),
+          child: WeeklyCalendarView(
+            schedules: scheduleInfos,
+            maroonColor: maroonColor,
+            dayWidth: isMobile ? 160 : 180,
+          ),
+        );
+
+        final detailsCard = Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(top: 24),
           decoration: BoxDecoration(
             color: cardBg,
             borderRadius: BorderRadius.circular(16),
@@ -471,10 +533,10 @@ class RoomDetailsScreen extends ConsumerWidget {
           child: ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: schedules.length,
+            itemCount: scheduleInfos.length,
             separatorBuilder: (context, index) => const Divider(height: 1),
             itemBuilder: (context, index) {
-              final s = schedules[index];
+              final schedule = scheduleInfos[index].schedule;
               return ListTiles(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
@@ -489,21 +551,99 @@ class RoomDetailsScreen extends ConsumerWidget {
                   ),
                 ),
                 title: Text(
-                  s.subject?.name ?? 'Unknown Subject',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  schedule.subject?.name ?? 'Unknown Subject',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
-                  _scheduleSummary(s),
+                  _scheduleSummary(schedule),
                   style: GoogleFonts.poppins(fontSize: 12),
                 ),
+                trailing: scheduleInfos[index].conflicts.isEmpty
+                    ? null
+                    : Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '${scheduleInfos[index].conflicts.length} conflict${scheduleInfos[index].conflicts.length == 1 ? '' : 's'}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.red[700],
+                          ),
+                        ),
+                      ),
               );
             },
           ),
         );
+
+        if (isMobile) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              calendarCard,
+              const SizedBox(height: 16),
+              TimetableSummaryPanel(summary: summary),
+              detailsCard,
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            calendarCard,
+            const SizedBox(height: 20),
+            TimetableSummaryPanel(summary: summary),
+            detailsCard,
+          ],
+        );
       },
     );
+  }
+
+  TimetableSummary _buildRoomSummary(List<ScheduleInfo> schedules) {
+    double totalUnits = 0;
+    double totalWeeklyHours = 0;
+    final uniqueSubjects = <int>{};
+    int conflictCount = 0;
+
+    for (final info in schedules) {
+      final schedule = info.schedule;
+      totalUnits += schedule.units ?? 0;
+      uniqueSubjects.add(schedule.subjectId);
+      if (info.conflicts.isNotEmpty) {
+        conflictCount++;
+      }
+
+      final timeslot = schedule.timeslot;
+      if (timeslot != null) {
+        totalWeeklyHours += _hoursFromTimeslot(timeslot);
+      }
+    }
+
+    return TimetableSummary(
+      totalSubjects: uniqueSubjects.length,
+      totalUnits: totalUnits,
+      totalWeeklyHours: totalWeeklyHours,
+      conflictCount: conflictCount,
+    );
+  }
+
+  double _hoursFromTimeslot(Timeslot timeslot) {
+    try {
+      final start = DateTime.parse('2000-01-01 ${timeslot.startTime}');
+      final end = DateTime.parse('2000-01-01 ${timeslot.endTime}');
+      return end.difference(start).inMinutes / 60.0;
+    } catch (_) {
+      return 0;
+    }
   }
 
   Widget _buildSimpleStatCard(

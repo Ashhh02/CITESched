@@ -13,6 +13,17 @@ class AuthNotifier extends Notifier<UserInfo?> {
   String? _selectedRole;
   bool _needsRoleOnboarding = false;
 
+  bool _isLegacySession(AuthSuccess? authInfo) {
+    final token = authInfo?.token.trim();
+    if (token == null || token.isEmpty) return false;
+    return RegExp(r'^\d+:').hasMatch(token);
+  }
+
+  bool _isGoogleSession(AuthSuccess? authInfo) {
+    final strategy = authInfo?.authStrategy.trim().toLowerCase();
+    return strategy == 'google';
+  }
+
   @override
   UserInfo? build() {
     // Initialize auth listener
@@ -107,12 +118,17 @@ class AuthNotifier extends Notifier<UserInfo?> {
   String? get selectedRole => _selectedRole;
 
   Future<void> signOut() async {
+    final authInfo = client.auth.authInfo;
     try {
-      await client.auth.disconnectGoogleAccount();
-    } catch (_) {
-      try {
+      if (_isGoogleSession(authInfo)) {
+        await client.auth.disconnectGoogleAccount();
+      } else if (_isLegacySession(authInfo)) {
+        await client.auth.updateSignedInUser(null);
+      } else {
         await client.auth.signOutDevice();
-      } catch (_) {}
+      }
+    } catch (_) {
+      await client.auth.updateSignedInUser(null);
     }
     _selectedRole = null;
     _needsRoleOnboarding = false;

@@ -441,16 +441,11 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
 
     final scaffold = Scaffold(
       backgroundColor: bgColor,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: ResponsiveHelper.maxContentWidth(context),
-          ),
-          child: SingleChildScrollView(
-            padding: ResponsiveHelper.pagePadding(context),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      body: SingleChildScrollView(
+        padding: ResponsiveHelper.pagePadding(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                 // ── Welcome Banner ──────────────────────────────────────
                 Container(
                   padding: EdgeInsets.all(
@@ -930,88 +925,64 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                         children: [
                           // ── Tab 1: Calendar ──────────────────────────
                           availabilityAsync.when(
-                            data: (availabilities) => Column(
-                              children: [
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton.icon(
-                                    onPressed: () =>
-                                        Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            FullScreenCalendarScaffold(
+                            data: (availabilities) => CalendarViewCard(
+                              title: _weeklyCalendarLabel,
+                              maroonColor: maroonColor,
+                              cardBg: cardBg,
+                              isDark: isDark,
+                              calendarHeight: 700,
+                              onFullScreen: () =>
+                                  Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => FullScreenCalendarScaffold(
                                     title: _weeklyCalendarLabel,
-                                          backgroundColor: isDark
-                                              ? const Color(0xFF0F172A)
-                                              : const Color(0xFFF8F9FA),
-                                          child: WeeklyCalendarView(
-                                            schedules: schedules,
-                                            availabilities: availabilities,
-                                            maroonColor: maroonColor,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    icon:
-                                        const Icon(Icons.fullscreen_rounded),
-                                    label: Text(
-                                      'Full Screen',
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                    backgroundColor: isDark
+                                        ? const Color(0xFF0F172A)
+                                        : const Color(0xFFF8F9FA),
+                                    useMaxWidthConstraint: false,
+                                    child: WeeklyCalendarView(
+                                      schedules: schedules,
+                                      availabilities: availabilities,
+                                      maroonColor: maroonColor,
                                     ),
                                   ),
                                 ),
-                                Expanded(
-                                  child: WeeklyCalendarView(
-                                    schedules: schedules,
-                                    availabilities: availabilities,
-                                    maroonColor: maroonColor,
-                                  ),
-                                ),
-                              ],
+                              ),
+                              child: WeeklyCalendarView(
+                                schedules: schedules,
+                                availabilities: availabilities,
+                                maroonColor: maroonColor,
+                              ),
                             ),
                             loading: () => const Center(
                               child: CircularProgressIndicator(),
                             ),
-                            error: (err, _) => Column(
-                              children: [
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton.icon(
-                                    onPressed: () =>
-                                        Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            FullScreenCalendarScaffold(
+                            error: (err, _) => CalendarViewCard(
+                              title: _weeklyCalendarLabel,
+                              maroonColor: maroonColor,
+                              cardBg: cardBg,
+                              isDark: isDark,
+                              calendarHeight: 700,
+                              onFullScreen: () =>
+                                  Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => FullScreenCalendarScaffold(
                                     title: _weeklyCalendarLabel,
-                                          backgroundColor: isDark
-                                              ? const Color(0xFF0F172A)
-                                              : const Color(0xFFF8F9FA),
-                                          child: WeeklyCalendarView(
-                                            schedules: schedules,
-                                            maroonColor: maroonColor,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    icon:
-                                        const Icon(Icons.fullscreen_rounded),
-                                    label: Text(
-                                      'Full Screen',
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                    backgroundColor: isDark
+                                        ? const Color(0xFF0F172A)
+                                        : const Color(0xFFF8F9FA),
+                                    useMaxWidthConstraint: false,
+                                    child: WeeklyCalendarView(
+                                      schedules: schedules,
+                                      maroonColor: maroonColor,
                                     ),
                                   ),
                                 ),
-                                Expanded(
-                                  child: WeeklyCalendarView(
-                                    schedules: schedules,
-                                    maroonColor: maroonColor,
-                                  ),
-                                ),
-                              ],
+                              ),
+                              child: WeeklyCalendarView(
+                                schedules: schedules,
+                                maroonColor: maroonColor,
+                              ),
                             ),
                           ),
 
@@ -1027,9 +998,7 @@ class _FacultyDashboardScreenState extends ConsumerState<FacultyDashboardScreen>
                     );
                   },
                 ),
-              ],
-            ),
-          ),
+          ],
         ),
       ),
     );

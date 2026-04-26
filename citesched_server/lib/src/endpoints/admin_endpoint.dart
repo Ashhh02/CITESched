@@ -1193,7 +1193,6 @@ class AdminEndpoint extends Endpoint {
     // Normalize sentinel values from frontend
     if (schedule.roomId == -1) schedule.roomId = null;
     if (schedule.timeslotId == -1) schedule.timeslotId = null;
-    await _syncScheduleSectionReference(session, schedule);
 
     // Ensure schedule exists
     var existing = await Schedule.db.findById(session, schedule.id!);
@@ -1201,16 +1200,23 @@ class AdminEndpoint extends Endpoint {
       throw Exception('Schedule not found with ID: ${schedule.id}');
     }
 
-    // Validate schedule entry (excluding current schedule from conflict checks)
-    var conflicts = await ConflictService().validateSchedule(
-      session,
-      schedule,
-      excludeScheduleId: schedule.id,
-    );
+    final isArchiving = existing.isActive && !schedule.isActive;
+    await _syncScheduleSectionReference(session, schedule);
 
-    if (conflicts.isNotEmpty) {
-      var messages = conflicts.map((c) => c.message).join('; ');
-      throw Exception('Schedule validation failed: $messages');
+    // Archiving only flips the active flag, so it should not be blocked by
+    // conflict validation for room, faculty, or section rules.
+    if (!isArchiving) {
+      // Validate schedule entry (excluding current schedule from conflict checks)
+      var conflicts = await ConflictService().validateSchedule(
+        session,
+        schedule,
+        excludeScheduleId: schedule.id,
+      );
+
+      if (conflicts.isNotEmpty) {
+        var messages = conflicts.map((c) => c.message).join('; ');
+        throw Exception('Schedule validation failed: $messages');
+      }
     }
 
     // Update timestamp

@@ -116,23 +116,13 @@ class StudentScheduleScreen extends ConsumerWidget {
                           });
 
                     return Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                        border: Border.all(
-                          color: Colors.black.withValues(alpha: 0.05),
-                        ),
-                      ),
-                      child: SizedBox(
-                        height: ResponsiveHelper.calendarHeight(context),
+                      child: CalendarViewCard(
+                        title: 'My Weekly Schedule',
+                        maroonColor: maroonDark,
+                        cardBg: Colors.white,
+                        isDark: false,
+                        calendarHeight:
+                            ResponsiveHelper.calendarHeight(context) + 90,
                         child: WeeklyCalendarView(
                           schedules: scheduleInfos,
                           maroonColor: maroonDark,

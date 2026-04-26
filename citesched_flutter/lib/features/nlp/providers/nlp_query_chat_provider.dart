@@ -42,6 +42,20 @@ class NLPQueryChatNotifier extends Notifier<NLPQueryChatState> {
   bool _initialized = false;
   bool _pendingTimetable = false;
 
+  String? _selectedRole() => ref.read(authProvider.notifier).selectedRole;
+
+  String _effectiveRole() {
+    final selectedRole = _selectedRole();
+    if (selectedRole != null && selectedRole.isNotEmpty) return selectedRole;
+
+    final auth = ref.read(authProvider);
+    final scopes = auth?.scopeNames ?? const <String>[];
+    if (scopes.contains('admin')) return 'admin';
+    if (scopes.contains('faculty')) return 'faculty';
+    if (scopes.contains('student')) return 'student';
+    return 'chat';
+  }
+
   @override
   NLPQueryChatState build() {
     if (!_initialized) {
@@ -207,8 +221,13 @@ class NLPQueryChatNotifier extends Notifier<NLPQueryChatState> {
     var normalized = _normalizeQuery(query);
     final auth = ref.read(authProvider);
     final scopes = auth?.scopeNames ?? const [];
-    final isStudent = scopes.contains('student');
-    final isFaculty = scopes.contains('faculty');
+    final selectedRole = _selectedRole();
+    final isStudent =
+        selectedRole == 'student' ||
+        (selectedRole == null && scopes.contains('student'));
+    final isFaculty =
+        selectedRole == 'faculty' ||
+        (selectedRole == null && scopes.contains('faculty'));
 
     final asksSchedule = RegExp(
       r'\b(schedule|schedules|class schedule|classes|timetable|calendar|routine)\b',
@@ -303,30 +322,34 @@ class NLPQueryChatNotifier extends Notifier<NLPQueryChatState> {
   }
 
   bool _isAdmin() {
+    final selectedRole = _selectedRole();
+    if (selectedRole != null) return selectedRole == 'admin';
     final auth = ref.read(authProvider);
     final scopes = auth?.scopeNames ?? const [];
     return scopes.contains('admin');
   }
 
   bool _isStudent() {
+    final selectedRole = _selectedRole();
+    if (selectedRole != null) return selectedRole == 'student';
     final auth = ref.read(authProvider);
     final scopes = auth?.scopeNames ?? const [];
     return scopes.contains('student');
   }
 
   String _generateSessionId() {
-    return 'chat_${DateTime.now().microsecondsSinceEpoch}';
+    final role = _effectiveRole();
+    return '${role}_chat_${DateTime.now().microsecondsSinceEpoch}';
   }
 
   String _generateSessionTitle() {
-    final auth = ref.read(authProvider);
-    final scopes = auth?.scopeNames ?? const [];
+    final role = _effectiveRole();
     final now = DateTime.now();
     final dateLabel =
         '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    if (scopes.contains('admin')) return 'Admin Chat $dateLabel';
-    if (scopes.contains('faculty')) return 'Faculty Chat $dateLabel';
-    if (scopes.contains('student')) return 'Student Chat $dateLabel';
+    if (role == 'admin') return 'Admin Chat $dateLabel';
+    if (role == 'faculty') return 'Faculty Chat $dateLabel';
+    if (role == 'student') return 'Student Chat $dateLabel';
     return 'Chat $dateLabel';
   }
 }

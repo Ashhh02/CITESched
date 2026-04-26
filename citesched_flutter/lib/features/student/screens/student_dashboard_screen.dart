@@ -98,18 +98,11 @@ class StudentDashboardScreen extends ConsumerWidget {
           _StudentDashboardActions(),
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: ResponsiveHelper.maxContentWidth(context),
-              ),
-              child: SingleChildScrollView(
-                padding: ResponsiveHelper.pagePadding(context),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+      body: SingleChildScrollView(
+        padding: ResponsiveHelper.pagePadding(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                     // Premium Welcome Card
                     Container(
                       padding: EdgeInsets.all(
@@ -758,33 +751,27 @@ class StudentDashboardScreen extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 16),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton.icon(
-                                onPressed: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => FullScreenCalendarScaffold(
-                                      title: 'My Weekly Schedule',
-                                      backgroundColor: bgColor,
-                                      child: WeeklyCalendarView(
-                                        schedules: scheduled,
-                                        maroonColor: maroonColor,
-                                        isStudentView: true,
-                                      ),
+                            CalendarViewCard(
+                              title: 'My Weekly Schedule',
+                              maroonColor: maroonColor,
+                              cardBg: cardBg,
+                              isDark: isDark,
+                              calendarHeight:
+                                  ResponsiveHelper.calendarHeight(context) + 90,
+                              onFullScreen: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => FullScreenCalendarScaffold(
+                                    title: 'My Weekly Schedule',
+                                    backgroundColor: bgColor,
+                                    useMaxWidthConstraint: false,
+                                    child: WeeklyCalendarView(
+                                      schedules: scheduled,
+                                      maroonColor: maroonColor,
+                                      isStudentView: true,
                                     ),
                                   ),
                                 ),
-                                icon: const Icon(Icons.fullscreen_rounded),
-                                label: Text(
-                                  'Full Screen',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
                               ),
-                            ),
-                            SizedBox(
-                              height: ResponsiveHelper.calendarHeight(context),
                               child: WeeklyCalendarView(
                                 schedules: scheduled,
                                 maroonColor: maroonColor,
@@ -848,12 +835,8 @@ class StudentDashboardScreen extends ConsumerWidget {
                         );
                       },
                     ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+          ],
+        ),
       ),
     );
 

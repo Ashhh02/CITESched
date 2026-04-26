@@ -518,25 +518,48 @@ class _NLPChatDialogState extends ConsumerState<NLPChatDialog> {
   }
 
   List<String> _roleSuggestions() {
+    final selectedRole = ref.read(authProvider.notifier).selectedRole;
     final scopes = ref.read(authProvider)?.scopeNames ?? const [];
-    if (scopes.contains('admin')) {
+    if (selectedRole == 'admin' || scopes.contains('admin')) {
       return [
         'Generate schedule',
         'Show schedule conflicts',
         'Find free room',
       ];
     }
+    if (selectedRole == 'faculty') {
+      return [
+        'Show my schedule',
+        'Show my teaching load this term',
+        'Show my timetable for this week',
+        'Do I have any schedule conflicts?',
+        'What is my next class?',
+      ];
+    }
+    if (selectedRole == 'student') {
+      return [
+        'Show our section schedule',
+        'Show our class timetable this week',
+        'Where is my next class?',
+        'Do we have any schedule conflicts?',
+        'Which room is assigned for our next class?',
+      ];
+    }
     if (scopes.contains('faculty')) {
       return [
         'Show my schedule',
+        'Show my teaching load this term',
+        'Show my timetable for this week',
+        'Do I have any schedule conflicts?',
         'What is my next class?',
-        'Am I free at 10 AM?',
       ];
     }
     return [
-      'Show my schedule',
-      'What classes do I have today?',
+      'Show our section schedule',
+      'Show our class timetable this week',
       'Where is my next class?',
+      'Do we have any schedule conflicts?',
+      'Which room is assigned for our next class?',
     ];
   }
 

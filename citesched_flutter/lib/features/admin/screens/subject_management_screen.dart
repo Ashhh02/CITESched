@@ -34,6 +34,18 @@ String _semesterLabel(int term) {
   return term == 1 ? kFirstSemesterLabel : kSecondSemesterLabel;
 }
 
+List<Faculty> _dedupeFacultyById(List<Faculty> facultyList) {
+  final byId = <int, Faculty>{};
+  for (final faculty in facultyList) {
+    final id = faculty.id;
+    if (id == null) continue;
+    byId[id] = faculty;
+  }
+
+  return byId.values.toList()
+    ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+}
+
 class SubjectManagementScreen extends ConsumerStatefulWidget {
   const SubjectManagementScreen({super.key});
 
@@ -50,13 +62,10 @@ class _SubjectManagementScreenState
   bool _isShowingArchived = false;
   final TextEditingController _searchController = TextEditingController();
   final Set<int> _selectedSubjectIds = {};
-  Timer? _refreshTimer;
-
   final Color maroonColor = const Color(0xFF720045);
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -64,11 +73,6 @@ class _SubjectManagementScreenState
   @override
   void initState() {
     super.initState();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      ref.invalidate(subjectsProvider);
-      ref.invalidate(archivedSubjectsProvider);
-      ref.invalidate(allConflictsProvider);
-    });
   }
 
   void _syncSelectedSubjects(List<Subject> subjects) {
@@ -1620,7 +1624,7 @@ class _AddSubjectModalState extends ConsumerState<_AddSubjectModal> {
       final list = await client.admin.getAllFaculty(isActive: true);
       if (!mounted) return;
       setState(() {
-        _facultyList = list;
+        _facultyList = _dedupeFacultyById(list);
         _facultyLoadError = null;
       });
     } catch (e) {
@@ -2686,7 +2690,7 @@ class _EditSubjectModalState extends ConsumerState<_EditSubjectModal> {
       final list = await client.admin.getAllFaculty(isActive: true);
       if (!mounted) return;
       setState(() {
-        _facultyList = list;
+        _facultyList = _dedupeFacultyById(list);
         final hasSelected =
             _selectedFacultyId != null &&
             _facultyList.any((f) => f.id == _selectedFacultyId);

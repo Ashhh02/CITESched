@@ -7,17 +7,17 @@ class AppErrorDialog {
     BuildContext context,
     dynamic error, {
     String title = 'Action Failed',
+    String? actionLabel,
   }) {
     if (!context.mounted) return;
 
-    String message = error.toString();
-    // Clean up typical Serverpod or Exception prefixes
-    message = message.replaceAll('Exception: ', '').trim();
-    message = message.replaceAll('ServerpodClientException: ', '').trim();
-    // Sometimes serverpod includes the status code in the string
-    message = message
-        .replaceAll('Internal server error (500)', 'Internal Server Error')
-        .trim();
+    final rawMessage = error?.toString().trim().isNotEmpty == true
+        ? error.toString().trim()
+        : 'Unknown error';
+    final errorType = error?.runtimeType.toString() ?? 'UnknownError';
+    final message = actionLabel == null || actionLabel.trim().isEmpty
+        ? '$errorType: $rawMessage'
+        : 'Action: $actionLabel\nError Type: $errorType\nDetails: $rawMessage';
 
     showDialog(
       context: context,

@@ -23,7 +23,10 @@ const _startupStorage = FlutterSecureStorage();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final serverUrl = await _resolveServerUrl();
-  client = Client(serverUrl)
+  client = Client(
+    serverUrl,
+    connectionTimeout: const Duration(minutes: 3),
+  )
     ..connectivityMonitor = FlutterConnectivityMonitor()
     ..authSessionManager = FlutterAuthSessionManager();
 

@@ -1,12 +1,48 @@
 import 'package:citesched_client/citesched_client.dart';
+import 'package:citesched_flutter/features/auth/providers/auth_provider.dart';
 import 'package:citesched_flutter/main.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+String? _activeRole(Ref ref) {
+  return ref.read(authProvider.notifier).selectedRole;
+}
+
+bool _matchesActiveRole({
+  required String? activeRole,
+  required String? itemRole,
+}) {
+  if (activeRole == null || activeRole.isEmpty) return true;
+  return itemRole == activeRole;
+}
+
+bool _matchesSessionRole({
+  required String? activeRole,
+  required ChatSessionSummary summary,
+}) {
+  if (activeRole == null || activeRole.isEmpty) return true;
+
+  final normalizedTitle = summary.title.trim().toLowerCase();
+  final normalizedSessionId = summary.sessionId.trim().toLowerCase();
+  return normalizedTitle.startsWith('$activeRole chat ') ||
+      normalizedSessionId.startsWith('${activeRole}_chat_');
+}
 
 final chatHistoryProvider = FutureProvider.family<List<ChatHistory>, int>((
   ref,
   limit,
 ) async {
-  return await client.chatHistory.getMyHistory(limit: limit);
+  final activeRole = _activeRole(ref);
+  final items = await client.chatHistory.getMyHistory(limit: 200);
+  final filtered = items
+      .where(
+        (entry) => _matchesActiveRole(
+          activeRole: activeRole,
+          itemRole: entry.role,
+        ),
+      )
+      .take(limit)
+      .toList();
+  return filtered;
 });
 
 final chatHistorySessionsProvider =
@@ -14,7 +50,18 @@ final chatHistorySessionsProvider =
   ref,
   limit,
 ) async {
-  return await client.chatHistory.getMySessions(limit: limit);
+  final activeRole = _activeRole(ref);
+  final sessions = await client.chatHistory.getMySessions(limit: 200);
+  final filtered = sessions
+      .where(
+        (entry) => _matchesSessionRole(
+          activeRole: activeRole,
+          summary: entry,
+        ),
+      )
+      .take(limit)
+      .toList();
+  return filtered;
 });
 
 final chatHistorySessionProvider =
@@ -22,10 +69,19 @@ final chatHistorySessionProvider =
   ref,
   sessionId,
 ) async {
-  return await client.chatHistory.getSessionHistory(
+  final activeRole = _activeRole(ref);
+  final items = await client.chatHistory.getSessionHistory(
     sessionId: sessionId,
     limit: 200,
   );
+  return items
+      .where(
+        (entry) => _matchesActiveRole(
+          activeRole: activeRole,
+          itemRole: entry.role,
+        ),
+      )
+      .toList();
 });
 
 final chatHistoryDeleteProvider = FutureProvider.family<bool, String>((

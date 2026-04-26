@@ -79,12 +79,31 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
   }
 
   List<String> _roleSuggestions() {
+    final selectedRole = ref.read(authProvider.notifier).selectedRole;
     final scopes = ref.read(authProvider)?.scopeNames ?? const [];
-    if (scopes.contains('admin')) {
+    if (selectedRole == 'admin' || scopes.contains('admin')) {
       return [
         'Generate schedule',
         'Show schedule conflicts',
         'Find free room',
+      ];
+    }
+    if (selectedRole == 'faculty') {
+      return [
+        'Show my schedule',
+        'Show my teaching load this term',
+        'Show my timetable for this week',
+        'Do I have any schedule conflicts?',
+        'What is my next class?',
+      ];
+    }
+    if (selectedRole == 'student') {
+      return [
+        'Show our section schedule',
+        'Show our class timetable this week',
+        'Where is my next class?',
+        'Do we have any schedule conflicts?',
+        'Which room is assigned for our next class?',
       ];
     }
     if (scopes.contains('faculty')) {
@@ -611,10 +630,19 @@ class _NLPQueryDialogState extends ConsumerState<NLPQueryDialog> {
   }
 
   String _historyLabel(UserInfo? auth) {
+    final selectedRole = ref.read(authProvider.notifier).selectedRole;
     final scopes = auth?.scopeNames ?? const [];
-    if (scopes.contains('admin')) return 'Admin History';
-    if (scopes.contains('faculty')) return 'Faculty History';
-    if (scopes.contains('student')) return 'Student History';
+    if (selectedRole == 'admin' || scopes.contains('admin') && selectedRole == null) {
+      return 'Admin History';
+    }
+    if (selectedRole == 'faculty' ||
+        scopes.contains('faculty') && selectedRole == null) {
+      return 'Faculty History';
+    }
+    if (selectedRole == 'student' ||
+        scopes.contains('student') && selectedRole == null) {
+      return 'Student History';
+    }
     return 'History';
   }
 

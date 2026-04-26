@@ -43,8 +43,18 @@ class NLPEndpoint extends Endpoint {
 
       final resolvedSessionId = sessionId?.trim().isNotEmpty == true
           ? sessionId!.trim()
-          : _generateSessionId();
-      final role = _resolveRole(authInfo.scopes);
+          : _generateSessionId(
+              _resolveRole(
+                authInfo.scopes,
+                sessionId: sessionId,
+                sessionTitle: sessionTitle,
+              ),
+            );
+      final role = _resolveRole(
+        authInfo.scopes,
+        sessionId: resolvedSessionId,
+        sessionTitle: sessionTitle,
+      );
       final resolvedSessionTitle =
           sessionTitle?.trim().isNotEmpty == true
               ? sessionTitle!.trim()
@@ -102,12 +112,16 @@ class NLPEndpoint extends Endpoint {
     String? intent,
     String? metadataJson,
   }) async {
-    final role = _resolveRole(authInfo.scopes);
+    final resolvedRole = _resolveRole(
+      authInfo.scopes,
+      sessionId: sessionId,
+      sessionTitle: sessionTitle,
+    );
     await ChatHistory.db.insertRow(
       session,
       ChatHistory(
         userId: authInfo.userIdentifier.toString(),
-        role: role,
+        role: resolvedRole,
         sessionId: sessionId,
         sessionTitle: sessionTitle,
         sender: sender,
@@ -119,7 +133,25 @@ class NLPEndpoint extends Endpoint {
     );
   }
 
-  String _resolveRole(Set<Scope> scopes) {
+  String _resolveRole(
+    Set<Scope> scopes, {
+    String? sessionId,
+    String? sessionTitle,
+  }) {
+    final sessionIdLower = sessionId?.trim().toLowerCase();
+    if (sessionIdLower != null && sessionIdLower.isNotEmpty) {
+      if (sessionIdLower.startsWith('admin_chat_')) return 'admin';
+      if (sessionIdLower.startsWith('faculty_chat_')) return 'faculty';
+      if (sessionIdLower.startsWith('student_chat_')) return 'student';
+    }
+
+    final sessionTitleLower = sessionTitle?.trim().toLowerCase();
+    if (sessionTitleLower != null && sessionTitleLower.isNotEmpty) {
+      if (sessionTitleLower.startsWith('admin chat ')) return 'admin';
+      if (sessionTitleLower.startsWith('faculty chat ')) return 'faculty';
+      if (sessionTitleLower.startsWith('student chat ')) return 'student';
+    }
+
     if (scopes.any((s) => s.name == 'admin')) return 'admin';
     if (scopes.any((s) => s.name == 'faculty')) return 'faculty';
     if (scopes.any((s) => s.name == 'student')) return 'student';
@@ -142,7 +174,13 @@ class NLPEndpoint extends Endpoint {
     }
   }
 
-  String _generateSessionId() {
-    return 'chat_${DateTime.now().microsecondsSinceEpoch}';
+  String _generateSessionId(String role) {
+    final safeRole = switch (role) {
+      'admin' => 'admin',
+      'faculty' => 'faculty',
+      'student' => 'student',
+      _ => 'chat',
+    };
+    return '${safeRole}_chat_${DateTime.now().microsecondsSinceEpoch}';
   }
 }

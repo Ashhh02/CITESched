@@ -132,7 +132,11 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     } catch (e) {
       if (!mounted) return;
       _closeDialogIfMounted();
-      AppErrorDialog.show(context, e);
+      AppErrorDialog.show(
+        context,
+        e,
+        actionLabel: 'Pre-check before generating schedule',
+      );
       return;
     }
     if (!mounted) return;
@@ -304,7 +308,11 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     } catch (e) {
       if (!mounted) return;
       _closeDialogIfMounted();
-      AppErrorDialog.show(context, e);
+      AppErrorDialog.show(
+        context,
+        e,
+        actionLabel: 'Generate all schedules',
+      );
     }
   }
 
@@ -446,7 +454,11 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     } catch (e) {
       if (!mounted) return;
       _closeDialogIfMounted();
-      AppErrorDialog.show(context, e);
+      AppErrorDialog.show(
+        context,
+        e,
+        actionLabel: 'Generate schedule for ${selected.first.name}',
+      );
     }
   }
 
@@ -766,6 +778,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     required TimetableFilterRequest currentFilter,
     required Color bgColor,
     required bool isMobile,
+    required bool isDark,
   }) {
     final availabilities = currentFilter.facultyId != null
         ? ref
@@ -787,43 +800,49 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
       isInstructorView: isInstructorView,
     );
 
+    final calendarHeight = isMobile
+        ? (MediaQuery.of(context).size.height * 0.72).clamp(520.0, 760.0)
+        : 980.0;
+    final calendarCard = CalendarViewCard(
+      title: _weeklyTimetableTitle,
+      maroonColor: maroonColor,
+      cardBg: isDark ? const Color(0xFF1E293B) : Colors.white,
+      isDark: isDark,
+      calendarHeight: calendarHeight,
+      onFullScreen: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => FullScreenCalendarScaffold(
+            title: _weeklyTimetableTitle,
+            backgroundColor: bgColor,
+            useMaxWidthConstraint: false,
+            child: WeeklyCalendarView(
+              schedules: schedules,
+              maroonColor: maroonColor,
+              availabilities: availabilities,
+              selectedFaculty: selectedFaculty,
+              isInstructorView: isInstructorView,
+              onEdit: _openEditSchedule,
+            ),
+          ),
+        ),
+      ),
+      child: calendar,
+    );
+
     if (isMobile) {
-      final calendarHeight =
-          (MediaQuery.of(context).size.height * 0.65).clamp(420.0, 720.0);
       return Column(
         children: [
           if (isInstructorView && schedules.isNotEmpty)
             _buildInstructorSummary(schedules),
-          Align(
-            alignment: Alignment.centerRight,
-            child: _buildFullScreenButton(
-              schedules: schedules,
-              availabilities: availabilities,
-              selectedFaculty: selectedFaculty,
-              bgColor: bgColor,
-              isInstructorView: isInstructorView,
-            ),
-          ),
-          SizedBox(height: calendarHeight, child: calendar),
+          calendarCard,
         ],
       );
     }
-
     return Column(
       children: [
         if (isInstructorView && schedules.isNotEmpty)
           _buildInstructorSummary(schedules),
-        Align(
-          alignment: Alignment.centerRight,
-          child: _buildFullScreenButton(
-            schedules: schedules,
-            availabilities: availabilities,
-            selectedFaculty: selectedFaculty,
-            bgColor: bgColor,
-            isInstructorView: isInstructorView,
-          ),
-        ),
-        Expanded(child: calendar),
+        Expanded(child: calendarCard),
       ],
     );
   }
@@ -867,6 +886,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                         currentFilter: currentFilter,
                         bgColor: bgColor,
                         isMobile: true,
+                        isDark: isDark,
                       );
                     },
                     loading: () =>
@@ -916,6 +936,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                               currentFilter: currentFilter,
                               bgColor: bgColor,
                               isMobile: false,
+                              isDark: isDark,
                             );
                           },
                             loading: () => const Center(

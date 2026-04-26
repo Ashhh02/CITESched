@@ -2,6 +2,79 @@ import 'package:citesched_client/citesched_client.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+class CalendarViewCard extends StatelessWidget {
+  final String title;
+  final Color maroonColor;
+  final Color cardBg;
+  final bool isDark;
+  final double calendarHeight;
+  final VoidCallback? onFullScreen;
+  final Widget child;
+
+  const CalendarViewCard({
+    super.key,
+    required this.title,
+    required this.maroonColor,
+    required this.cardBg,
+    required this.isDark,
+    required this.calendarHeight,
+    required this.child,
+    this.onFullScreen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    return SizedBox(
+      width: double.infinity,
+      height: calendarHeight,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(isMobile ? 16 : 20),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Icon(Icons.calendar_view_week_rounded, color: maroonColor),
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: isMobile ? 18 : 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (onFullScreen != null)
+                  TextButton.icon(
+                    onPressed: onFullScreen,
+                    icon: const Icon(Icons.fullscreen_rounded),
+                    label: Text(
+                      'Full Screen',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(child: child),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class WeeklyCalendarView extends StatefulWidget {
   final List<ScheduleInfo> schedules;
   final List<FacultyAvailability>? availabilities;
@@ -10,6 +83,7 @@ class WeeklyCalendarView extends StatefulWidget {
   final bool isInstructorView;
   final Faculty? selectedFaculty;
   final bool isStudentView;
+  final double dayWidth;
 
   const WeeklyCalendarView({
     super.key,
@@ -20,6 +94,7 @@ class WeeklyCalendarView extends StatefulWidget {
     this.selectedFaculty,
     this.onEdit,
     this.isStudentView = false,
+    this.dayWidth = 150,
   });
 
   @override
@@ -30,6 +105,10 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
   final ScrollController _verticalController = ScrollController();
   final ScrollController _horizontalController = ScrollController();
   static const String _lunchLabel = 'LUNCH TIME';
+  static const Color _lectureFillColor = Color(0xFF0B5D2A);
+  static const Color _lectureBorderColor = Color(0xFF16A34A);
+  static const Color _laboratoryFillColor = Color(0xFF0B3A82);
+  static const Color _laboratoryBorderColor = Color(0xFF2563EB);
 
   List<ScheduleInfo> get schedules => widget.schedules;
   List<FacultyAvailability>? get availabilities => widget.availabilities;
@@ -38,6 +117,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
   bool get isInstructorView => widget.isInstructorView;
   Faculty? get selectedFaculty => widget.selectedFaculty;
   bool get isStudentView => widget.isStudentView;
+  double get dayWidth => widget.dayWidth;
 
   @override
   void initState() {
@@ -95,7 +175,6 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
 
     // Config
     final double hourHeight = isStudentView ? 64.0 : 100.0;
-    const double dayWidth = 150.0;
     const int startHour = 7;
     const int endHour = 21; // 7AM–9PM
     final List<DayOfWeek> days = [
@@ -110,24 +189,39 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
     return LayoutBuilder(
       builder: (context, constraints) {
         const headerHeight = 40.0;
-        final totalWidth = 80 + (dayWidth * days.length);
+        const legendHeight = 30.0;
+        const headerSpacing = 8.0;
+        final availableWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : 0.0;
+        final stretchedDayWidth = availableWidth > 80
+            ? ((availableWidth - 80) / days.length)
+            : dayWidth;
+        final effectiveDayWidth = stretchedDayWidth > dayWidth
+            ? stretchedDayWidth
+            : dayWidth;
+        final totalWidth = 80 + (effectiveDayWidth * days.length);
         final fullGridHeight = hourHeight * (endHour - startHour + 1);
-        final availableHeight = constraints.maxHeight.isFinite
+        final hasBoundedHeight = constraints.maxHeight.isFinite;
+        final availableHeight = hasBoundedHeight
             ? constraints.maxHeight
-            : fullGridHeight + headerHeight;
-        final gridViewportHeight = (availableHeight - headerHeight).clamp(
-          0.0,
-          double.infinity,
-        );
+            : fullGridHeight + headerHeight + legendHeight + headerSpacing;
+        final reservedHeight = headerHeight + legendHeight + headerSpacing;
+        final gridViewportHeight = hasBoundedHeight
+            ? (availableHeight - reservedHeight).clamp(0.0, double.infinity)
+            : fullGridHeight;
 
         return SingleChildScrollView(
           controller: _horizontalController,
           scrollDirection: Axis.horizontal,
           child: SizedBox(
             width: totalWidth,
+            height: hasBoundedHeight ? availableHeight : null,
             child: Column(
               children: [
-                _buildDayHeaderRow(days, dayWidth, gridColor),
+                _buildLegendRow(),
+                const SizedBox(height: headerSpacing),
+                _buildDayHeaderRow(days, effectiveDayWidth, gridColor),
                 SizedBox(
                   height: gridViewportHeight,
                   child: SingleChildScrollView(
@@ -145,19 +239,18 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                             startHour,
                             endHour,
                             hourHeight,
-                            dayWidth,
+                            effectiveDayWidth,
                             gridColor,
                           ),
 
-                          // 1.5 Lunch Time Cardbox (Instructor/Admin view)
-                          if (!isStudentView)
-                            _buildLunchCardbox(
-                              days,
-                              startHour,
-                              endHour,
-                              hourHeight,
-                              dayWidth,
-                            ),
+                          // 1.5 Lunch Time Cardbox (shared across admin, faculty, and student views)
+                          _buildLunchCardbox(
+                            days,
+                            startHour,
+                            endHour,
+                            hourHeight,
+                            effectiveDayWidth,
+                          ),
 
                           // 2. Preference Cardboxes (High Visibility Black/Faded Highlight)
                           if (availabilities != null)
@@ -169,7 +262,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                                     days,
                                     startHour,
                                     hourHeight,
-                                    dayWidth,
+                                    effectiveDayWidth,
                                   ),
                                 ),
 
@@ -181,7 +274,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                                 days,
                                 startHour,
                                 hourHeight,
-                                dayWidth,
+                                effectiveDayWidth,
                               ),
                             ),
 
@@ -193,7 +286,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                               days,
                               startHour,
                               hourHeight,
-                              dayWidth,
+                              effectiveDayWidth,
                             ),
                           ),
                         ],
@@ -242,6 +335,68 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLegendRow() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          _buildLegendChip(
+            label: 'LECTURE',
+            fillColor: _lectureFillColor,
+            borderColor: _lectureBorderColor,
+          ),
+          _buildLegendChip(
+            label: 'LABORATORY',
+            fillColor: _laboratoryFillColor,
+            borderColor: _laboratoryBorderColor,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendChip({
+    required String label,
+    required Color fillColor,
+    required Color borderColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              color: fillColor,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: borderColor, width: 1.2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF334155),
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -643,20 +798,18 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
 
     // Styles
     final Color typeFillColor = classType == 'LAB'
-        ? const Color(0xFF0B3A82) // blue fill for lab
-        : const Color(0xFF0B5D2A); // green fill for lecture
+        ? _laboratoryFillColor
+        : _lectureFillColor;
     final Color blockColor = _blockFillColor(
-      isStudentView: isStudentView,
       hasConflict: hasConflict,
       typeFillColor: typeFillColor,
     );
 
     final Color typeOutlineColor = classType == 'LAB'
-        ? const Color(0xFF2563EB) // blue for lab
-        : const Color(0xFF16A34A); // green for lecture
+        ? _laboratoryBorderColor
+        : _lectureBorderColor;
 
     final Color borderColor = _blockBorderColor(
-      isStudentView: isStudentView,
       hasConflict: hasConflict,
       typeOutlineColor: typeOutlineColor,
     );
@@ -790,22 +943,18 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
   }
 
   Color _blockFillColor({
-    required bool isStudentView,
     required bool hasConflict,
     required Color typeFillColor,
   }) {
-    if (isStudentView) return Colors.white;
     if (hasConflict) return const Color(0xFF2D0000);
     return typeFillColor;
   }
 
   Color _blockBorderColor({
-    required bool isStudentView,
     required bool hasConflict,
     required Color typeOutlineColor,
   }) {
     if (hasConflict) return Colors.red.shade400;
-    if (isStudentView) return Colors.black87;
     return typeOutlineColor;
   }
 
@@ -869,8 +1018,8 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               fontWeight: FontWeight.w800,
-              fontSize: 10,
-              color: isStudentView ? Colors.black : Colors.white,
+              fontSize: 15,
+              color: Colors.white,
             ),
           ),
         ),
@@ -880,8 +1029,8 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
           textAlign: TextAlign.center,
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
-            fontSize: 9,
-            color: isStudentView ? Colors.black87 : Colors.white70,
+            fontSize: 12,
+            color: Colors.white70,
             letterSpacing: 0.8,
           ),
         ),
@@ -897,8 +1046,8 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w700,
-                  fontSize: 10,
-                  color: isStudentView ? Colors.black : Colors.white,
+                  fontSize: 15,
+                  color: Colors.white,
                   height: 1.0,
                 ),
               ),
@@ -907,11 +1056,9 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
-                  fontSize: 9,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: isStudentView
-                      ? Colors.black87
-                      : Colors.white.withValues(alpha: 0.85),
+                  color: Colors.white.withValues(alpha: 0.85),
                   height: 1.0,
                 ),
               ),
@@ -920,8 +1067,8 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
-                  fontSize: 8,
-                  color: isStudentView ? Colors.black87 : Colors.white70,
+                  fontSize: 11,
+                  color: Colors.white70,
                   height: 1.0,
                 ),
               ),
@@ -930,8 +1077,8 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
-                  fontSize: 8,
-                  color: isStudentView ? Colors.black87 : Colors.white70,
+                  fontSize: 11,
+                  color: Colors.white70,
                   height: 1.0,
                 ),
               ),
@@ -944,7 +1091,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
             child: Icon(
               Icons.warning_amber_rounded,
               size: 14,
-              color: isStudentView ? Colors.red[700] : Colors.red[300],
+              color: Colors.red[300],
             ),
           ),
       ],
@@ -1021,17 +1168,18 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Close'),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              onEdit?.call(schedule);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: maroonColor,
-              foregroundColor: Colors.white,
+          if (onEdit != null)
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                onEdit?.call(schedule);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: maroonColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Edit Schedule'),
             ),
-            child: const Text('Edit Schedule'),
-          ),
         ],
       ),
     );

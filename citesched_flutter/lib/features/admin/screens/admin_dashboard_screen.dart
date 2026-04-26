@@ -87,12 +87,14 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
-  Timer? _refreshTimer;
   final FlutterSecureStorage _notificationStorage = const FlutterSecureStorage();
   final Set<int> _readStudentNotificationIds = <int>{};
   final Set<int> _readFacultyNotificationIds = <int>{};
+  final Set<int> _dismissedStudentNotificationIds = <int>{};
+  final Set<int> _dismissedFacultyNotificationIds = <int>{};
   final Set<String> _selectedNotificationKeys = <String>{};
   String? _notificationStorageOwnerKey;
+  bool _notificationStateLoaded = false;
 
   String _notificationStorageKey(String ownerKey) =>
       'admin_notification_reads_v1:$ownerKey';
@@ -111,17 +113,46 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     return id != null && _readFacultyNotificationIds.contains(id);
   }
 
+  bool _isStudentNotificationDismissed(Student student) {
+    final id = student.id;
+    return id != null && _dismissedStudentNotificationIds.contains(id);
+  }
+
+  bool _isFacultyNotificationDismissed(Faculty faculty) {
+    final id = faculty.id;
+    return id != null && _dismissedFacultyNotificationIds.contains(id);
+  }
+
+  List<Student> _visibleStudentNotifications(List<Student> recentStudents) {
+    return recentStudents
+        .where((student) => !_isStudentNotificationDismissed(student))
+        .toList();
+  }
+
+  List<Faculty> _visibleFacultyNotifications(List<Faculty> pendingFaculty) {
+    return pendingFaculty
+        .where((faculty) => !_isFacultyNotificationDismissed(faculty))
+        .toList();
+  }
+
   Future<void> _loadNotificationStateForAdmin(String? email) async {
     final ownerKey = email?.trim().toLowerCase();
-    if (!mounted || ownerKey == _notificationStorageOwnerKey) return;
+    if (!mounted) return;
+    if (ownerKey == _notificationStorageOwnerKey && _notificationStateLoaded) {
+      return;
+    }
 
     _notificationStorageOwnerKey = ownerKey;
+    _notificationStateLoaded = false;
     if (ownerKey == null || ownerKey.isEmpty) {
       if (!mounted) return;
       setState(() {
         _readStudentNotificationIds.clear();
         _readFacultyNotificationIds.clear();
+        _dismissedStudentNotificationIds.clear();
+        _dismissedFacultyNotificationIds.clear();
         _selectedNotificationKeys.clear();
+        _notificationStateLoaded = true;
       });
       return;
     }
@@ -137,6 +168,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           const <dynamic>[];
       final facultyItems =
           (decoded is Map<String, dynamic> ? decoded['faculty'] : null)
+              as List<dynamic>? ??
+          const <dynamic>[];
+      final dismissedStudentItems =
+          (decoded is Map<String, dynamic> ? decoded['dismissedStudents'] : null)
+              as List<dynamic>? ??
+          const <dynamic>[];
+      final dismissedFacultyItems =
+          (decoded is Map<String, dynamic> ? decoded['dismissedFaculty'] : null)
               as List<dynamic>? ??
           const <dynamic>[];
 
@@ -157,25 +196,47 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 .map((item) => item is int ? item : int.tryParse('$item'))
                 .whereType<int>(),
           );
+        _dismissedStudentNotificationIds
+          ..clear()
+          ..addAll(
+            dismissedStudentItems
+                .map((item) => item is int ? item : int.tryParse('$item'))
+                .whereType<int>(),
+          );
+        _dismissedFacultyNotificationIds
+          ..clear()
+          ..addAll(
+            dismissedFacultyItems
+                .map((item) => item is int ? item : int.tryParse('$item'))
+                .whereType<int>(),
+          );
         _selectedNotificationKeys.clear();
+        _notificationStateLoaded = true;
       });
     } catch (_) {
       if (!mounted || _notificationStorageOwnerKey != ownerKey) return;
       setState(() {
         _readStudentNotificationIds.clear();
         _readFacultyNotificationIds.clear();
+        _dismissedStudentNotificationIds.clear();
+        _dismissedFacultyNotificationIds.clear();
         _selectedNotificationKeys.clear();
+        _notificationStateLoaded = true;
       });
     }
   }
 
   Future<void> _persistNotificationState() async {
     final ownerKey = _notificationStorageOwnerKey;
-    if (ownerKey == null || ownerKey.isEmpty) return;
+    if (!_notificationStateLoaded || ownerKey == null || ownerKey.isEmpty) {
+      return;
+    }
 
     final payload = jsonEncode({
       'students': _readStudentNotificationIds.toList()..sort(),
       'faculty': _readFacultyNotificationIds.toList()..sort(),
+      'dismissedStudents': _dismissedStudentNotificationIds.toList()..sort(),
+      'dismissedFaculty': _dismissedFacultyNotificationIds.toList()..sort(),
     });
 
     await _notificationStorage.write(
@@ -210,11 +271,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     required List<Student> recentStudents,
     required List<Faculty> pendingFaculty,
   }) {
+    if (!_notificationStateLoaded) return;
+
     final studentIds = recentStudents.map((item) => item.id).whereType<int>().toSet();
     final facultyIds = pendingFaculty.map((item) => item.id).whereType<int>().toSet();
 
     _readStudentNotificationIds.removeWhere((id) => !studentIds.contains(id));
     _readFacultyNotificationIds.removeWhere((id) => !facultyIds.contains(id));
+    _dismissedStudentNotificationIds.removeWhere((id) => !studentIds.contains(id));
+    _dismissedFacultyNotificationIds.removeWhere((id) => !facultyIds.contains(id));
     _selectedNotificationKeys.removeWhere((key) {
       if (key.startsWith('student:')) {
         return !recentStudents.any((item) => _studentNotificationKey(item) == key);
@@ -298,6 +363,58 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         final id = faculty.id;
         if (id != null &&
             _selectedNotificationKeys.contains(_facultyNotificationKey(faculty))) {
+          _readFacultyNotificationIds.remove(id);
+        }
+      }
+
+      _selectedNotificationKeys.clear();
+    });
+    unawaited(_persistNotificationState());
+  }
+
+  void _deleteStudentNotification(Student student) {
+    final id = student.id;
+    if (id == null) return;
+
+    setState(() {
+      _dismissedStudentNotificationIds.add(id);
+      _readStudentNotificationIds.remove(id);
+      _selectedNotificationKeys.remove(_studentNotificationKey(student));
+    });
+    unawaited(_persistNotificationState());
+  }
+
+  void _deleteFacultyNotification(Faculty faculty) {
+    final id = faculty.id;
+    if (id == null) return;
+
+    setState(() {
+      _dismissedFacultyNotificationIds.add(id);
+      _readFacultyNotificationIds.remove(id);
+      _selectedNotificationKeys.remove(_facultyNotificationKey(faculty));
+    });
+    unawaited(_persistNotificationState());
+  }
+
+  void _deleteSelectedNotifications({
+    required List<Student> recentStudents,
+    required List<Faculty> pendingFaculty,
+  }) {
+    setState(() {
+      for (final student in recentStudents) {
+        final id = student.id;
+        if (id != null &&
+            _selectedNotificationKeys.contains(_studentNotificationKey(student))) {
+          _dismissedStudentNotificationIds.add(id);
+          _readStudentNotificationIds.remove(id);
+        }
+      }
+
+      for (final faculty in pendingFaculty) {
+        final id = faculty.id;
+        if (id != null &&
+            _selectedNotificationKeys.contains(_facultyNotificationKey(faculty))) {
+          _dismissedFacultyNotificationIds.add(id);
           _readFacultyNotificationIds.remove(id);
         }
       }
@@ -419,16 +536,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     ref.listenManual<UserInfo?>(authProvider, (previous, next) {
       unawaited(_loadNotificationStateForAdmin(next?.email));
     });
-    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      ref.invalidate(dashboardStatsProvider);
-      ref.invalidate(pendingFacultyRequestsProvider);
-      ref.invalidate(recentStudentSignupsProvider);
-    });
+    final adminEmail = ref.read(authProvider)?.email;
+    unawaited(_loadNotificationStateForAdmin(adminEmail));
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
     super.dispose();
   }
 
@@ -436,9 +549,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     AsyncValue<List<Faculty>> pendingFacultyAsync,
     AsyncValue<List<Student>> recentStudentAsync,
   ) {
-    final adminEmail = ref.read(authProvider)?.email;
-    unawaited(_loadNotificationStateForAdmin(adminEmail));
-
     final pending = pendingFacultyAsync.maybeWhen(
       data: (items) => items,
       orElse: () => const <Faculty>[],
@@ -451,8 +561,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       recentStudents: recentStudents,
       pendingFaculty: pending,
     );
-    final count =
-        _unreadFacultyCount(pending) + _unreadStudentCount(recentStudents);
+    final visiblePendingFaculty = _visibleFacultyNotifications(pending);
+    final visibleRecentStudents = _visibleStudentNotifications(recentStudents);
+    final count = _unreadFacultyCount(visiblePendingFaculty) +
+        _unreadStudentCount(visibleRecentStudents);
 
     return Stack(
       clipBehavior: Clip.none,
@@ -460,8 +572,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         IconButton(
           tooltip: 'Admin notifications',
           onPressed: () => _openAdminNotificationsInbox(
-            pendingFaculty: pending,
-            recentStudents: recentStudents,
+            pendingFaculty: visiblePendingFaculty,
+            recentStudents: visibleRecentStudents,
           ),
           icon: const Icon(
             Icons.notifications_active_rounded,
@@ -1181,10 +1293,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     required List<Faculty> pendingFaculty,
     required List<Student> recentStudents,
   }) {
-    _pruneNotificationState(
-      recentStudents: recentStudents,
-      pendingFaculty: pendingFaculty,
-    );
     var selectedSection = pendingFaculty.isNotEmpty && recentStudents.isEmpty
         ? 'faculty'
         : 'students';
@@ -1306,6 +1414,23 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFF720045),
                                 side: const BorderSide(color: Color(0xFF720045)),
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: hasSelection
+                                  ? () {
+                                      _deleteSelectedNotifications(
+                                        recentStudents: recentStudents,
+                                        pendingFaculty: pendingFaculty,
+                                      );
+                                      setDialogState(() {});
+                                    }
+                                  : null,
+                              icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                              label: const Text('Delete selected'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFB91C1C),
+                                side: const BorderSide(color: Color(0xFFB91C1C)),
                               ),
                             ),
                             ElevatedButton.icon(
@@ -1715,6 +1840,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       ),
                     ),
                     _buildNotificationStatusChip(isRead: isRead),
+                    IconButton(
+                      tooltip: 'Delete notification',
+                      onPressed: () {
+                        _deleteStudentNotification(student);
+                        setDialogState(() {});
+                      },
+                      icon: const Icon(
+                        Icons.delete_outline_rounded,
+                        size: 18,
+                        color: Color(0xFFB91C1C),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -1817,6 +1954,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       ),
                     ),
                     _buildNotificationStatusChip(isRead: isRead),
+                    IconButton(
+                      tooltip: 'Delete notification',
+                      onPressed: () {
+                        _deleteFacultyNotification(item);
+                        setDialogState(() {});
+                      },
+                      icon: const Icon(
+                        Icons.delete_outline_rounded,
+                        size: 18,
+                        color: Color(0xFFB91C1C),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 2),
