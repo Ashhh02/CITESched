@@ -493,15 +493,14 @@ class _SubjectManagementScreenState
     final conflictsAsync = ref.watch(allConflictsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF0F172A) : Colors.white;
-    final isMobile = ResponsiveHelper.isMobile(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final useStackedHeader = screenWidth < 1100;
-    final useCompactList = screenWidth < 1280;
-
     return Scaffold(
       backgroundColor: bgColor,
       body: LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
+        builder: (context, constraints) {
+          final useStackedHeader = constraints.maxWidth < 1100;
+          final useCompactList = constraints.maxWidth < 1280;
+
+          return SingleChildScrollView(
           padding: EdgeInsets.all(useStackedHeader ? 16 : 32),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
@@ -608,9 +607,9 @@ class _SubjectManagementScreenState
                           ],
                         )
                       : Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
+                            Expanded(
+                              child: Row(
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(16),
@@ -630,56 +629,70 @@ class _SubjectManagementScreenState
                                   ),
                                 ),
                                 const SizedBox(width: 24),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Subject Management',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        letterSpacing: -1,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Manage academic subjects, curricula, and units',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        color: Colors.white.withValues(
-                                          alpha: 0.8,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Subject Management',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          letterSpacing: -1,
                                         ),
-                                        letterSpacing: 0.2,
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Manage academic subjects, curricula, and units',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 16,
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                          letterSpacing: 0.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
+                            ),
                             const SizedBox(width: 16),
-                            ElevatedButton.icon(
-                              onPressed: _showAddSubjectModal,
-                              icon: const Icon(Icons.add_rounded, size: 24),
-                              label: Text(
-                                kAddNewSubjectLabel,
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                  letterSpacing: 0.5,
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: ElevatedButton.icon(
+                                  onPressed: _showAddSubjectModal,
+                                  icon: const Icon(Icons.add_rounded, size: 24),
+                                  label: Text(
+                                    kAddNewSubjectLabel,
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: maroonColor,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 28,
+                                      vertical: 18,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    elevation: 0,
+                                  ),
                                 ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: maroonColor,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 28,
-                                  vertical: 18,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                elevation: 0,
                               ),
                             ),
                           ],
@@ -1170,7 +1183,8 @@ class _SubjectManagementScreenState
               ],
             ),
           ),
-        ),
+        );
+        },
       ),
     );
   }

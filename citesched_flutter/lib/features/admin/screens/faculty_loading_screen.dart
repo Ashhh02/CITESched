@@ -118,6 +118,29 @@ List<SubjectType> _effectiveAssignmentTypes(
   return subjectTypes;
 }
 
+List<String> _componentTagsForTypes(List<SubjectType>? types) {
+  if (types == null || types.isEmpty) return const ['lecture'];
+
+  final hasLecture = types.contains(SubjectType.lecture);
+  final hasLab = types.contains(SubjectType.laboratory);
+  final hasBlended = types.contains(SubjectType.blended);
+
+  if (hasBlended || (hasLecture && hasLab)) {
+    return const ['lecture', 'laboratory'];
+  }
+  if (hasLab) return const ['laboratory'];
+  return const ['lecture'];
+}
+
+bool _hasOverlappingAssignmentComponent(
+  List<SubjectType>? existingTypes,
+  List<SubjectType> newTypes,
+) {
+  final existingTags = _componentTagsForTypes(existingTypes).toSet();
+  final newTags = _componentTagsForTypes(newTypes).toSet();
+  return existingTags.intersection(newTags).isNotEmpty;
+}
+
 Widget _buildSubjectTypeDisplay({
   required List<SubjectType> types,
   required Color accentColor,
@@ -583,10 +606,12 @@ bool _isSameSubjectDifferentFaculty({
   required Schedule schedule,
   required int subjectId,
   required int facultyId,
+  required List<SubjectType> effectiveTypes,
 }) {
   return sameSection &&
       schedule.subjectId == subjectId &&
-      schedule.facultyId != facultyId;
+      schedule.facultyId != facultyId &&
+      _hasOverlappingAssignmentComponent(schedule.loadTypes, effectiveTypes);
 }
 
 bool _isSameAssignment({
@@ -594,10 +619,12 @@ bool _isSameAssignment({
   required Schedule schedule,
   required int subjectId,
   required int facultyId,
+  required List<SubjectType> effectiveTypes,
 }) {
   return sameSection &&
       schedule.subjectId == subjectId &&
-      schedule.facultyId == facultyId;
+      schedule.facultyId == facultyId &&
+      _hasOverlappingAssignmentComponent(schedule.loadTypes, effectiveTypes);
 }
 
 bool _isFacultyTimeConflict({
@@ -653,6 +680,7 @@ String? _detectAssignmentConflict({
   required List<Room> roomList,
   required List<Timeslot> timeslotList,
   required List<Section> sectionList,
+  required List<SubjectType> effectiveTypes,
 }) {
   final facultyName = _facultyNameById(facultyList, facultyId);
   final subjectName = _subjectNameById(subjectList, subjectId);
@@ -680,6 +708,7 @@ String? _detectAssignmentConflict({
       schedule: schedule,
       subjectId: subjectId,
       facultyId: facultyId,
+      effectiveTypes: effectiveTypes,
     )) {
       final otherFaculty = _facultyNameById(facultyList, schedule.facultyId);
       return 'Subject $subjectName is already assigned to $otherFaculty for $sectionLabel.';
@@ -690,6 +719,7 @@ String? _detectAssignmentConflict({
       schedule: schedule,
       subjectId: subjectId,
       facultyId: facultyId,
+      effectiveTypes: effectiveTypes,
     )) {
       return 'This assignment already exists for $facultyName in $sectionLabel.';
     }
@@ -1847,10 +1877,6 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
-    final isMobile = ResponsiveHelper.isMobile(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final useStackedHeader = screenWidth < 1100;
-
     return DefaultTabController(
       length: 2,
       child: Builder(
@@ -1865,7 +1891,10 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
               return Scaffold(
                 backgroundColor: bgColor,
                 body: LayoutBuilder(
-                  builder: (context, constraints) => SingleChildScrollView(
+                  builder: (context, constraints) {
+                    final useStackedHeader = constraints.maxWidth < 1100;
+
+                    return SingleChildScrollView(
                     padding: EdgeInsets.all(useStackedHeader ? 16 : 32),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
@@ -1911,7 +1940,8 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
                         ],
                       ),
                     ),
-                  ),
+                  );
+                  },
                 ),
               );
             },
@@ -1989,50 +2019,62 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
               ],
             )
           : Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Faculty Loading',
-                      style: GoogleFonts.poppins(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Faculty Loading',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Manage faculty schedule assignments and workload',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.85),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Manage faculty schedule assignments and workload',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                ElevatedButton.icon(
-                  onPressed: _showNewAssignmentModal,
-                  icon: const Icon(Icons.add_rounded, size: 20),
-                  label: Text(
-                    'Assign Subject',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
+                    ],
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: maroonColor,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 18,
+                ),
+                const SizedBox(width: 16),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton.icon(
+                      onPressed: _showNewAssignmentModal,
+                      icon: const Icon(Icons.add_rounded, size: 20),
+                      label: Text(
+                        'Assign Subject',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: maroonColor,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 18,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
                   ),
                 ),
               ],
@@ -2245,8 +2287,10 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
     bool isDark,
     Color maroonColor,
   ) {
-    final useCompactList = MediaQuery.of(context).size.width < 1280;
-    return schedulesAsync.when(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useCompactList = constraints.maxWidth < 1280;
+        return schedulesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(
         child: Column(
@@ -3600,6 +3644,8 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
         );
       },
     );
+      },
+    );
   }
 
   Widget _buildFacultySummaryView(
@@ -3626,18 +3672,21 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
     AsyncValue<List<Timeslot>> timeslotsAsync,
     bool isDark,
   ) {
-    final useCompactList = MediaQuery.of(context).size.width < 1280;
-    const maroonColor = Color(0xFF4f003b);
-    final headerBg = isDark
-        ? maroonColor.withValues(alpha: 0.22)
-        : maroonColor.withValues(alpha: 0.08);
-    final rowBgA = isDark ? const Color(0xFF0F172A) : Colors.white;
-    final rowBgB = isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB);
-    final dividerColor = isDark
-        ? Colors.white.withValues(alpha: 0.08)
-        : Colors.black.withValues(alpha: 0.06);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useCompactList = constraints.maxWidth < 1280;
+        const maroonColor = Color(0xFF4f003b);
+        final headerBg = isDark
+            ? maroonColor.withValues(alpha: 0.22)
+            : maroonColor.withValues(alpha: 0.08);
+        final rowBgA = isDark ? const Color(0xFF0F172A) : Colors.white;
+        final rowBgB =
+            isDark ? const Color(0xFF111827) : const Color(0xFFF9FAFB);
+        final dividerColor = isDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : Colors.black.withValues(alpha: 0.06);
 
-    return schedulesAsync.when(
+        return schedulesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(child: Text('Error: $error')),
       data: (schedules) => facultyAsync.when(
@@ -3682,6 +3731,8 @@ class _FacultyLoadingScreenState extends ConsumerState<FacultyLoadingScreen> {
           );
         },
       ),
+      );
+      },
     );
   }
 
@@ -4580,6 +4631,7 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
         roomList: roomList,
         timeslotList: timeslotList,
         sectionList: sections,
+        effectiveTypes: effectiveTypes,
       );
 
       if (conflictMessage != null) {
@@ -5785,6 +5837,7 @@ class _EditAssignmentModalState extends ConsumerState<_EditAssignmentModal> {
         roomList: roomList,
         timeslotList: timeslotList,
         sectionList: sections,
+        effectiveTypes: effectiveTypes,
       );
 
       if (conflictMessage != null) {
