@@ -7,9 +7,22 @@ class AppErrorDialog {
     r'^minified:Class\d+:\s*',
     caseSensitive: false,
   );
+  static final RegExp _serverpodPrefixPattern = RegExp(
+    r'^ServerpodClientException:\s*',
+    caseSensitive: false,
+  );
+  static final RegExp _statusCodeSuffixPattern = RegExp(
+    r',?\s*statusCode\s*=\s*\d+\s*$',
+    caseSensitive: false,
+  );
 
   static String _cleanMessage(String message) {
-    return message.trim().replaceFirst(_minifiedPrefixPattern, '');
+    return message
+        .trim()
+        .replaceFirst(_minifiedPrefixPattern, '')
+        .replaceFirst(_serverpodPrefixPattern, '')
+        .replaceFirst(_statusCodeSuffixPattern, '')
+        .trim();
   }
 
   static String _friendlyMessage(dynamic error) {

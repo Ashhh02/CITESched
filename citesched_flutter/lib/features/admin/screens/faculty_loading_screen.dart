@@ -1231,12 +1231,51 @@ Widget _buildConflictBannerCard({
 /// e.g. "Exception: Schedule validation failed: Faculty is already assigned..."
 ///  -> "Faculty is already assigned..."
 String _parseServerError(Object error) {
+  if (error is ServerpodClientException) {
+    final message = error.message.trim();
+    if (message.isNotEmpty &&
+        message.toLowerCase() != 'internal server error') {
+      return message;
+    }
+
+    switch (error.statusCode) {
+      case 400:
+        return 'The request is invalid. Please review the assignment details and try again.';
+      case 401:
+        return 'Your session has expired. Please sign in again.';
+      case 403:
+        return 'You do not have permission to update faculty loading.';
+      case 404:
+        return 'The schedule record could not be found.';
+      case 500:
+        return 'The server could not save this assignment. Please review the validation details and try again.';
+    }
+  }
+
   var msg = error.toString();
+  if (msg.startsWith('ServerpodClientException: ')) {
+    msg = msg.substring('ServerpodClientException: '.length);
+  }
+  msg = msg.replaceFirst(RegExp(r',?\s*statusCode\s*=\s*\d+\s*$'), '');
   if (msg.startsWith('Exception: ')) msg = msg.substring('Exception: '.length);
   if (msg.startsWith('Schedule validation failed: ')) {
     msg = msg.substring('Schedule validation failed: '.length);
   }
   return msg.trim().isNotEmpty ? msg.trim() : 'An unexpected error occurred.';
+}
+
+String _formatScheduleConflict(ScheduleConflict conflict) {
+  final details = conflict.details?.trim();
+  if (details != null && details.isNotEmpty && details != conflict.message) {
+    return '${conflict.message}: $details';
+  }
+  return conflict.message;
+}
+
+Future<String?> _validateScheduleWithServer(Schedule schedule) async {
+  final conflicts = await client.admin.validateSchedule(schedule);
+  if (conflicts.isEmpty) return null;
+  return conflicts.map(_formatScheduleConflict).join('; ');
 }
 
 /// Shows a styled conflict / validation error dialog.
@@ -4654,6 +4693,14 @@ class _NewAssignmentModalState extends ConsumerState<_NewAssignmentModal> {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
+
+      final serverConflictMessage = await _validateScheduleWithServer(schedule);
+      if (serverConflictMessage != null) {
+        if (mounted) {
+          _showConflictErrorDialog(context, serverConflictMessage);
+        }
+        return;
+      }
 
       await client.admin.createSchedule(schedule);
 
