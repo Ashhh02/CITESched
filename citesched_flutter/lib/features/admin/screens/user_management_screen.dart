@@ -15,6 +15,8 @@ String _programDisplayLabel(Program program) {
       return 'BSIT';
     case Program.emc:
       return 'BSEMC';
+    case Program.both:
+      return 'Both IT and EMC';
   }
 }
 
@@ -1031,14 +1033,14 @@ class _StudentModalState extends ConsumerState<_StudentModal> {
     required List<Section> sections,
     bool isLoading = false,
   }) => _buildSectionDropdownContent(
-        label: label,
-        icon: icon,
-        bgBody: bgBody,
-        textPrimary: textPrimary,
-        textMuted: textMuted,
-        sections: sections,
-        isLoading: isLoading,
-      );
+    label: label,
+    icon: icon,
+    bgBody: bgBody,
+    textPrimary: textPrimary,
+    textMuted: textMuted,
+    sections: sections,
+    isLoading: isLoading,
+  );
 
   Widget _buildSectionDropdownContent({
     required String label,

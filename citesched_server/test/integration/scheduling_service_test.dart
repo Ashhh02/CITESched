@@ -26,7 +26,7 @@ void main() {
         var room = await endpoints.admin.createRoom(
           sessionBuilder,
           Room(
-            name: 'Room 101',
+            name: 'ROOM 1',
             capacity: 30,
             type: RoomType.lecture,
             program: Program.it,
@@ -41,6 +41,7 @@ void main() {
           Subject(
             code: 'CS101',
             name: 'Intro to CS',
+            hours: 1,
             units: 3,
             types: [SubjectType.lecture],
             program: Program.it,
@@ -117,7 +118,7 @@ void main() {
         var room1 = await endpoints.admin.createRoom(
           sessionBuilder,
           Room(
-            name: 'Room 201',
+            name: 'ROOM 1',
             capacity: 30,
             type: RoomType.lecture,
             program: Program.it,
@@ -130,9 +131,9 @@ void main() {
         var room2 = await endpoints.admin.createRoom(
           sessionBuilder,
           Room(
-            name: 'Room 202',
+            name: 'IT LAB',
             capacity: 30,
-            type: RoomType.lecture,
+            type: RoomType.laboratory,
             program: Program.it,
             isActive: true,
             createdAt: DateTime.now(),
@@ -140,13 +141,29 @@ void main() {
           ),
         );
 
-        var subject = await endpoints.admin.createSubject(
+        var lectureSubject = await endpoints.admin.createSubject(
           sessionBuilder,
           Subject(
             code: 'MATH101',
             name: 'Calculus I',
+            hours: 1,
             units: 3,
             types: [SubjectType.lecture],
+            program: Program.it,
+            studentsCount: 30,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        var labSubject = await endpoints.admin.createSubject(
+          sessionBuilder,
+          Subject(
+            code: 'MATH101L',
+            name: 'Calculus I Lab',
+            hours: 1,
+            units: 3,
+            types: [SubjectType.laboratory],
             program: Program.it,
             studentsCount: 30,
             createdAt: DateTime.now(),
@@ -170,7 +187,7 @@ void main() {
         await endpoints.admin.createSchedule(
           sessionBuilder,
           Schedule(
-            subjectId: subject.id!,
+            subjectId: lectureSubject.id!,
             facultyId: faculty.id!,
             roomId: room1.id!,
             timeslotId: timeslot.id!,
@@ -185,7 +202,7 @@ void main() {
           () async => await endpoints.admin.createSchedule(
             sessionBuilder,
             Schedule(
-              subjectId: subject.id!,
+              subjectId: labSubject.id!,
               facultyId: faculty.id!, // Same faculty
               roomId: room2.id!, // Different room
               timeslotId: timeslot.id!, // Same timeslot
@@ -219,7 +236,7 @@ void main() {
         var room = await endpoints.admin.createRoom(
           sessionBuilder,
           Room(
-            name: 'Room 301',
+            name: 'ROOM 1',
             capacity: 30,
             type: RoomType.lecture,
             program: Program.it,
@@ -234,7 +251,8 @@ void main() {
           Subject(
             code: 'CS201',
             name: 'Data Structures',
-            units: 3,
+            hours: 1,
+            units: 1,
             types: [SubjectType.lecture],
             program: Program.it,
             studentsCount: 30,

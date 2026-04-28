@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:citesched_client/citesched_client.dart';
 import 'package:citesched_flutter/features/admin/widgets/admin_create_user_form.dart';
 import 'package:citesched_flutter/features/admin/widgets/admin_header_container.dart';
@@ -8,7 +10,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class UserListModal extends ConsumerStatefulWidget {
-  const UserListModal({super.key});
+  final int initialTabIndex;
+
+  const UserListModal({super.key, this.initialTabIndex = 0});
 
   @override
   ConsumerState<UserListModal> createState() => _UserListModalState();
@@ -28,6 +32,9 @@ class _UserListModalState extends ConsumerState<UserListModal>
       TextEditingController();
   String _facultySearchQuery = '';
   String _studentSearchQuery = '';
+  String? _selectedStudentProgram;
+  int? _selectedStudentYearLevel;
+  String? _selectedStudentSection;
 
   void _archiveFaculty(Faculty faculty) async {
     final confirm = await showDialog<bool>(
@@ -91,7 +98,12 @@ class _UserListModalState extends ConsumerState<UserListModal>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    final initialIndex = widget.initialTabIndex.clamp(0, 1);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: initialIndex,
+    );
     _fetchData();
   }
 
@@ -110,6 +122,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
           _faculty = faculty;
           _students = students;
           _userRoles = roles;
+          _normalizeStudentFilters();
           _isLoading = false;
         });
       }
@@ -146,12 +159,23 @@ class _UserListModalState extends ConsumerState<UserListModal>
   List<Student> get _sortedStudents {
     final query = _studentSearchQuery.trim().toLowerCase();
     final sorted = _students.where((student) {
-      if (query.isEmpty) return true;
-      return student.name.toLowerCase().contains(query) ||
+      final program = student.course.trim().toUpperCase();
+      final section = student.section?.trim() ?? '';
+      final matchesProgram =
+          _selectedStudentProgram == null || program == _selectedStudentProgram;
+      final matchesYear =
+          _selectedStudentYearLevel == null ||
+          student.yearLevel == _selectedStudentYearLevel;
+      final matchesSection =
+          _selectedStudentSection == null || section == _selectedStudentSection;
+      final matchesSearch =
+          query.isEmpty ||
+          student.name.toLowerCase().contains(query) ||
           student.email.toLowerCase().contains(query) ||
           student.studentNumber.toLowerCase().contains(query) ||
           student.course.toLowerCase().contains(query) ||
           (student.section?.toLowerCase().contains(query) ?? false);
+      return matchesProgram && matchesYear && matchesSection && matchesSearch;
     }).toList();
     sorted.sort((a, b) {
       final comparison = a.name.toLowerCase().compareTo(b.name.toLowerCase());
@@ -179,6 +203,64 @@ class _UserListModalState extends ConsumerState<UserListModal>
     }
 
     return entries;
+  }
+
+  List<String> get _studentProgramOptions {
+    final programs = _students
+        .map((student) => student.course.trim().toUpperCase())
+        .where((program) => program.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return programs;
+  }
+
+  List<int> get _studentYearLevelOptions {
+    final yearLevels = _students.map((student) => student.yearLevel).toSet().toList()
+      ..sort();
+    return yearLevels;
+  }
+
+  List<String> get _studentSectionOptions {
+    final sections = _students
+        .map((student) => student.section?.trim() ?? '')
+        .where((section) => section.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return sections;
+  }
+
+  bool get _hasActiveStudentFilters =>
+      _selectedStudentProgram != null ||
+      _selectedStudentYearLevel != null ||
+      _selectedStudentSection != null;
+
+  void _normalizeStudentFilters() {
+    final programs = _studentProgramOptions;
+    final yearLevels = _studentYearLevelOptions;
+    final sections = _studentSectionOptions;
+
+    if (_selectedStudentProgram != null &&
+        !programs.contains(_selectedStudentProgram)) {
+      _selectedStudentProgram = null;
+    }
+    if (_selectedStudentYearLevel != null &&
+        !yearLevels.contains(_selectedStudentYearLevel)) {
+      _selectedStudentYearLevel = null;
+    }
+    if (_selectedStudentSection != null &&
+        !sections.contains(_selectedStudentSection)) {
+      _selectedStudentSection = null;
+    }
+  }
+
+  void _clearStudentFilters() {
+    setState(() {
+      _selectedStudentProgram = null;
+      _selectedStudentYearLevel = null;
+      _selectedStudentSection = null;
+    });
   }
 
   @override
@@ -465,6 +547,9 @@ class _UserListModalState extends ConsumerState<UserListModal>
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isMobile = screenWidth < 600;
+    final dialogHeight = isMobile
+        ? screenHeight * 0.9
+        : math.min(700.0, screenHeight - 80);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -474,7 +559,7 @@ class _UserListModalState extends ConsumerState<UserListModal>
       ),
       child: Container(
         width: isMobile ? screenWidth * 0.95 : 900,
-        height: isMobile ? screenHeight * 0.9 : 700,
+        height: dialogHeight,
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(19),
@@ -787,125 +872,119 @@ class _UserListModalState extends ConsumerState<UserListModal>
     Color bgBody,
   ) {
     final isMobile = MediaQuery.of(context).size.width < 600;
-    return Column(
+    final horizontalPadding = isMobile ? 16.0 : 28.0;
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(horizontalPadding, 16, horizontalPadding, 24),
       children: [
-        Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: isMobile ? 16 : 28,
-            vertical: 16,
-          ),
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              _buildSearchField(
-                controller: _facultySearchController,
-                onChanged: (value) => setState(() {
-                  _facultySearchQuery = value;
-                }),
-                hintText: 'Search faculty or admin users',
-                primaryColor: primaryColor,
-                textMuted: textMuted,
-                bgBody: bgBody,
-              ),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.filter_list_rounded,
-                        color: textMuted,
-                        size: 18,
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _buildSearchField(
+              controller: _facultySearchController,
+              onChanged: (value) => setState(() {
+                _facultySearchQuery = value;
+              }),
+              hintText: 'Search faculty or admin users',
+              primaryColor: primaryColor,
+              textMuted: textMuted,
+              bgBody: bgBody,
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.filter_list_rounded,
+                      color: textMuted,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Role:',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: textPrimary,
                       ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Role:',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  _buildFilterChip('All', 'all', primaryColor, textPrimary),
-                  _buildFilterChip(
-                    'Faculty',
-                    'faculty',
-                    primaryColor,
-                    textPrimary,
-                  ),
-                  _buildFilterChip(
-                    'Admin',
-                    'admin',
-                    primaryColor,
-                    textPrimary,
-                  ),
-                ],
+                    ),
+                  ],
+                ),
+                _buildFilterChip('All', 'all', primaryColor, textPrimary),
+                _buildFilterChip(
+                  'Faculty',
+                  'faculty',
+                  primaryColor,
+                  textPrimary,
+                ),
+                _buildFilterChip(
+                  'Admin',
+                  'admin',
+                  primaryColor,
+                  textPrimary,
+                ),
+              ],
+            ),
+            _buildArchiveToggle(
+              _isShowingArchivedFaculty,
+              (v) => setState(() {
+                _isShowingArchivedFaculty = v;
+                _fetchData();
+              }),
+              primaryColor,
+              textMuted,
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 6,
               ),
-              _buildArchiveToggle(
-                _isShowingArchivedFaculty,
-                (v) => setState(() {
-                  _isShowingArchivedFaculty = v;
-                  _fetchData();
-                }),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
+              ),
+              child: Text(
+                '${_filteredFaculty.length} users',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: primaryColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (_filteredFaculty.isEmpty)
+          SizedBox(
+            height: 320,
+            child: _buildEmptyState(
+              'No faculty members found',
+              Icons.people_outline_rounded,
+              textMuted,
+            ),
+          )
+        else
+          ..._filteredFaculty.asMap().entries.map((entry) {
+            final isLast = entry.key == _filteredFaculty.length - 1;
+            return Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 8),
+              child: _buildFacultyCard(
+                entry.value,
                 primaryColor,
+                textPrimary,
                 textMuted,
+                bgBody,
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
-                ),
-                child: Text(
-                  '${_filteredFaculty.length} users',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: primaryColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: _filteredFaculty.isEmpty
-              ? _buildEmptyState(
-                  'No faculty members found',
-                  Icons.people_outline_rounded,
-                  textMuted,
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 28,
-                    vertical: 8,
-                  ),
-                  itemCount: _filteredFaculty.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final f = _filteredFaculty[index];
-                    return _buildFacultyCard(
-                      f,
-                      primaryColor,
-                      textPrimary,
-                      textMuted,
-                      bgBody,
-                    );
-                  },
-                ),
-        ),
+            );
+          }),
       ],
     );
   }
@@ -922,21 +1001,45 @@ class _UserListModalState extends ConsumerState<UserListModal>
     final newStudentCount = _sortedStudents
         .where((student) => _isNewSignup(student.createdAt))
         .length;
-    return Column(
+    final horizontalPadding = isMobile ? 16.0 : 28.0;
+    final programOptions = _studentProgramOptions;
+    final yearLevelOptions = _studentYearLevelOptions;
+    final sectionOptions = _studentSectionOptions;
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(horizontalPadding, 16, horizontalPadding, 24),
       children: [
-        Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: isMobile ? 16 : 28,
-            vertical: 16,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (isMobile)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSearchField(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isMobile)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSearchField(
+                    controller: _studentSearchController,
+                    onChanged: (value) => setState(() {
+                      _studentSearchQuery = value;
+                    }),
+                    hintText: 'Search students by name, ID, course, or section',
+                    primaryColor: primaryColor,
+                    textMuted: textMuted,
+                    bgBody: bgBody,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildStudentSortControls(
+                    primaryColor: primaryColor,
+                    textPrimary: textPrimary,
+                    textMuted: textMuted,
+                  ),
+                ],
+              )
+            else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _buildSearchField(
                       controller: _studentSearchController,
                       onChanged: (value) => setState(() {
                         _studentSearchQuery = value;
@@ -946,125 +1049,164 @@ class _UserListModalState extends ConsumerState<UserListModal>
                       textMuted: textMuted,
                       bgBody: bgBody,
                     ),
-                    const SizedBox(height: 12),
-                    _buildStudentSortControls(
-                      primaryColor: primaryColor,
-                      textPrimary: textPrimary,
-                      textMuted: textMuted,
-                    ),
-                  ],
-                )
-              else
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildSearchField(
-                        controller: _studentSearchController,
-                        onChanged: (value) => setState(() {
-                          _studentSearchQuery = value;
-                        }),
-                        hintText: 'Search students by name, ID, course, or section',
-                        primaryColor: primaryColor,
-                        textMuted: textMuted,
-                        bgBody: bgBody,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    _buildStudentSortControls(
-                      primaryColor: primaryColor,
-                      textPrimary: textPrimary,
-                      textMuted: textMuted,
-                    ),
-                  ],
-                ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  _buildArchiveToggle(
-                    _isShowingArchivedStudents,
-                    (v) => setState(() {
-                      _isShowingArchivedStudents = v;
-                      _fetchData();
-                    }),
-                    primaryColor,
-                    textMuted,
                   ),
-                  if (newStudentCount > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: const Color(0xFF2E7D32).withValues(alpha: 0.25),
-                        ),
-                      ),
-                      child: Text(
-                        '$newStudentCount new',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF2E7D32),
-                        ),
-                      ),
-                    ),
+                  const SizedBox(width: 16),
+                  _buildStudentSortControls(
+                    primaryColor: primaryColor,
+                    textPrimary: textPrimary,
+                    textMuted: textMuted,
+                  ),
+                ],
+              ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _buildArchiveToggle(
+                  _isShowingArchivedStudents,
+                  (v) => setState(() {
+                    _isShowingArchivedStudents = v;
+                    _fetchData();
+                  }),
+                  primaryColor,
+                  textMuted,
+                ),
+                if (newStudentCount > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.08),
+                      color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
+                      border: Border.all(
+                        color: const Color(0xFF2E7D32).withValues(alpha: 0.25),
+                      ),
                     ),
                     child: Text(
-                      '${_sortedStudents.length} students',
+                      '$newStudentCount new',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: primaryColor,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF2E7D32),
                       ),
                     ),
                   ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: _sortedStudents.isEmpty
-              ? _buildEmptyState(
-                  'No students found',
-                  Icons.school_outlined,
-                  textMuted,
-                )
-              : ListView.builder(
+                Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 28,
-                    vertical: 8,
+                    horizontal: 12,
+                    vertical: 6,
                   ),
-                  itemCount: _groupedStudents.length,
-                  itemBuilder: (context, index) {
-                    final group = _groupedStudents[index];
-                    return _buildStudentGroupSection(
-                      group.key,
-                      group.value,
-                      primaryColor,
-                      textPrimary,
-                      textMuted,
-                      bgBody,
-                    );
-                  },
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
+                  ),
+                  child: Text(
+                    '${_sortedStudents.length} students',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: primaryColor,
+                    ),
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _buildStudentFilterDropdown<String>(
+                  label: 'Program',
+                  value: _selectedStudentProgram,
+                  items: programOptions,
+                  itemLabel: (program) => program,
+                  onChanged: (value) => setState(
+                    () => _selectedStudentProgram = value,
+                  ),
+                  textPrimary: textPrimary,
+                  textMuted: textMuted,
+                  bgBody: bgBody,
+                ),
+                _buildStudentFilterDropdown<int>(
+                  label: 'Year Level',
+                  value: _selectedStudentYearLevel,
+                  items: yearLevelOptions,
+                  itemLabel: (yearLevel) => 'Year $yearLevel',
+                  onChanged: (value) => setState(
+                    () => _selectedStudentYearLevel = value,
+                  ),
+                  textPrimary: textPrimary,
+                  textMuted: textMuted,
+                  bgBody: bgBody,
+                ),
+                _buildStudentFilterDropdown<String>(
+                  label: 'Section',
+                  value: _selectedStudentSection,
+                  items: sectionOptions,
+                  itemLabel: (section) => section,
+                  onChanged: (value) => setState(
+                    () => _selectedStudentSection = value,
+                  ),
+                  textPrimary: textPrimary,
+                  textMuted: textMuted,
+                  bgBody: bgBody,
+                ),
+                if (_hasActiveStudentFilters)
+                  OutlinedButton.icon(
+                    onPressed: _clearStudentFilters,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: primaryColor,
+                      side: BorderSide(
+                        color: primaryColor.withValues(alpha: 0.24),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    icon: const Icon(Icons.filter_alt_off_rounded, size: 18),
+                    label: Text(
+                      'Clear filters',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ),
+        const SizedBox(height: 16),
+        if (_sortedStudents.isEmpty)
+          SizedBox(
+            height: 320,
+            child: _buildEmptyState(
+              'No students found',
+              Icons.school_outlined,
+              textMuted,
+            ),
+          )
+        else
+          ..._groupedStudents.map(
+            (group) => _buildStudentGroupSection(
+              group.key,
+              group.value,
+              primaryColor,
+              textPrimary,
+              textMuted,
+              bgBody,
+            ),
+          ),
       ],
     );
   }
@@ -1764,6 +1906,69 @@ class _UserListModalState extends ConsumerState<UserListModal>
         _buildSortChip('A → Z', 'asc', primaryColor, textPrimary),
         _buildSortChip('Z → A', 'desc', primaryColor, textPrimary),
       ],
+    );
+  }
+
+  Widget _buildStudentFilterDropdown<T>({
+    required String label,
+    required T? value,
+    required List<T> items,
+    required String Function(T item) itemLabel,
+    required ValueChanged<T?> onChanged,
+    required Color textPrimary,
+    required Color textMuted,
+    required Color bgBody,
+  }) {
+    final safeValue = items.contains(value) ? value : null;
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: 150, maxWidth: 220),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: bgBody,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T?>(
+          value: safeValue,
+          isExpanded: true,
+          icon: Icon(Icons.keyboard_arrow_down_rounded, color: textMuted),
+          hint: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: textMuted.withValues(alpha: 0.9),
+            ),
+          ),
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: textPrimary,
+          ),
+          items: [
+            DropdownMenuItem<T?>(
+              value: null,
+              child: Text(
+                'All $label',
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(fontSize: 13, color: textMuted),
+              ),
+            ),
+            ...items.map(
+              (item) => DropdownMenuItem<T?>(
+                value: item,
+                child: Text(
+                  itemLabel(item),
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(fontSize: 13, color: textPrimary),
+                ),
+              ),
+            ),
+          ],
+          onChanged: onChanged,
+        ),
+      ),
     );
   }
 

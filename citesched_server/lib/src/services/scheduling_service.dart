@@ -7,13 +7,15 @@ import 'conflict_service.dart';
 /// Respects faculty availability preferences from the FacultyAvailability table.
 class SchedulingService {
   final ConflictService _conflictService = ConflictService();
-  static const Set<String> _labRoomNames = {'IT LAB', 'EMC LAB'};
-  static const String _lectureRoomName = 'ROOM 1';
   static const double _lectureHours = 2.0;
   static const double _labHours = 3.0;
   static const int _labEarliestStartMinutes = 9 * 60;
   static const int _lunchStartMinutes = 12 * 60;
   static const int _lunchEndMinutes = 13 * 60;
+
+  bool _roomSupportsProgram(Room room, Program subjectProgram) {
+    return room.program == Program.both || room.program == subjectProgram;
+  }
 
   /// Generate schedules using a greedy algorithm.
   /// Attempts to assign each subject to available timeslots while respecting
@@ -107,7 +109,10 @@ class SchedulingService {
         .whereType<Faculty>()
         .where((f) => f.isActive)
         .toList();
-    final validRooms = rooms.whereType<Room>().where((r) => r.isActive).toList();
+    final validRooms = rooms
+        .whereType<Room>()
+        .where((r) => r.isActive)
+        .toList();
     final validTimeslots = timeslots.whereType<Timeslot>().toList();
     final timeslotCache = <String, Timeslot>{
       for (final t in validTimeslots)
@@ -222,8 +227,10 @@ class SchedulingService {
     required List<Schedule> generatedSchedules,
     required List<ScheduleConflict> conflicts,
   }) async {
-    final matchingSections =
-        _matchingSectionsForSubject(subject, data.candidateSections);
+    final matchingSections = _matchingSectionsForSubject(
+      subject,
+      data.candidateSections,
+    );
 
     if (matchingSections.isEmpty) {
       conflicts.add(
@@ -325,8 +332,7 @@ class SchedulingService {
         conflicts.add(
           ScheduleConflict(
             type: 'generation_failed',
-            message:
-                'No eligible room for ${subject.name} (${subject.code})',
+            message: 'No eligible room for ${subject.name} (${subject.code})',
             details: 'No room matches subject type/program constraints.',
           ),
         );
@@ -396,8 +402,9 @@ class SchedulingService {
         availability: data.facultyAvailMap[faculty.id!] ?? const [],
         requiredHours: component.hours,
         cache: data.timeslotCache,
-        requireLabStartAfterNine:
-            component.types.contains(SubjectType.laboratory),
+        requireLabStartAfterNine: component.types.contains(
+          SubjectType.laboratory,
+        ),
       );
       final rankedTimeslots = _rankTimeslotsForFaculty(
         timeslots: candidateTimeslots,
@@ -599,8 +606,9 @@ class SchedulingService {
       session: session,
       allTimeslots: data.validTimeslots,
       availability: lockedAvailability,
-      requiredHours:
-          maxComponentHours > 0 ? maxComponentHours : _requiredHours(subject),
+      requiredHours: maxComponentHours > 0
+          ? maxComponentHours
+          : _requiredHours(subject),
       cache: data.timeslotCache,
     );
     final lockedTimeslots = _rankTimeslotsForFaculty(
@@ -865,14 +873,13 @@ class SchedulingService {
     required int requiredMinutes,
     required Map<String, Timeslot> cache,
     required bool requireLabStartAfterNine,
-  }) async =>
-      _candidateTimeslotsFromExistingImpl(
-        session: session,
-        allTimeslots: allTimeslots,
-        requiredMinutes: requiredMinutes,
-        cache: cache,
-        requireLabStartAfterNine: requireLabStartAfterNine,
-      );
+  }) async => _candidateTimeslotsFromExistingImpl(
+    session: session,
+    allTimeslots: allTimeslots,
+    requiredMinutes: requiredMinutes,
+    cache: cache,
+    requireLabStartAfterNine: requireLabStartAfterNine,
+  );
 
   Future<List<Timeslot>> _candidateTimeslotsFromExistingImpl({
     required Session session,
@@ -922,14 +929,13 @@ class SchedulingService {
     required int requiredMinutes,
     required Map<String, Timeslot> cache,
     required bool requireLabStartAfterNine,
-  }) async =>
-      _candidateTimeslotsFromAvailabilityImpl(
-        session: session,
-        availability: availability,
-        requiredMinutes: requiredMinutes,
-        cache: cache,
-        requireLabStartAfterNine: requireLabStartAfterNine,
-      );
+  }) async => _candidateTimeslotsFromAvailabilityImpl(
+    session: session,
+    availability: availability,
+    requiredMinutes: requiredMinutes,
+    cache: cache,
+    requireLabStartAfterNine: requireLabStartAfterNine,
+  );
 
   Future<List<Timeslot>> _candidateTimeslotsFromAvailabilityImpl({
     required Session session,
@@ -1007,13 +1013,11 @@ class SchedulingService {
         subject.types.contains(SubjectType.blended);
 
     return rooms.where((room) {
-      final normalized = room.name.trim().toUpperCase();
       if (requiresLabRoom) {
-        return _labRoomNames.contains(normalized) &&
-            room.program == subject.program;
+        return room.type == RoomType.laboratory &&
+            _roomSupportsProgram(room, subject.program);
       }
-      // Lecture room is always ROOM 1 regardless of program.
-      return normalized == _lectureRoomName;
+      return room.type == RoomType.lecture;
     }).toList();
   }
 
@@ -1024,13 +1028,11 @@ class SchedulingService {
   }) {
     final requiresLab = componentTypes.contains(SubjectType.laboratory);
     return rooms.where((room) {
-      final normalized = room.name.trim().toUpperCase();
       if (requiresLab) {
-        return _labRoomNames.contains(normalized) &&
-            room.program == subject.program;
+        return room.type == RoomType.laboratory &&
+            _roomSupportsProgram(room, subject.program);
       }
-      // Lecture room is always ROOM 1 regardless of program.
-      return normalized == _lectureRoomName;
+      return room.type == RoomType.lecture;
     }).toList();
   }
 

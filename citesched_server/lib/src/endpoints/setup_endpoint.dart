@@ -338,7 +338,11 @@ class SetupEndpoint extends Endpoint {
   }) async {
     try {
       final normalizedRole = role.trim().toLowerCase();
-      final needsFacultyApproval = normalizedRole == 'faculty';
+      final requestedByAdmin =
+          session.authenticated?.scopes.any((scope) => scope.name == 'admin') ??
+          false;
+      final needsFacultyApproval =
+          normalizedRole == 'faculty' && !requestedByAdmin;
 
       final userInfo = await _ensureUserInfo(
         session,

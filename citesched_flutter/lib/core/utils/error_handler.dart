@@ -1,8 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:serverpod_client/serverpod_client.dart';
 
 class AppErrorDialog {
-  /// Shows a standardized error dialog for any caught exceptions (including 500 server errors).
+  static final RegExp _minifiedPrefixPattern = RegExp(
+    r'^minified:Class\d+:\s*',
+    caseSensitive: false,
+  );
+
+  static String _cleanMessage(String message) {
+    return message.trim().replaceFirst(_minifiedPrefixPattern, '');
+  }
+
+  static String _friendlyMessage(dynamic error) {
+    if (error is ServerpodClientException) {
+      final cleaned = _cleanMessage(error.message);
+      if (cleaned.isNotEmpty && cleaned.toLowerCase() != 'internal server error') {
+        return cleaned;
+      }
+
+      switch (error.statusCode) {
+        case 400:
+          return 'The request is invalid. Please review the form and try again.';
+        case 401:
+          return 'Your session has expired. Please sign in again.';
+        case 403:
+          return 'You do not have permission to perform this action.';
+        case 404:
+          return 'The requested record could not be found.';
+        case 500:
+          return 'The server encountered an internal error while processing your request.';
+      }
+    }
+
+    final raw = error?.toString().trim().isNotEmpty == true
+        ? error.toString().trim()
+        : 'Unknown error';
+    return _cleanMessage(raw);
+  }
+
   static void show(
     BuildContext context,
     dynamic error, {
@@ -11,13 +47,10 @@ class AppErrorDialog {
   }) {
     if (!context.mounted) return;
 
-    final rawMessage = error?.toString().trim().isNotEmpty == true
-        ? error.toString().trim()
-        : 'Unknown error';
-    final errorType = error?.runtimeType.toString() ?? 'UnknownError';
+    final friendlyMessage = _friendlyMessage(error);
     final message = actionLabel == null || actionLabel.trim().isEmpty
-        ? '$errorType: $rawMessage'
-        : 'Action: $actionLabel\nError Type: $errorType\nDetails: $rawMessage';
+        ? friendlyMessage
+        : 'Action: $actionLabel\nDetails: $friendlyMessage';
 
     showDialog(
       context: context,

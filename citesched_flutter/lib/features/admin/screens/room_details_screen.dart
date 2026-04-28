@@ -157,7 +157,9 @@ class RoomDetailsScreen extends ConsumerWidget {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              room.program.name.toUpperCase(),
+                              room.program == Program.both
+                                  ? 'Both IT and EMC'
+                                  : room.program.name.toUpperCase(),
                               style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -248,7 +250,9 @@ class RoomDetailsScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            room.program.name.toUpperCase(),
+                            room.program == Program.both
+                                ? 'Both IT and EMC'
+                                : room.program.name.toUpperCase(),
                             style: GoogleFonts.poppins(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -472,7 +476,8 @@ class RoomDetailsScreen extends ConsumerWidget {
   }) {
     return scheduleAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error loading schedule: $err')),
+      error: (err, stack) =>
+          Center(child: Text('Error loading schedule: $err')),
       data: (scheduleInfos) {
         final summary = _buildRoomSummary(scheduleInfos);
 
@@ -651,9 +656,9 @@ class RoomDetailsScreen extends ConsumerWidget {
     String value,
     IconData icon,
     Color color,
-    Color cardBg,
-    {bool compact = false}
-  ) {
+    Color cardBg, {
+    bool compact = false,
+  }) {
     final card = Container(
       padding: EdgeInsets.all(compact ? 16 : 20),
       decoration: BoxDecoration(

@@ -9,9 +9,6 @@ import '../services/report_service.dart';
 /// Admin-only endpoint for managing scheduling data and user roles.
 /// Only users with the 'admin' scope can access these methods.
 class AdminEndpoint extends Endpoint {
-  static const String _itLabName = 'IT LAB';
-  static const String _emcLabName = 'EMC LAB';
-
   @override
   @override
   bool get requireLogin => false;
@@ -158,6 +155,54 @@ class AdminEndpoint extends Endpoint {
     }
   }
 
+  Future<void> _syncUserInfoScopesForRole(
+    Session session, {
+    required String userId,
+    required String role,
+  }) async {
+    final parsedUserInfoId = int.tryParse(userId);
+    if (parsedUserInfoId == null) return;
+
+    final userInfo = await UserInfo.db.findById(session, parsedUserInfoId);
+    if (userInfo == null) return;
+
+    final updatedScopes = userInfo.scopeNames.toSet();
+    switch (role) {
+      case 'faculty':
+        updatedScopes
+          ..remove('faculty_pending')
+          ..remove('faculty_declined')
+          ..add('faculty');
+        break;
+      case 'faculty_pending':
+        updatedScopes
+          ..remove('faculty')
+          ..remove('faculty_declined')
+          ..add('faculty_pending');
+        break;
+      case 'faculty_declined':
+        updatedScopes
+          ..remove('faculty')
+          ..remove('faculty_pending')
+          ..add('faculty_declined');
+        break;
+      case 'student':
+        updatedScopes.add('student');
+        break;
+      case 'admin':
+        updatedScopes.add('admin');
+        break;
+    }
+
+    if (updatedScopes.length == userInfo.scopeNames.length &&
+        updatedScopes.containsAll(userInfo.scopeNames)) {
+      return;
+    }
+
+    userInfo.scopeNames = updatedScopes.toList();
+    await UserInfo.db.updateRow(session, userInfo);
+  }
+
   /// Get aggregated dashboard statistics. ─────────────────────────────────────────────────
 
   // ─── Role Management ─────────────────────────────────────────────────
@@ -191,13 +236,25 @@ class AdminEndpoint extends Endpoint {
     if (existing != null) {
       // Update the existing role
       existing.role = role;
-      return await UserRole.db.updateRow(session, existing);
+      final updatedRole = await UserRole.db.updateRow(session, existing);
+      await _syncUserInfoScopesForRole(
+        session,
+        userId: userId,
+        role: role,
+      );
+      return updatedRole;
     } else {
       // Create a new role entry
-      return await UserRole.db.insertRow(
+      final createdRole = await UserRole.db.insertRow(
         session,
         UserRole(userId: userId, role: role),
       );
+      await _syncUserInfoScopesForRole(
+        session,
+        userId: userId,
+        role: role,
+      );
+      return createdRole;
     }
   }
 
@@ -728,7 +785,6 @@ class AdminEndpoint extends Endpoint {
 
   /// Create a new room with validation.
   Future<Room> createRoom(Session session, Room room) async {
-    var allRooms = await Room.db.find(session);
     _validateRoomCatalogRules(room);
 
     // Validate capacity
@@ -744,12 +800,6 @@ class AdminEndpoint extends Endpoint {
     if (existing != null) {
       throw Exception(
         'Room ${room.name} already exists',
-      );
-    }
-
-    if (allRooms.length >= 3) {
-      throw Exception(
-        'Limit Exceeded: Only 3 rooms are allowed in the system.',
       );
     }
 
@@ -1360,38 +1410,13 @@ class AdminEndpoint extends Endpoint {
     );
   }
 
-  static const Set<String> _allowedRoomNames = {
-    _itLabName,
-    _emcLabName,
-    'ROOM 1',
-  };
-
   String _normalizedRoomName(String value) => value.trim().toUpperCase();
 
   void _validateRoomCatalogRules(Room room) {
     final roomName = _normalizedRoomName(room.name);
 
-    if (!_allowedRoomNames.contains(roomName)) {
-      throw Exception(
-        'Invalid room name. Only IT LAB, EMC LAB, and ROOM 1 are allowed.',
-      );
-    }
-
-    if ((roomName == _itLabName || roomName == _emcLabName) &&
-        room.type != RoomType.laboratory) {
-      throw Exception('$roomName must be a laboratory room.');
-    }
-
-    if (roomName == 'ROOM 1' && room.type != RoomType.lecture) {
-      throw Exception('ROOM 1 must be a lecture room.');
-    }
-
-    if (roomName == _itLabName && room.program != Program.it) {
-      throw Exception('$_itLabName must be assigned to IT program.');
-    }
-
-    if (roomName == _emcLabName && room.program != Program.emc) {
-      throw Exception('$_emcLabName must be assigned to EMC program.');
+    if (roomName.isEmpty) {
+      throw Exception('Room name is required.');
     }
   }
 

@@ -842,7 +842,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         onTap: () {
           showDialog(
             context: context,
-            builder: (_) => const UserListModal(),
+            barrierDismissible: true,
+            builder: (_) => const UserListModal(initialTabIndex: 0),
           );
         },
       ),
@@ -853,6 +854,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         borderColor: const Color(0xFF06b6d4),
         iconColor: const Color(0xFF06b6d4),
         valueColor: const Color(0xFF06b6d4),
+        onTap: () {
+          showDialog(
+            context: context,
+            barrierDismissible: true,
+            builder: (_) => const UserListModal(initialTabIndex: 1),
+          );
+        },
       ),
       _StatCardConfig(
         label: 'Schedules',

@@ -14,7 +14,8 @@ import 'package:serverpod_client/serverpod_client.dart' as _i1;
 
 enum Program implements _i1.SerializableModel {
   it,
-  emc;
+  emc,
+  both;
 
   static Program fromJson(String name) {
     switch (name) {
@@ -22,6 +23,8 @@ enum Program implements _i1.SerializableModel {
         return Program.it;
       case 'emc':
         return Program.emc;
+      case 'both':
+        return Program.both;
       default:
         throw ArgumentError('Value "$name" cannot be converted to "Program"');
     }

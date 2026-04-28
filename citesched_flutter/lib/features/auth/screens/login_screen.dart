@@ -51,8 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   String get _loginTitle => _isFaculty ? 'Faculty Login' : 'Student Login';
   String get _idLabel => _isFaculty ? _facultyIdLabel : _studentIdLabel;
-  String get _idHint =>
-      _isFaculty ? _enterFacultyIdHint : _enterStudentIdHint;
+  String get _idHint => _isFaculty ? _enterFacultyIdHint : _enterStudentIdHint;
 
   String _employmentStatusText(EmploymentStatus status) {
     if (status == EmploymentStatus.fullTime) {
@@ -843,7 +842,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           color: textMuted,
                                         ),
                                       ),
-                                ),
+                                    ),
                                 obscureText: obscurePassword,
                                 obscuringCharacter: '\u2022',
                                 autocorrect: false,
@@ -896,7 +895,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           color: textMuted,
                                         ),
                                       ),
-                                ),
+                                    ),
                                 obscureText: obscureConfirmPassword,
                                 obscuringCharacter: '\u2022',
                                 autocorrect: false,
@@ -1106,7 +1105,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 DropdownButtonFormField<Program>(
                                   initialValue: selectedProgram,
                                   decoration: fieldDecoration('Select Program'),
-                                  items: Program.values
+                                  items: const [Program.it, Program.emc]
                                       .map(
                                         (program) => DropdownMenuItem<Program>(
                                           value: program,
@@ -2166,7 +2165,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   )
                 : null,
-            ),
+          ),
         ),
       );
     }
@@ -2238,7 +2237,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             borderRadius: BorderRadius.circular(24),
                             boxShadow: [
                               BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
+                                color: Colors.black.withValues(alpha: 0.1),
                                 blurRadius: 50,
                                 offset: const Offset(0, 20),
                               ),
@@ -2779,13 +2778,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     required String? email,
     required String? displayName,
     required AuthNotifier authNotifier,
-  }) async =>
-      _resolveGoogleRoleSelectionImpl(
-        userInfo: userInfo,
-        email: email,
-        displayName: displayName,
-        authNotifier: authNotifier,
-      );
+  }) async => _resolveGoogleRoleSelectionImpl(
+    userInfo: userInfo,
+    email: email,
+    displayName: displayName,
+    authNotifier: authNotifier,
+  );
 
   Future<String?> _resolveGoogleRoleSelectionImpl({
     required UserInfo? userInfo,

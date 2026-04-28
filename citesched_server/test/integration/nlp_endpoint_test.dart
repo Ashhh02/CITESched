@@ -42,7 +42,7 @@ void main() {
       final room = await endpoints.admin.createRoom(
         sessionBuilder,
         Room(
-          name: 'Room NLP 1',
+          name: 'ROOM 1',
           capacity: 30,
           type: RoomType.lecture,
           program: Program.it,
@@ -57,6 +57,7 @@ void main() {
         Subject(
           code: 'NLP101',
           name: 'Natural Language Processing',
+          hours: 1,
           units: 3,
           types: [SubjectType.lecture],
           program: Program.it,
@@ -109,26 +110,26 @@ void main() {
 
         final studentSession = sessionBuilder.copyWith(
           authentication: AuthenticationOverride.authenticationInfo(
-            '901',
+            'student@test.com',
             {AppScopes.student},
           ),
         );
 
         final startResponse = await endpoints.nLP.query(
           studentSession,
-          'schedule monday start at 8:00',
+          'my schedule on monday start at 8:00',
         );
         expect(startResponse.intent, NLPIntent.schedule);
-        expect(startResponse.text, contains('Found 1 class'));
+        expect(startResponse.text, contains('1 class'));
         expect(startResponse.schedules, isNotNull);
         expect(startResponse.schedules!, isNotEmpty);
 
         final endResponse = await endpoints.nLP.query(
           studentSession,
-          'schedule monday end at 9:00',
+          'my schedule on monday end at 9:00',
         );
         expect(endResponse.intent, NLPIntent.schedule);
-        expect(endResponse.text, contains('Found 1 class'));
+        expect(endResponse.text, contains('1 class'));
         expect(endResponse.schedules, isNotNull);
         expect(endResponse.schedules!, isNotEmpty);
       },

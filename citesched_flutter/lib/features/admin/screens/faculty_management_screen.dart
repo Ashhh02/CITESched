@@ -14,8 +14,7 @@ import 'package:citesched_flutter/core/providers/schedule_sync_provider.dart';
 import 'package:citesched_flutter/core/providers/admin_providers.dart';
 import 'package:citesched_flutter/core/utils/error_handler.dart';
 
-const String kEndTimeAfterStartMessage =
-    'End time must be after start time.';
+const String kEndTimeAfterStartMessage = 'End time must be after start time.';
 const String kDeletePermanentlyLabel = 'Delete Permanently';
 const String kAddFacultyMemberLabel = 'Add Faculty Member';
 const String kSelectStartTimeLabel = 'Select Start Time';
@@ -115,8 +114,10 @@ class _FacultyManagementScreenState
   }
 
   void _syncSelectedFaculty(List<Faculty> facultyList) {
-    final visibleIds =
-        facultyList.map((faculty) => faculty.id).whereType<int>().toSet();
+    final visibleIds = facultyList
+        .map((faculty) => faculty.id)
+        .whereType<int>()
+        .toSet();
     final intersection = _selectedFacultyIds.intersection(visibleIds);
     if (intersection.length != _selectedFacultyIds.length) {
       _selectedFacultyIds
@@ -543,274 +544,297 @@ class _FacultyManagementScreenState
         : ref.watch(facultyListProvider);
     final conflictsAsync = ref.watch(allConflictsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor =
-        isDark ? const Color(0xFF0F172A) : Colors.white;
-
+    final bgColor = isDark ? const Color(0xFF0F172A) : Colors.white;
     final isMobile = ResponsiveHelper.isMobile(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final useStackedHeader = screenWidth < 1100;
+    final useCompactList = screenWidth < 1280;
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: Padding(
-        padding: EdgeInsets.all(isMobile ? 16 : 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            // Header (Standardized Maroon Gradient Banner)
-            AdminHeaderContainer(
-              primaryColor: maroonColor,
-              padding: EdgeInsets.all(isMobile ? 20 : 32),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: maroonColor.withValues(alpha: 0.3),
-                  blurRadius: 25,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-              child: isMobile
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+      body: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          padding: EdgeInsets.all(useStackedHeader ? 16 : 32),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AdminHeaderContainer(
+                  primaryColor: maroonColor,
+                  padding: EdgeInsets.all(useStackedHeader ? 20 : 32),
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: maroonColor.withValues(alpha: 0.3),
+                      blurRadius: 25,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                  child: useStackedHeader
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.people_outline_rounded,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Faculty Management',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Manage instructors, workloads, and schedules',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      color:
-                                          Colors.white.withValues(alpha: 0.8),
-                                      letterSpacing: 0.2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _showAddFacultyModal,
-                            icon:
-                                const Icon(Icons.person_add_rounded, size: 20),
-                            label: Text(
-                              kAddFacultyMemberLabel,
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                letterSpacing: 0.4,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: maroonColor,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 0,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.people_outline_rounded,
-                                color: Colors.white,
-                                size: 32,
-                              ),
-                            ),
-                            const SizedBox(width: 24),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            Row(
                               children: [
-                                Text(
-                                  'Faculty Management',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
+                                Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.people_outline_rounded,
                                     color: Colors.white,
-                                    letterSpacing: -1,
+                                    size: 28,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Manage instructors, workloads, and schedules',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                    letterSpacing: 0.2,
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Faculty Management',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Manage instructors, workloads, and schedules',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                          letterSpacing: 0.2,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _showAddFacultyModal,
+                                icon: const Icon(
+                                  Icons.person_add_rounded,
+                                  size: 20,
+                                ),
+                                label: Text(
+                                  kAddFacultyMemberLabel,
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: maroonColor,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.people_outline_rounded,
+                                    color: Colors.white,
+                                    size: 32,
+                                  ),
+                                ),
+                                const SizedBox(width: 24),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Faculty Management',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        letterSpacing: -1,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Manage instructors, workloads, and schedules',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        color: Colors.white.withValues(
+                                          alpha: 0.8,
+                                        ),
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 16),
+                            ElevatedButton.icon(
+                              onPressed: _showAddFacultyModal,
+                              icon: const Icon(
+                                Icons.person_add_rounded,
+                                size: 24,
+                              ),
+                              label: Text(
+                                kAddFacultyMemberLabel,
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: maroonColor,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 28,
+                                  vertical: 18,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 0,
+                              ),
+                            ),
                           ],
                         ),
-                        const SizedBox(width: 16),
-                        ElevatedButton.icon(
-                          onPressed: _showAddFacultyModal,
-                          icon: const Icon(Icons.person_add_rounded, size: 24),
-                          label: Text(
-                            kAddFacultyMemberLabel,
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: maroonColor,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 28,
-                              vertical: 18,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 0,
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-
-            const SizedBox(height: 32),
-
-            // Search and Filter Row
-            isMobile
-                ? Column(
-                    children: [
-                      _buildViewToggle(isDark),
-                      const SizedBox(height: 16),
-                      _buildSearchBar(isDark),
-                      const SizedBox(height: 16),
-                      _buildProgramFilter(facultyAsync, isDark),
-                    ],
-                  )
-                : Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: _buildSearchBar(isDark),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 2,
-                        child: _buildProgramFilter(facultyAsync, isDark),
-                      ),
-                      const SizedBox(width: 16),
-                      _buildViewToggle(isDark),
-                    ],
-                  ),
-            const SizedBox(height: 32),
-
-            // Faculty Table
-            Expanded(
-              child: facultyAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error loading faculty',
-                        style: GoogleFonts.poppins(fontSize: 18),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        error.toString(),
-                        style: GoogleFonts.poppins(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => ref.refresh(facultyListProvider),
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
                 ),
-                data: (facultyList) {
-                  _maybeAutoOpenTargetFaculty(facultyList);
-                  final filteredFaculty = _filteredFaculty(facultyList);
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!mounted) return;
-                    _syncSelectedFaculty(filteredFaculty);
-                  });
+                const SizedBox(height: 32),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    useStackedHeader
+                        ? Column(
+                            children: [
+                              _buildViewToggle(isDark),
+                              const SizedBox(height: 16),
+                              _buildSearchBar(isDark),
+                              const SizedBox(height: 16),
+                              _buildProgramFilter(facultyAsync, isDark),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(flex: 3, child: _buildSearchBar(isDark)),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                flex: 2,
+                                child: _buildProgramFilter(
+                                  facultyAsync,
+                                  isDark,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              _buildViewToggle(isDark),
+                            ],
+                          ),
+                    const SizedBox(height: 32),
+                    facultyAsync.when(
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (error, stack) => Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: Colors.red,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Error loading faculty',
+                              style: GoogleFonts.poppins(fontSize: 18),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              error.toString(),
+                              style: GoogleFonts.poppins(color: Colors.grey),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => ref.refresh(facultyListProvider),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      data: (facultyList) {
+                        _maybeAutoOpenTargetFaculty(facultyList);
+                        final filteredFaculty = _filteredFaculty(facultyList);
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          _syncSelectedFaculty(filteredFaculty);
+                        });
 
-                  if (filteredFaculty.isEmpty) {
-                    return _buildEmptyFacultyState();
-                  }
+                        if (filteredFaculty.isEmpty) {
+                          return _buildEmptyFacultyState();
+                        }
 
-                  if (isMobile) {
-                    return _buildMobileFacultyList(filteredFaculty, isDark);
-                  }
+                        if (useCompactList) {
+                          return _buildMobileFacultyList(
+                            filteredFaculty,
+                            isDark,
+                          );
+                        }
 
-                  return _buildDesktopFacultyTable(
-                    context,
-                    filteredFaculty,
-                    conflictsAsync,
-                    isDark,
-                  );
-                },
-              ),
+                        return _buildDesktopFacultyTable(
+                          context,
+                          filteredFaculty,
+                          conflictsAsync,
+                          isDark,
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -899,7 +923,8 @@ class _FacultyManagementScreenState
 
   List<Faculty> _filteredFaculty(List<Faculty> facultyList) {
     return facultyList.where((faculty) {
-      final matchesSearch = _searchQuery.isEmpty ||
+      final matchesSearch =
+          _searchQuery.isEmpty ||
           faculty.name.toLowerCase().contains(_searchQuery) ||
           faculty.email.toLowerCase().contains(_searchQuery) ||
           faculty.facultyId.toLowerCase().contains(_searchQuery);
@@ -912,8 +937,7 @@ class _FacultyManagementScreenState
   Widget _buildEmptyFacultyState() {
     final hasQuery = _searchQuery.isNotEmpty;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textMuted =
-        isDark ? const Color(0xFF94A3B8) : Colors.grey[600]!;
+    final textMuted = isDark ? const Color(0xFF94A3B8) : Colors.grey[600]!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -932,7 +956,9 @@ class _FacultyManagementScreenState
             const SizedBox(height: 8),
             Text(
               'Click "Add Faculty" to get started',
-              style: GoogleFonts.poppins(color: textMuted.withValues(alpha: 0.85)),
+              style: GoogleFonts.poppins(
+                color: textMuted.withValues(alpha: 0.85),
+              ),
             ),
           ],
         ],
@@ -960,7 +986,8 @@ class _FacultyManagementScreenState
     AsyncValue<List<ScheduleConflict>> conflictsAsync,
     bool isDark,
   ) {
-    final allSelected = filteredFaculty.isNotEmpty &&
+    final allSelected =
+        filteredFaculty.isNotEmpty &&
         _selectedFacultyIds.length == filteredFaculty.length;
     final anySelected = _selectedFacultyIds.isNotEmpty;
     return Container(
@@ -988,66 +1015,57 @@ class _FacultyManagementScreenState
                 ? () => _deleteSelectedFaculty(filteredFaculty)
                 : null,
           ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: DataTable(
-                        showCheckboxColumn: false,
-                        headingRowColor: WidgetStateProperty.all(maroonColor),
-                        headingTextStyle: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          letterSpacing: 0.5,
-                        ),
-                        dataRowMinHeight: 65,
-                        dataRowMaxHeight: 85,
-                        columnSpacing: 32,
-                        horizontalMargin: 24,
-                        decoration: const BoxDecoration(color: Colors.transparent),
-                        columns: [
-                          DataColumn(
-                            label: Checkbox(
-                              value: allSelected,
-                              onChanged: (value) =>
-                                  _toggleSelectAllFaculty(
-                                    filteredFaculty,
-                                    value,
-                                  ),
-                              activeColor: Colors.white,
-                              checkColor: maroonColor,
-                            ),
-                          ),
-                          const DataColumn(label: Text('FACULTY ID')),
-                          const DataColumn(label: Text('NAME')),
-                          const DataColumn(label: Text('EMAIL')),
-                          const DataColumn(label: Text('PROGRAM')),
-                          const DataColumn(label: Text('STATUS')),
-                          const DataColumn(label: Text('CONFLICTS')),
-                          const DataColumn(label: Text('SHIFT')),
-                          const DataColumn(label: Text('MAX LOAD')),
-                          const DataColumn(label: Text('ACTIONS')),
-                        ],
-                        rows: filteredFaculty.asMap().entries.map(
-                          (entry) => _facultyDataRow(
-                            context,
-                            entry.value,
-                            entry.key,
-                            conflictsAsync,
-                            isDark,
-                          ),
-                        ).toList(),
-                      ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              showCheckboxColumn: false,
+              headingRowColor: WidgetStateProperty.all(maroonColor),
+              headingTextStyle: GoogleFonts.poppins(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                letterSpacing: 0.5,
+              ),
+              dataRowMinHeight: 65,
+              dataRowMaxHeight: 85,
+              columnSpacing: 32,
+              horizontalMargin: 24,
+              decoration: const BoxDecoration(color: Colors.transparent),
+              columns: [
+                DataColumn(
+                  label: Checkbox(
+                    value: allSelected,
+                    onChanged: (value) => _toggleSelectAllFaculty(
+                      filteredFaculty,
+                      value,
                     ),
+                    activeColor: Colors.white,
+                    checkColor: maroonColor,
                   ),
-                );
-              },
+                ),
+                const DataColumn(label: Text('FACULTY ID')),
+                const DataColumn(label: Text('NAME')),
+                const DataColumn(label: Text('EMAIL')),
+                const DataColumn(label: Text('PROGRAM')),
+                const DataColumn(label: Text('STATUS')),
+                const DataColumn(label: Text('CONFLICTS')),
+                const DataColumn(label: Text('SHIFT')),
+                const DataColumn(label: Text('MAX LOAD')),
+                const DataColumn(label: Text('ACTIONS')),
+              ],
+              rows: filteredFaculty
+                  .asMap()
+                  .entries
+                  .map(
+                    (entry) => _facultyDataRow(
+                      context,
+                      entry.value,
+                      entry.key,
+                      conflictsAsync,
+                      isDark,
+                    ),
+                  )
+                  .toList(),
             ),
           ),
         ],
@@ -1159,8 +1177,8 @@ class _FacultyManagementScreenState
       cells: [
         DataCell(
           Checkbox(
-            value: faculty.id != null &&
-                _selectedFacultyIds.contains(faculty.id),
+            value:
+                faculty.id != null && _selectedFacultyIds.contains(faculty.id),
             onChanged: faculty.id == null
                 ? null
                 : (value) => _toggleFacultySelection(faculty.id!, value),
@@ -1189,8 +1207,9 @@ class _FacultyManagementScreenState
             loading: () => _facultyNameCell(faculty),
             error: (error, _) => _facultyNameCell(faculty),
             data: (conflicts) {
-              final hasNameConflict =
-                  conflicts.hasConflictForFaculty(faculty.id!);
+              final hasNameConflict = conflicts.hasConflictForFaculty(
+                faculty.id!,
+              );
               return _facultyNameCell(faculty, hasConflict: hasNameConflict);
             },
           ),
@@ -1202,7 +1221,10 @@ class _FacultyManagementScreenState
               const SizedBox(width: 6),
               Text(
                 faculty.email,
-                style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[700]),
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: Colors.grey[700],
+                ),
               ),
             ],
           ),
@@ -1223,14 +1245,17 @@ class _FacultyManagementScreenState
               gradient: LinearGradient(
                 colors: [
                   _getStatusColor(faculty.employmentStatus),
-                  _getStatusColor(faculty.employmentStatus).withValues(alpha: 0.7),
+                  _getStatusColor(
+                    faculty.employmentStatus,
+                  ).withValues(alpha: 0.7),
                 ],
               ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: _getStatusColor(faculty.employmentStatus)
-                      .withValues(alpha: 0.3),
+                  color: _getStatusColor(
+                    faculty.employmentStatus,
+                  ).withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 ),
@@ -1264,8 +1289,7 @@ class _FacultyManagementScreenState
             loading: () => const SizedBox.shrink(),
             error: (error, _) => const SizedBox.shrink(),
             data: (conflicts) {
-              final hasConflict =
-                  conflicts.hasConflictForFaculty(faculty.id!);
+              final hasConflict = conflicts.hasConflictForFaculty(faculty.id!);
               return _conflictBadge(hasConflict);
             },
           ),
@@ -1499,7 +1523,10 @@ class _FacultyManagementScreenState
       children: [
         _buildDropdown<Program?>(
           value: _selectedProgram,
-          items: [null, ...Program.values],
+          items: [
+            null,
+            ...const [Program.it, Program.emc],
+          ],
           onChanged: (value) {
             setState(() {
               _selectedProgram = value;
@@ -1558,6 +1585,8 @@ class _FacultyManagementScreenState
   Widget _buildMobileFacultyList(List<Faculty> facultyList, bool isDark) {
     return ListView.builder(
       itemCount: facultyList.length,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemBuilder: (context, index) {
         final faculty = facultyList[index];
         return Card(
@@ -1647,8 +1676,7 @@ class _FacultyManagementScreenState
                             ),
                           ),
                           TextButton.icon(
-                            onPressed: () =>
-                                _permanentDeleteFaculty(faculty),
+                            onPressed: () => _permanentDeleteFaculty(faculty),
                             icon: const Icon(
                               Icons.delete_forever_rounded,
                               color: Colors.red,
@@ -1816,6 +1844,10 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
         password: _passwordController.text,
         role: 'faculty',
         facultyId: facultyId,
+        maxLoad: int.tryParse(_maxLoadController.text) ?? 18,
+        employmentStatus: _employmentStatus?.name,
+        shiftPreference: _shiftPreference?.name,
+        program: _program?.name,
       );
 
       if (!createdAccount) {
@@ -2076,8 +2108,9 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               elevation: 0,
-                              disabledBackgroundColor:
-                                  primaryPurple.withValues(alpha: 0.5),
+                              disabledBackgroundColor: primaryPurple.withValues(
+                                alpha: 0.5,
+                              ),
                             ),
                             child: _isLoading
                                 ? const SizedBox(
@@ -2116,8 +2149,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                                 : () => Navigator.pop(context),
                             style: TextButton.styleFrom(
                               foregroundColor: textMuted,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 16),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 side: BorderSide(
@@ -2145,8 +2177,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                                 : () => Navigator.pop(context),
                             style: TextButton.styleFrom(
                               foregroundColor: textMuted,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 16),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 side: BorderSide(
@@ -2171,14 +2202,14 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryPurple,
                               foregroundColor: Colors.white,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 16),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               elevation: 0,
-                              disabledBackgroundColor:
-                                  primaryPurple.withValues(alpha: 0.5),
+                              disabledBackgroundColor: primaryPurple.withValues(
+                                alpha: 0.5,
+                              ),
                             ),
                             child: _isLoading
                                 ? const SizedBox(
@@ -2369,7 +2400,7 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
             textPrimary: textPrimary,
             textMuted: textMuted,
             primaryPurple: primaryPurple,
-            items: Program.values,
+            items: const [Program.it, Program.emc],
             onChanged: (value) => setState(() => _program = value),
             itemLabel: (prog) => prog.name.toUpperCase(),
             hint: 'Select Program',
@@ -2520,11 +2551,11 @@ class _AddFacultyModalState extends State<_AddFacultyModal> {
     Color textMuted,
     Color bgBody,
   ) => _buildDayPickerSectionContent(
-        primaryPurple,
-        textPrimary,
-        textMuted,
-        bgBody,
-      );
+    primaryPurple,
+    textPrimary,
+    textMuted,
+    bgBody,
+  );
 
   Widget _buildDayPickerSectionContent(
     Color primaryPurple,
@@ -3257,7 +3288,9 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         elevation: 0,
-                        disabledBackgroundColor: primaryPurple.withValues(alpha: 0.5),
+                        disabledBackgroundColor: primaryPurple.withValues(
+                          alpha: 0.5,
+                        ),
                       ),
                       child: _isLoading
                           ? const SizedBox(
@@ -3422,7 +3455,7 @@ class _EditFacultyModalState extends State<_EditFacultyModal> {
             textPrimary: textPrimary,
             textMuted: textMuted,
             primaryPurple: primaryPurple,
-            items: Program.values,
+            items: const [Program.it, Program.emc],
             onChanged: (value) => setState(() => _program = value!),
             itemLabel: (prog) => prog.name.toUpperCase(),
           ),
@@ -3928,4 +3961,3 @@ class _AvailabilityEntry {
     required this.end,
   });
 }
-

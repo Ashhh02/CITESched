@@ -50,7 +50,7 @@ class TimetableFilterPanel extends StatelessWidget {
           _buildFilterDropdown<Program>(
             label: 'Program',
             value: currentFilter.program,
-            items: Program.values,
+            items: const [Program.it, Program.emc],
             itemLabel: (v) => v.toString().split('.').last.toUpperCase(),
             onChanged: (v) =>
                 onFilterChanged(currentFilter.copyWith(program: v)),

@@ -2,3 +2,4 @@ enum: Program
 values:
   - it
   - emc
+  - both

@@ -79,7 +79,7 @@ void main() {
         var room = await endpoints.admin.createRoom(
           sessionBuilder,
           Room(
-            name: 'Lab 101',
+            name: 'IT LAB',
             capacity: 40,
             type: RoomType.laboratory,
             program: Program.it,
@@ -93,12 +93,30 @@ void main() {
         expect(room.capacity, 40);
       });
 
+      test('Create CSS LAB room succeeds', () async {
+        var room = await endpoints.admin.createRoom(
+          sessionBuilder,
+          Room(
+            name: 'CSS LAB',
+            capacity: 40,
+            type: RoomType.laboratory,
+            program: Program.it,
+            isActive: true,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        expect(room.id, isNotNull);
+        expect(room.name, 'CSS LAB');
+      });
+
       test('Create room with zero capacity fails', () async {
         expect(
           () async => await endpoints.admin.createRoom(
             sessionBuilder,
             Room(
-              name: 'Invalid Room',
+              name: 'ROOM 1',
               capacity: 0, // Invalid
               type: RoomType.lecture,
               program: Program.it,
@@ -289,7 +307,7 @@ void main() {
 
       test('Archive subject with legacy duplicate code still succeeds', () async {
         final first = await Subject.db.insertRow(
-          sessionBuilder,
+          sessionBuilder.build(),
           Subject(
             code: 'IT 101',
             name: 'Legacy Duplicate A',
@@ -303,7 +321,7 @@ void main() {
         );
 
         final second = await Subject.db.insertRow(
-          sessionBuilder,
+          sessionBuilder.build(),
           Subject(
             code: 'IT 101',
             name: 'Legacy Duplicate B',
@@ -448,7 +466,7 @@ void main() {
         var room = await endpoints.admin.createRoom(
           sessionBuilder,
           Room(
-            name: 'Room 401',
+            name: 'ROOM 1',
             capacity: 30,
             type: RoomType.lecture,
             program: Program.it,
@@ -463,6 +481,7 @@ void main() {
           Subject(
             code: 'CS301',
             name: 'Advanced Programming',
+            hours: 1,
             units: 3,
             types: [SubjectType.lecture],
             program: Program.it,

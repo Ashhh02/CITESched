@@ -14,11 +14,7 @@ import '../generated/protocol.dart';
 ///   room_inactive       – Room is marked inactive
 ///   faculty_unavailable – Timeslot falls outside faculty availability
 class ConflictService {
-  static const Set<String> _labRoomNames = {'IT LAB', 'EMC LAB'};
-  static const String _lectureRoomName = 'ROOM 1';
   static const int _labEarliestStartMinutes = 9 * 60;
-
-  String _normalizeRoomName(String name) => name.trim().toUpperCase();
 
   bool _isLabSubject(Subject subject) {
     return subject.types.contains(SubjectType.laboratory);
@@ -58,9 +54,8 @@ class ConflictService {
     }
 
     if (room != null) {
-      final normalized = _normalizeRoomName(room.name);
-      if (_labRoomNames.contains(normalized)) return true;
-      if (normalized == _lectureRoomName) return false;
+      if (room.type == RoomType.laboratory) return true;
+      if (room.type == RoomType.lecture) return false;
     }
 
     return _requiresLaboratoryRoom(subject);
@@ -147,8 +142,7 @@ class ConflictService {
         conflicts.add(
           ScheduleConflict(
             type: 'duplicate_component',
-            message:
-                'Section already has a $tag schedule for this subject',
+            message: 'Section already has a $tag schedule for this subject',
             facultyId: schedule.facultyId,
             subjectId: schedule.subjectId,
             scheduleId: schedule.id,
@@ -167,30 +161,29 @@ class ConflictService {
     required Subject subject,
     required Room room,
   }) {
-    final normalizedRoomName = _normalizeRoomName(room.name);
     final requiresLabRoom = _requiresLaboratoryRoomForSchedule(
       subject,
       schedule,
     );
 
-    if (requiresLabRoom && !_labRoomNames.contains(normalizedRoomName)) {
+    if (requiresLabRoom && room.type != RoomType.laboratory) {
       return ScheduleConflict(
         type: 'room_type_mismatch',
         message:
-            'Laboratory or blended subjects can only be assigned to IT LAB or EMC LAB',
+            'Laboratory or blended subjects can only be assigned to laboratory rooms',
         facultyId: schedule.facultyId,
         roomId: room.id,
         subjectId: schedule.subjectId,
         scheduleId: schedule.id,
         details:
-            '${subject.name} requires a laboratory room (IT LAB or EMC LAB), but was assigned to ${room.name}',
+            '${subject.name} requires a laboratory room, but was assigned to ${room.name}',
       );
     }
 
-    if (!requiresLabRoom && normalizedRoomName != _lectureRoomName) {
+    if (!requiresLabRoom && room.type != RoomType.lecture) {
       return ScheduleConflict(
         type: 'room_type_mismatch',
-        message: 'Non-lab subjects can only be assigned to ROOM 1',
+        message: 'Lecture-only subjects can only be assigned to lecture rooms',
         facultyId: schedule.facultyId,
         roomId: room.id,
         subjectId: schedule.subjectId,
@@ -438,9 +431,9 @@ class ConflictService {
     final room = await Room.db.findById(session, roomId);
     if (room == null) return;
 
-    final normalizedRoomName = _normalizeRoomName(room.name);
     if (subject.program != room.program &&
-        normalizedRoomName != _lectureRoomName) {
+        room.program != Program.both &&
+        room.type != RoomType.lecture) {
       conflicts.add(
         ScheduleConflict(
           type: 'program_mismatch',
@@ -749,7 +742,7 @@ class ConflictService {
     }
 
     return conflicts;
-   }
+  }
 
   Future<_ConflictContext> _buildConflictContext(Session session) async =>
       _buildConflictContextImpl(session);
@@ -820,13 +813,17 @@ class ConflictService {
           buildMessage: (a, b, slotLabel) =>
               '${room?.name ?? 'Room $roomId'} already booked at $slotLabel',
           buildDetails: (a, b) {
-            final subjA = context.subjectMap[a.subjectId]?.code ??
+            final subjA =
+                context.subjectMap[a.subjectId]?.code ??
                 'Subject ${a.subjectId}';
-            final subjB = context.subjectMap[b.subjectId]?.code ??
+            final subjB =
+                context.subjectMap[b.subjectId]?.code ??
                 'Subject ${b.subjectId}';
-            final facA = context.facultyMap[a.facultyId]?.name ??
+            final facA =
+                context.facultyMap[a.facultyId]?.name ??
                 'Faculty ${a.facultyId}';
-            final facB = context.facultyMap[b.facultyId]?.name ??
+            final facB =
+                context.facultyMap[b.facultyId]?.name ??
                 'Faculty ${b.facultyId}';
             return 'Conflicts: $subjA / $facA / ${a.section} <> $subjB / $facB / ${b.section}';
           },
@@ -855,9 +852,11 @@ class ConflictService {
           buildMessage: (a, b, slotLabel) =>
               '${faculty?.name ?? 'Faculty $facultyId'} has overlapping classes at $slotLabel',
           buildDetails: (a, b) {
-            final subjA = context.subjectMap[a.subjectId]?.code ??
+            final subjA =
+                context.subjectMap[a.subjectId]?.code ??
                 'Subject ${a.subjectId}';
-            final subjB = context.subjectMap[b.subjectId]?.code ??
+            final subjB =
+                context.subjectMap[b.subjectId]?.code ??
                 'Subject ${b.subjectId}';
             return 'Subjects: $subjA, $subjB (Schedule IDs: ${a.id}, ${b.id})';
           },
@@ -891,9 +890,11 @@ class ConflictService {
           buildMessage: (a, b, slotLabel) =>
               'Section $sectionLabel double-booked at $slotLabel',
           buildDetails: (a, b) {
-            final subjA = context.subjectMap[a.subjectId]?.code ??
+            final subjA =
+                context.subjectMap[a.subjectId]?.code ??
                 'Subject ${a.subjectId}';
-            final subjB = context.subjectMap[b.subjectId]?.code ??
+            final subjB =
+                context.subjectMap[b.subjectId]?.code ??
                 'Subject ${b.subjectId}';
             return 'Subjects: $subjA, $subjB (Schedule IDs: ${a.id}, ${b.id})';
           },
@@ -911,9 +912,9 @@ class ConflictService {
       final room = s.roomId != null ? context.roomMap[s.roomId!] : null;
       if (subject == null || room == null) continue;
 
-      final normalizedRoomName = _normalizeRoomName(room.name);
       if (subject.program != room.program &&
-          normalizedRoomName != _lectureRoomName) {
+          room.program != Program.both &&
+          room.type != RoomType.lecture) {
         conflicts.add(
           ScheduleConflict(
             type: 'program_mismatch',
@@ -1057,8 +1058,7 @@ class ConflictService {
   void _addContinuousBlockConflicts(
     _ConflictContext context,
     List<ScheduleConflict> conflicts,
-  ) =>
-      _addContinuousBlockConflictsImpl(context, conflicts);
+  ) => _addContinuousBlockConflictsImpl(context, conflicts);
 
   void _addContinuousBlockConflictsImpl(
     _ConflictContext context,
@@ -1140,7 +1140,6 @@ class ConflictService {
     return conflicts;
   }
 }
-
 
 class _ScheduleSlot {
   final Schedule schedule;
